@@ -21,7 +21,9 @@ export default async function HomePage() {
 
             <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
                 <div className="mb-8 text-center">
-                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-400/20 text-3xl"></div>
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-400/20 text-3xl">
+                        🧭
+                    </div>
                     <h1 className="text-2xl font-bold text-white">Zakoulki</h1>
                     <p className="mt-1 text-sm text-white/50">
                         Увидел → Сфотографировал → Отметил на карте → Поделился

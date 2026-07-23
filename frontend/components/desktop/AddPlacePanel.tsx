@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import type { City, Category, Place } from "@/types";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   pickedPoint: { lat: number; lng: number } | null;
   onTogglePick: () => void;
   onCreated: (place: Place) => void;
+  onRequestLogin: () => void;
 }
 
 export default function AddPlacePanel({
@@ -20,42 +22,15 @@ export default function AddPlacePanel({
   pickedPoint,
   onTogglePick,
   onCreated,
+  onRequestLogin,
 }: Props) {
-  const [hasToken, setHasToken] = useState(
-    typeof window !== "undefined" && !!localStorage.getItem("token")
-  );
+  const { user, loading: authLoading } = useAuth();
 
-  // --- лёгкая авторизация прямо в окне (полноценные /login и /register — следующий шаг) ---
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authBusy, setAuthBusy] = useState(false);
-
-  const handleAuth = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setAuthBusy(true);
-    setAuthError(null);
-    try {
-      if (authMode === "register") {
-        await api.post("/auth/register", { username, email, password });
-      }
-      const res = await api.post("/auth/login", { email, password });
-      localStorage.setItem("token", res.data.access_token);
-      setHasToken(true);
-    } catch (err: any) {
-      setAuthError(err?.response?.data?.detail || "Не удалось войти. Проверьте данные.");
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
-  // --- форма создания места ---
   const [title, setTitle] = useState("");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState<string | null>(null);
 
   const toggleCategory = (id: number) => {
     setCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
@@ -82,8 +57,10 @@ export default function AddPlacePanel({
         category_ids: categoryIds,
       });
       onCreated(res.data);
+      setJustCreated(res.data.title as string);
       setTitle("");
       setCategoryIds([]);
+      setTimeout(() => setJustCreated(null), 4000);
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Не удалось создать место");
     } finally {
@@ -91,64 +68,24 @@ export default function AddPlacePanel({
     }
   };
 
-  if (!hasToken) {
+  if (authLoading) {
+    return <p className="text-xs opacity-60">Проверяем сессию…</p>;
+  }
+
+  if (!user) {
     return (
-      <form onSubmit={handleAuth} className="flex h-full flex-col gap-2 text-sm">
-        <p className="text-xs opacity-70">Чтобы добавлять места, войдите или зарегистрируйтесь.</p>
-
-        <div className="flex gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setAuthMode("login")}
-            className={`flex-1 border px-2 py-1 ${
-              authMode === "login" ? "border-[#0b3d91] bg-[#e7f0ff]" : "border-[#0b3d91]/30 bg-white"
-            }`}
-          >
-            Вход
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthMode("register")}
-            className={`flex-1 border px-2 py-1 ${
-              authMode === "register" ? "border-[#0b3d91] bg-[#e7f0ff]" : "border-[#0b3d91]/30 bg-white"
-            }`}
-          >
-            Регистрация
-          </button>
-        </div>
-
-        {authMode === "register" && (
-          <input
-            className="border border-[#0b3d91]/40 px-2 py-1"
-            placeholder="Имя пользователя"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        )}
-        <input
-          className="border border-[#0b3d91]/40 px-2 py-1"
-          placeholder="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className="border border-[#0b3d91]/40 px-2 py-1"
-          placeholder="Пароль"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        {authError && <p className="text-xs text-red-600">{authError}</p>}
-
+      <div className="flex h-full flex-col items-start gap-3 text-sm">
+        <p className="opacity-70">
+          Чтобы отмечать новые места на карте, нужно войти в аккаунт или
+          зарегистрироваться.
+        </p>
         <button
-          disabled={authBusy}
-          className="mt-auto border border-[#0b3d91] bg-[#0b3d91] px-2 py-1 text-white disabled:opacity-50"
+          onClick={onRequestLogin}
+          className="border border-[#0b3d91] bg-[#0b3d91] px-3 py-1 text-white"
         >
-          {authBusy ? "Секунду…" : authMode === "login" ? "Войти" : "Создать аккаунт и войти"}
+          Войти / Зарегистрироваться
         </button>
-      </form>
+      </div>
     );
   }
 
@@ -187,6 +124,9 @@ export default function AddPlacePanel({
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
+      {justCreated && (
+        <p className="text-xs text-green-700">«{justCreated}» добавлено на карту ✓</p>
+      )}
 
       <button
         disabled={submitting}

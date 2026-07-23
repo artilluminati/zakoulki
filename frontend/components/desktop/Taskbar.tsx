@@ -40,7 +40,7 @@ export default function Taskbar({
                 href="/"
                 className="flex h-8 items-center gap-1 rounded-sm border border-white/30 bg-gradient-to-b from-lime-400 to-green-600 px-3 text-sm font-bold text-black shadow-inner"
             >
-                Zakoulki
+                🧭 Zakoulki
             </Link>
             <span className="hidden text-xs opacity-80 sm:inline">
                 {cityName}

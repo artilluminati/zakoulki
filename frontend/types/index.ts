@@ -37,6 +37,14 @@ export interface Photo {
   created_at: string;
 }
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  avatar?: string | null;
+  created_at: string;
+}
+
 export interface Post {
   id: number;
   place_id: number;
