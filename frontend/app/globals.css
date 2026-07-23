@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+.leaflet-control a > svg {
+    display: none !important;
+}
