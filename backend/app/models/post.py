@@ -19,4 +19,13 @@ class Post(Base):
 
     place = relationship("Place", back_populates="posts")
     author = relationship("User", back_populates="posts")
-    photos = relationship("Photo", back_populates="post", cascade="all, delete-orphan")
+    photos = relationship(
+        "Photo",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        order_by="Photo.created_at",
+    )
+
+    @property
+    def author_username(self) -> str | None:
+        return self.author.username if self.author else None

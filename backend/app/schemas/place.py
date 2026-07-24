@@ -3,6 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.schemas.category import CategoryOut
+from app.schemas.city import CityOut
+from app.schemas.photo import PhotoOut
 from app.schemas.post import PostOut
 
 
@@ -26,6 +28,7 @@ class PlaceOut(BaseModel):
 
     id: int
     city_id: int
+    city: CityOut
     created_by: int
     title: str
     slug: str
@@ -34,6 +37,7 @@ class PlaceOut(BaseModel):
     is_verified: bool
     created_at: datetime
     categories: list[CategoryOut] = []
+    cover_photo: PhotoOut | None = None
 
 
 class PlaceDetailOut(PlaceOut):

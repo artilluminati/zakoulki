@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
+import { getApiError } from "@/lib/errors";
 
 export default function AuthPanel() {
     const { user, loading, login, register, logout } = useAuth();
@@ -12,20 +13,6 @@ export default function AuthPanel() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
-
-    function getApiError(err: any): string {
-        const detail = err?.response?.data?.detail;
-
-        if (!detail) return "Неизвестная ошибка";
-
-        if (typeof detail === "string") return detail;
-
-        if (Array.isArray(detail)) return detail.map((e) => e.msg).join(", ");
-
-        if (typeof detail === "object" && "msg" in detail) return detail.msg;
-
-        return "Неизвестная ошибка";
-    }
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();

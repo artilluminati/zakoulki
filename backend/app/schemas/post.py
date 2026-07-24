@@ -22,6 +22,7 @@ class PostOut(BaseModel):
     id: int
     place_id: int
     author_id: int
+    author_username: str | None = None
     title: str
     text: str
     created_at: datetime

@@ -18,6 +18,7 @@ export interface Category {
 export interface Place {
   id: number;
   city_id: number;
+  city: City;
   created_by: number;
   title: string;
   slug: string;
@@ -26,6 +27,7 @@ export interface Place {
   is_verified: boolean;
   created_at: string;
   categories: Category[];
+  cover_photo?: Photo | null;
 }
 
 export interface Photo {
@@ -49,8 +51,13 @@ export interface Post {
   id: number;
   place_id: number;
   author_id: number;
+  author_username?: string | null;
   title: string;
   text: string;
   created_at: string;
   photos: Photo[];
+}
+
+export interface PlaceDetail extends Place {
+  posts: Post[];
 }

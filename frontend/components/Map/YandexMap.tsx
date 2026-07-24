@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadYandexMaps } from "@/lib/yandexMaps";
+import { photoUrl } from "@/lib/api";
 import type { City, Place } from "@/types";
 
 const API_KEY = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY || "";
@@ -90,12 +91,16 @@ export default function YandexMap({ city, places, pickMode, onPick }: Props) {
                 new ymaps.Placemark(
                     [place.latitude, place.longitude],
                     {
-                        balloonContentHeader: `<b>${escapeHtml(place.title)}</b>`,
-                        balloonContentBody: place.categories?.length
-                            ? `<div style="font-size:12px;opacity:.7;margin:4px 0;">${place.categories
-                                  .map((c) => escapeHtml(c.name))
-                                  .join(", ")}</div>`
+                        balloonContentHeader: place.cover_photo
+                            ? `<img src="${photoUrl(place.cover_photo.file_name)}" alt="" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;margin-bottom:6px;display:block;" />`
                             : "",
+                        balloonContentBody: `<b>${escapeHtml(place.title)}</b>${
+                            place.categories?.length
+                                ? `<div style="font-size:12px;opacity:.7;margin:4px 0;">${place.categories
+                                      .map((c) => escapeHtml(c.name))
+                                      .join(", ")}</div>`
+                                : ""
+                        }`,
                         balloonContentFooter: `<a href="/place/${place.slug}">Открыть место →</a>`,
                         hintContent: place.title,
                     },

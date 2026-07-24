@@ -6,6 +6,7 @@ import Taskbar from "./Taskbar";
 import CategoriesPanel from "./CategoriesPanel";
 import AddPlacePanel from "./AddPlacePanel";
 import AuthPanel from "./AuthPanel";
+import MyPlacesPanel from "./MyPlacesPanel";
 import YandexMap from "@/components/Map/YandexMap";
 import { useAuth } from "@/lib/auth";
 import type { City, Category, Place } from "@/types";
@@ -52,8 +53,16 @@ export default function MapDesktop({
             title: "Добавить место",
             icon: "📍",
             open: false,
-            geo: { x: 328, y: 24, width: 320, height: 400 },
+            geo: { x: 328, y: 24, width: 320, height: 520 },
             z: 9,
+        },
+        myPlaces: {
+            id: "myPlaces",
+            title: "Мои места",
+            icon: "🗂️",
+            open: false,
+            geo: { x: 24, y: 400, width: 320, height: 360 },
+            z: 7,
         },
         auth: {
             id: "auth",
@@ -118,6 +127,14 @@ export default function MapDesktop({
         setPickedPoint(null);
     }, []);
 
+    const handlePlaceUpdated = useCallback((place: Place) => {
+        setAllPlaces((prev) => prev.map((p) => (p.id === place.id ? place : p)));
+    }, []);
+
+    const handlePlaceDeleted = useCallback((placeId: number) => {
+        setAllPlaces((prev) => prev.filter((p) => p.id !== placeId));
+    }, []);
+
     // Кнопка в таскбаре показывает имя пользователя, если он вошёл в систему.
     const taskbarWindows = useMemo(
         () =>
@@ -178,6 +195,26 @@ export default function MapDesktop({
                         onTogglePick={() => setPickMode((v) => !v)}
                         onCreated={handlePlaceCreated}
                         onRequestLogin={() => openWindow("auth")}
+                    />
+                </Window>
+            )}
+
+            {windows.myPlaces.open && (
+                <Window
+                    title={windows.myPlaces.title}
+                    icon={windows.myPlaces.icon}
+                    geo={windows.myPlaces.geo}
+                    zIndex={windows.myPlaces.z}
+                    onFocus={() => bringToFront("myPlaces")}
+                    onClose={() => closeWindow("myPlaces")}
+                    onGeometryChange={(geo) => updateGeometry("myPlaces", geo)}
+                >
+                    <MyPlacesPanel
+                        places={allPlaces}
+                        categories={categories}
+                        onRequestLogin={() => openWindow("auth")}
+                        onUpdated={handlePlaceUpdated}
+                        onDeleted={handlePlaceDeleted}
                     />
                 </Window>
             )}

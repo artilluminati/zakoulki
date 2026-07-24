@@ -2,10 +2,11 @@ import re
 import unicodedata
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.db.session import get_db
 from app.models.place import Place
+from app.models.post import Post
 from app.models.category import Category
 from app.models.city import City
 from app.models.user import User
@@ -14,11 +15,37 @@ from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/places", tags=["places"])
 
+# Простая транслитерация кириллицы в латиницу для человекочитаемых slug'ов —
+# без неё slug получался кириллическим и ломался в URL (percent-encoding, 404).
+_CYRILLIC_TO_LATIN = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch",
+    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+}
+
+
+def transliterate(text: str) -> str:
+    return "".join(_CYRILLIC_TO_LATIN.get(ch, ch) for ch in text.lower())
+
 
 def slugify(text: str) -> str:
+    text = transliterate(text)
     text = unicodedata.normalize("NFKD", text)
     text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE).strip().lower()
-    return re.sub(r"[\s_-]+", "-", text) or "mesto"
+    text = re.sub(r"[\s_-]+", "-", text)
+    return text or "mesto"
+
+
+def _with_relations(query):
+    """Подгружает город/категории/публикации+фото одним заходом, чтобы не
+    ловить N+1 запросов при сериализации cover_photo и вложенных списков."""
+    return query.options(
+        joinedload(Place.city),
+        selectinload(Place.categories),
+        selectinload(Place.posts).selectinload(Post.photos),
+    )
 
 
 @router.get("", response_model=list[PlaceOut])
@@ -33,7 +60,7 @@ def list_places(
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Place)
+    q = _with_relations(db.query(Place))
     if city:
         q = q.join(City).filter(City.slug == city)
     if category:
@@ -50,9 +77,17 @@ def list_places(
     return q.offset((page - 1) * limit).limit(limit).all()
 
 
+@router.get("/slug/{slug}", response_model=PlaceDetailOut)
+def get_place_by_slug(slug: str, db: Session = Depends(get_db)):
+    place = _with_relations(db.query(Place)).filter(Place.slug == slug).first()
+    if not place:
+        raise HTTPException(404, "Место не найдено")
+    return place
+
+
 @router.get("/{place_id}", response_model=PlaceDetailOut)
 def get_place(place_id: int, db: Session = Depends(get_db)):
-    place = db.get(Place, place_id)
+    place = _with_relations(db.query(Place)).filter(Place.id == place_id).first()
     if not place:
         raise HTTPException(404, "Место не найдено")
     return place

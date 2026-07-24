@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { getApiError } from "@/lib/errors";
 import type { City, Category, Place } from "@/types";
 
 interface Props {
@@ -15,6 +16,15 @@ interface Props {
   onRequestLogin: () => void;
 }
 
+type Stage = "idle" | "place" | "post" | "photos";
+
+const STAGE_LABEL: Record<Stage, string> = {
+  idle: "Создать место",
+  place: "Создаём место…",
+  post: "Публикуем описание…",
+  photos: "Загружаем фото…",
+};
+
 export default function AddPlacePanel({
   city,
   categories,
@@ -26,18 +36,45 @@ export default function AddPlacePanel({
 }: Props) {
   const { user, loading: authLoading } = useAuth();
 
+  // --- место ---
   const [title, setTitle] = useState("");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+
+  // --- первая публикация (обязательна вместе минимум с одной фотографией) ---
+  const [postText, setPostText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [justCreated, setJustCreated] = useState<string | null>(null);
+
+  const submitting = stage !== "idle";
 
   const toggleCategory = (id: number) => {
     setCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
+  const handleFiles = (e: ChangeEvent<HTMLInputElement>) => {
+    setFiles(Array.from(e.target.files ?? []));
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setCategoryIds([]);
+    setPostText("");
+    setFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+
     if (!pickedPoint) {
       setError("Сначала выберите точку на карте");
       return;
@@ -46,25 +83,54 @@ export default function AddPlacePanel({
       setError("Введите название места");
       return;
     }
-    setSubmitting(true);
-    setError(null);
+    if (!postText.trim()) {
+      setError("Опишите находку в первой публикации");
+      return;
+    }
+    if (files.length === 0) {
+      setError("Добавьте хотя бы одну фотографию — она обязательна для первой публикации");
+      return;
+    }
+
     try {
-      const res = await api.post("/places", {
+      setStage("place");
+      const placeRes = await api.post("/places", {
         city_id: city.id,
         title,
         latitude: pickedPoint.lat,
         longitude: pickedPoint.lng,
         category_ids: categoryIds,
       });
-      onCreated(res.data);
-      setJustCreated(res.data.title as string);
-      setTitle("");
-      setCategoryIds([]);
-      setTimeout(() => setJustCreated(null), 4000);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Не удалось создать место");
+      const place: Place = placeRes.data;
+
+      setStage("post");
+      const postRes = await api.post("/posts", {
+        place_id: place.id,
+        title,
+        text: postText,
+      });
+      const post = postRes.data;
+
+      setStage("photos");
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("post_id", String(post.id));
+        formData.append("file", file);
+        await api.post("/photos", formData);
+      }
+
+      // Место было создано до загрузки фото, поэтому у него ещё не было
+      // cover_photo — перезапрашиваем, чтобы на карте сразу показалось превью.
+      const refreshedPlace = await api.get(`/places/${place.id}`);
+
+      onCreated(refreshedPlace.data);
+      setJustCreated(place.title);
+      resetForm();
+      setTimeout(() => setJustCreated(null), 5000);
+    } catch (err) {
+      setError(getApiError(err, "Не удалось создать место"));
     } finally {
-      setSubmitting(false);
+      setStage("idle");
     }
   };
 
@@ -94,9 +160,10 @@ export default function AddPlacePanel({
       <button
         type="button"
         onClick={onTogglePick}
+        disabled={submitting}
         className={`border px-2 py-1 text-xs ${
           pickMode ? "border-red-600 bg-red-100" : "border-[#0b3d91] bg-white"
-        }`}
+        } disabled:opacity-50`}
       >
         {pickMode ? "Отменить выбор точки" : "Выбрать точку на карте"}
       </button>
@@ -112,27 +179,82 @@ export default function AddPlacePanel({
         placeholder="Название места"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        disabled={submitting}
       />
 
-      <div className="flex-1 space-y-1 overflow-auto">
+      <div className="max-h-24 space-y-1 overflow-auto border border-[#0b3d91]/10 bg-white/60 p-1">
         {categories.map((cat) => (
           <label key={cat.id} className="flex items-center gap-2 text-xs">
-            <input type="checkbox" checked={categoryIds.includes(cat.id)} onChange={() => toggleCategory(cat.id)} />
+            <input
+              type="checkbox"
+              checked={categoryIds.includes(cat.id)}
+              onChange={() => toggleCategory(cat.id)}
+              disabled={submitting}
+            />
             {cat.name}
           </label>
         ))}
       </div>
 
+      <hr className="border-[#0b3d91]/20" />
+      <p className="text-xs font-bold opacity-70">Первая публикация</p>
+
+      <textarea
+        className="border border-[#0b3d91]/40 px-2 py-1"
+        placeholder="Расскажите, чем интересно это место"
+        rows={3}
+        value={postText}
+        onChange={(e) => setPostText(e.target.value)}
+        disabled={submitting}
+      />
+
+      <div className="space-y-1">
+        <label
+          className={`block cursor-pointer border px-2 py-1 text-center text-xs ${
+            submitting ? "border-[#0b3d91]/30 opacity-50" : "border-[#0b3d91] bg-white hover:bg-[#e7f0ff]"
+          }`}
+        >
+          📷 {files.length > 0 ? `Выбрано фото: ${files.length}` : "Выбрать фото (обязательно)"}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFiles}
+            disabled={submitting}
+            className="hidden"
+          />
+        </label>
+
+        {files.length > 0 && (
+          <ul className="max-h-16 space-y-0.5 overflow-auto text-xs">
+            {files.map((f, i) => (
+              <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 truncate">
+                <span className="truncate">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(i)}
+                  disabled={submitting}
+                  className="shrink-0 text-red-600 hover:underline disabled:opacity-50"
+                >
+                  убрать
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {error && <p className="text-xs text-red-600">{error}</p>}
       {justCreated && (
-        <p className="text-xs text-green-700">«{justCreated}» добавлено на карту ✓</p>
+        <p className="text-xs text-green-700">«{justCreated}» опубликовано на карте ✓</p>
       )}
 
       <button
         disabled={submitting}
-        className="border border-[#0b3d91] bg-[#0b3d91] px-2 py-1 text-white disabled:opacity-50"
+        className="mt-auto border border-[#0b3d91] bg-[#0b3d91] px-2 py-1 text-white disabled:opacity-50"
       >
-        {submitting ? "Публикуем…" : "Создать место"}
+        {STAGE_LABEL[stage]}
       </button>
     </form>
   );
