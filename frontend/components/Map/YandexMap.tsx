@@ -12,6 +12,7 @@ interface Props {
     places: Place[];
     pickMode?: boolean;
     onPick?: (lat: number, lng: number) => void;
+    userLocation?: { lat: number; lng: number } | null;
 }
 
 function escapeHtml(str: string) {
@@ -25,11 +26,12 @@ function escapeHtml(str: string) {
     return str.replace(/[&<>"']/g, (c) => map[c]);
 }
 
-export default function YandexMap({ city, places, pickMode, onPick }: Props) {
+export default function YandexMap({ city, places, pickMode, onPick, userLocation }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const clustererRef = useRef<any>(null);
     const pickMarkerRef = useRef<any>(null);
+    const userMarkerRef = useRef<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [ready, setReady] = useState(false);
 
@@ -144,6 +146,29 @@ export default function YandexMap({ city, places, pickMode, onPick }: Props) {
             pickMarkerRef.current = null;
         }
     }, [pickMode]);
+
+    // Метка "вы здесь" для фильтра "рядом со мной".
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!ready || !map || !window.ymaps) return;
+        const ymaps = window.ymaps;
+
+        if (userMarkerRef.current) {
+            map.geoObjects.remove(userMarkerRef.current);
+            userMarkerRef.current = null;
+        }
+
+        if (userLocation) {
+            const marker = new ymaps.Placemark(
+                [userLocation.lat, userLocation.lng],
+                { hintContent: "Вы здесь" },
+                { preset: "islands#geolocationIcon" },
+            );
+            map.geoObjects.add(marker);
+            userMarkerRef.current = marker;
+            map.setCenter([userLocation.lat, userLocation.lng], Math.max(map.getZoom(), 14));
+        }
+    }, [ready, userLocation]);
 
     if (error) {
         return (

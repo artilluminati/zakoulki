@@ -1,3 +1,4 @@
 frontend/env.local
 .venv
 *.pyc
+backend/app/uploads/*

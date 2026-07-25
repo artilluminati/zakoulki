@@ -1,24 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+import { Compass, Clock } from "lucide-react";
+import type { City } from "@/types";
 
 export interface TaskbarWindow {
     id: string;
     title: string;
-    icon: string;
+    icon?: ReactNode;
     open: boolean;
 }
 
 export default function Taskbar({
-    cityName,
+    city,
+    cities,
     windows,
     onToggle,
 }: {
-    cityName: string;
+    city: City;
+    cities: City[];
     windows: TaskbarWindow[];
     onToggle: (id: string) => void;
 }) {
+    const router = useRouter();
     const [time, setTime] = useState("");
 
     useEffect(() => {
@@ -29,40 +35,175 @@ export default function Taskbar({
                     minute: "2-digit",
                 }),
             );
+
         update();
-        const t = setInterval(update, 30_000);
+
+        const t = setInterval(update, 30000);
+
         return () => clearInterval(t);
     }, []);
 
     return (
-        <div className="absolute inset-x-0 bottom-0 z-50 flex h-11 items-center gap-2 border-t-2 border-[#0b3d91] bg-gradient-to-b from-[#2f6fe0] to-[#0b3d91] px-2 text-white">
-            <Link
-                href="/"
-                className="flex h-8 items-center gap-1 rounded-sm border border-white/30 bg-gradient-to-b from-lime-400 to-green-600 px-3 text-sm font-bold text-black shadow-inner"
-            >
-                🧭 Zakoulki
-            </Link>
-            <span className="hidden text-xs opacity-80 sm:inline">
-                {cityName}
-            </span>
-            <div className="mx-2 hidden h-6 w-px bg-white/30 sm:block" />
-            <div className="flex flex-1 gap-1 overflow-x-auto">
-                {windows.map((w) => (
-                    <button
-                        key={w.id}
-                        onClick={() => onToggle(w.id)}
-                        className={`flex h-8 shrink-0 items-center gap-1 rounded-sm border border-white/20 px-2 text-xs ${
-                            w.open ? "bg-white/25" : "bg-white/5"
-                        }`}
+        <footer
+            className="
+absolute
+bottom-0
+left-0
+right-0
+z-50
+h-14
+border-t-2
+border-black
+bg-white/10
+backdrop-blur-[48px]
+backdrop-saturate-[200%]
+backdrop-brightness-125
+"
+            style={{
+                boxShadow: `
+0 -2px 0 rgba(255,255,255,.45) inset,
+0 0 0 2px rgba(0,0,0,.95)
+`,
+            }}
+        >
+            <div className="flex h-full items-center gap-2 px-2">
+                {/* LOGO */}
+
+                <Link
+                    href="/"
+                    className="
+flex
+h-10
+shrink-0
+items-center
+gap-2
+border-2
+border-black
+bg-black
+px-3
+font-mono
+text-[11px]
+font-bold
+uppercase
+tracking-[0.2em]
+text-white
+transition-colors
+hover:bg-white
+hover:text-black
+"
+                >
+                    <Compass className="h-4 w-4" />
+                    ZAKOULKI
+                </Link>
+
+                {/* CITY */}
+
+                <div
+                    className="
+hidden
+sm:flex
+h-10
+items-center
+gap-2
+border-2
+border-black
+bg-white/10
+px-2
+font-mono
+text-[10px]
+uppercase
+tracking-[0.18em]
+"
+                >
+                    <span className="text-black/60">CITY</span>
+
+                    <select
+                        value={city.slug}
+                        onChange={(e) => router.push(`/map/${e.target.value}`)}
+                        className="
+bg-transparent
+outline-none
+font-mono
+text-[11px]
+uppercase
+tracking-[0.15em]
+"
                     >
-                        <span>{w.icon}</span>
-                        {w.title}
-                    </button>
-                ))}
+                        {cities.map((c) => (
+                            <option
+                                key={c.id}
+                                value={c.slug}
+                                className="text-black"
+                            >
+                                {c.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* WINDOWS */}
+
+                <div className="flex flex-1 gap-2 overflow-x-auto">
+                    {windows.map((w) => (
+                        <button
+                            key={w.id}
+                            onClick={() => onToggle(w.id)}
+                            className={`
+flex
+h-10
+shrink-0
+items-center
+gap-2
+border-2
+px-3
+font-mono
+text-[11px]
+uppercase
+tracking-[0.15em]
+transition-colors
+${
+    w.open
+        ? "border-black bg-black text-white"
+        : "border-black bg-white/10 text-black hover:bg-black hover:text-white"
+}
+`}
+                        >
+                            {w.icon && (
+                                <span className="[&>svg]:h-4 [&>svg]:w-4">
+                                    {w.icon}
+                                </span>
+                            )}
+
+                            <span>{w.title}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* STATUS */}
+
+                <div
+                    className="
+flex
+h-10
+items-center
+gap-2
+border-2
+border-black
+bg-white/10
+px-3
+font-mono
+text-[10px]
+uppercase
+tracking-[0.2em]
+"
+                >
+                    <Clock className="h-4 w-4" />
+
+                    <span className="text-black/50">TIME</span>
+
+                    <span className="text-black">{time}</span>
+                </div>
             </div>
-            <div className="rounded-sm border border-white/20 bg-white/10 px-2 py-1 text-xs">
-                {time}
-            </div>
-        </div>
+        </footer>
     );
 }

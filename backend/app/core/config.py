@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     UPLOAD_DIR: str = "app/uploads"
+    # CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://192.168.1.13:3000"]
+    CORS_ORIGINS: list[str] = ["*"]
 
     class Config:
         env_file = ".env"

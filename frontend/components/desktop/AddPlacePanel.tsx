@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Crosshair, Camera, Check, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { getApiError } from "@/lib/errors";
+import { useToast } from "@/lib/toast";
 import type { City, Category, Place } from "@/types";
 
 interface Props {
@@ -35,6 +37,7 @@ export default function AddPlacePanel({
   onRequestLogin,
 }: Props) {
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
 
   // --- место ---
   const [title, setTitle] = useState("");
@@ -47,7 +50,6 @@ export default function AddPlacePanel({
 
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [justCreated, setJustCreated] = useState<string | null>(null);
 
   const submitting = stage !== "idle";
 
@@ -124,9 +126,8 @@ export default function AddPlacePanel({
       const refreshedPlace = await api.get(`/places/${place.id}`);
 
       onCreated(refreshedPlace.data);
-      setJustCreated(place.title);
+      toast(`«${place.title}» опубликовано на карте`, "success");
       resetForm();
-      setTimeout(() => setJustCreated(null), 5000);
     } catch (err) {
       setError(getApiError(err, "Не удалось создать место"));
     } finally {
@@ -147,7 +148,7 @@ export default function AddPlacePanel({
         </p>
         <button
           onClick={onRequestLogin}
-          className="border border-[#0b3d91] bg-[#0b3d91] px-3 py-1 text-white"
+          className="rounded border border-[#0b3d91] bg-[#0b3d91] px-3 py-1 text-white"
         >
           Войти / Зарегистрироваться
         </button>
@@ -161,10 +162,11 @@ export default function AddPlacePanel({
         type="button"
         onClick={onTogglePick}
         disabled={submitting}
-        className={`border px-2 py-1 text-xs ${
-          pickMode ? "border-red-600 bg-red-100" : "border-[#0b3d91] bg-white"
+        className={`flex items-center justify-center gap-1.5 rounded border px-2 py-1.5 text-xs transition ${
+          pickMode ? "border-red-600 bg-red-100" : "border-[#0b3d91] bg-white hover:bg-[#e7f0ff]"
         } disabled:opacity-50`}
       >
+        <Crosshair className="h-3.5 w-3.5" />
         {pickMode ? "Отменить выбор точки" : "Выбрать точку на карте"}
       </button>
 
@@ -175,32 +177,43 @@ export default function AddPlacePanel({
       </p>
 
       <input
-        className="border border-[#0b3d91]/40 px-2 py-1"
+        className="rounded border border-[#0b3d91]/40 px-2 py-1.5 outline-none focus:border-[#0b3d91]"
         placeholder="Название места"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         disabled={submitting}
       />
 
-      <div className="max-h-24 space-y-1 overflow-auto border border-[#0b3d91]/10 bg-white/60 p-1">
-        {categories.map((cat) => (
-          <label key={cat.id} className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={categoryIds.includes(cat.id)}
-              onChange={() => toggleCategory(cat.id)}
-              disabled={submitting}
-            />
-            {cat.name}
-          </label>
-        ))}
+      <div className="max-h-24 space-y-1 overflow-auto rounded border border-[#0b3d91]/10 bg-white/60 p-1">
+        {categories.map((cat) => {
+          const active = categoryIds.includes(cat.id);
+          return (
+            <label key={cat.id} className="flex cursor-pointer items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={() => toggleCategory(cat.id)}
+                disabled={submitting}
+                className="sr-only"
+              />
+              <span
+                className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border ${
+                  active ? "border-[#0b3d91] bg-[#0b3d91]" : "border-[#0b3d91]/40 bg-white"
+                }`}
+              >
+                {active && <Check className="h-2.5 w-2.5 text-white" />}
+              </span>
+              {cat.name}
+            </label>
+          );
+        })}
       </div>
 
       <hr className="border-[#0b3d91]/20" />
       <p className="text-xs font-bold opacity-70">Первая публикация</p>
 
       <textarea
-        className="border border-[#0b3d91]/40 px-2 py-1"
+        className="rounded border border-[#0b3d91]/40 px-2 py-1.5 outline-none focus:border-[#0b3d91]"
         placeholder="Расскажите, чем интересно это место"
         rows={3}
         value={postText}
@@ -210,11 +223,12 @@ export default function AddPlacePanel({
 
       <div className="space-y-1">
         <label
-          className={`block cursor-pointer border px-2 py-1 text-center text-xs ${
+          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded border px-2 py-1.5 text-center text-xs ${
             submitting ? "border-[#0b3d91]/30 opacity-50" : "border-[#0b3d91] bg-white hover:bg-[#e7f0ff]"
           }`}
         >
-          📷 {files.length > 0 ? `Выбрано фото: ${files.length}` : "Выбрать фото (обязательно)"}
+          <Camera className="h-3.5 w-3.5" />
+          {files.length > 0 ? `Выбрано фото: ${files.length}` : "Выбрать фото (обязательно)"}
           <input
             ref={fileInputRef}
             type="file"
@@ -235,9 +249,10 @@ export default function AddPlacePanel({
                   type="button"
                   onClick={() => removeFile(i)}
                   disabled={submitting}
-                  className="shrink-0 text-red-600 hover:underline disabled:opacity-50"
+                  className="shrink-0 text-red-600 hover:text-red-700 disabled:opacity-50"
+                  aria-label="Убрать файл"
                 >
-                  убрать
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </li>
             ))}
@@ -246,13 +261,10 @@ export default function AddPlacePanel({
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
-      {justCreated && (
-        <p className="text-xs text-green-700">«{justCreated}» опубликовано на карте ✓</p>
-      )}
 
       <button
         disabled={submitting}
-        className="mt-auto border border-[#0b3d91] bg-[#0b3d91] px-2 py-1 text-white disabled:opacity-50"
+        className="mt-auto rounded border border-[#0b3d91] bg-[#0b3d91] px-2 py-1.5 text-white transition hover:bg-[#0a3480] disabled:opacity-50"
       >
         {STAGE_LABEL[stage]}
       </button>
