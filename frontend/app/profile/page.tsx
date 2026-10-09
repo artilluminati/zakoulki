@@ -4,15 +4,22 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { fetchThreads } from "@/lib/v5";
+import { api } from "@/lib/api";
 import ThreadCard from "@/components/ThreadCard";
 import type { ThreadV5 } from "@/types/v5";
+
+interface Notif { id: string | number; kind: string; thread_id?: number | null; comment_id?: number | null; }
 
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
   const [mine, setMine] = useState<ThreadV5[]>([]);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
 
   useEffect(() => {
-    if (user) fetchThreads({ author_id: user.id, limit: 50 }).then(setMine).catch(() => {});
+    if (user) {
+      fetchThreads({ author_id: user.id, limit: 50 }).then(setMine).catch(() => {});
+      api.get("/threads/notifications/mine").then((r) => setNotifs(r.data ?? [])).catch(() => {});
+    }
   }, [user]);
 
   if (loading) return <div className="mx-auto max-w-2xl px-3 pt-10">Загружаем…</div>;
@@ -40,6 +47,24 @@ export default function ProfilePage() {
         {mine.map((t) => <ThreadCard key={t.id} t={t} />)}
         {mine.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400">Пока пусто. <Link href="/create" className="font-bold text-emerald-700">Спросить →</Link></div>}
       </div>
+
+      {notifs.length > 0 && (
+        <>
+          <h2 className="font-extrabold">Уведомления</h2>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            {notifs.map((n) => (
+              <Link
+                key={String(n.id)}
+                href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"}
+                className="block border-b border-slate-50 px-4 py-2.5 text-sm last:border-0 hover:bg-slate-50"
+              >
+                {n.kind === "mention" ? "Вас упомянули" : "Ответ в вашем треде"}
+                {n.thread_id ? <span className="text-slate-400"> · вопрос #{n.thread_id}</span> : ""}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -32,9 +32,9 @@ export default function MdEditor({
 
   return (
     <div className="relative overflow-visible rounded-xl border border-slate-200 bg-white">
-      <div className="flex items-center gap-1 border-b border-slate-100 bg-slate-50 px-2 py-1.5">
-        <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="rounded px-2 py-1 text-sm font-bold hover:bg-slate-200">B</button>
-        <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="rounded px-2 py-1 text-sm italic hover:bg-slate-200">I</button>
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50 px-2 py-1.5 [&>button]:shrink-0">
+        <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="shrink-0 rounded px-2 py-1 text-sm font-bold hover:bg-slate-200">B</button>
+        <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="shrink-0 rounded px-2 py-1 text-sm italic hover:bg-slate-200">I</button>
         {!compact && (
           <>
             <button type="button" onClick={() => wrap("> ")} className="rounded px-2 py-1 hover:bg-slate-200">❝</button>
@@ -45,7 +45,7 @@ export default function MdEditor({
         <button type="button" title="Человек" onClick={() => ref.current && (ref.current.setRangeText("@", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value))} className="rounded px-2 py-1 hover:bg-slate-200">@</button>
         <button type="button" title="Место" onClick={() => ref.current && (ref.current.setRangeText("+", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">📍</button>
         <button type="button" title="Тег" onClick={() => ref.current && (ref.current.setRangeText("#", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">#</button>
-        <div className="ml-auto flex rounded-lg bg-slate-200/70 p-0.5 text-xs">
+        <div className="ml-auto flex shrink-0 rounded-lg bg-slate-200/70 p-0.5 text-xs">
           <button type="button" onClick={() => setTab("write")} className={`rounded-md px-2 py-1 ${tab === "write" ? "bg-white shadow" : ""}`}>Писать</button>
           <button type="button" onClick={() => setTab("preview")} className={`rounded-md px-2 py-1 ${tab === "preview" ? "bg-white shadow" : ""}`}>Просмотр</button>
         </div>

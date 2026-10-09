@@ -168,17 +168,19 @@ export default function MapPage() {
               </div>
             </div>
 
-            <div className="absolute right-3 top-3 z-10 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur md:right-4">
+            <div className="absolute left-3 top-[112px] z-10 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur md:left-auto md:right-4 md:top-3">
               {count} на экране
             </div>
 
-            <Link
-              href="/create"
-              className="absolute bottom-24 right-3 z-10 flex items-center gap-1.5 rounded-full bg-lime-400 py-3 pl-4 pr-5 text-[15px] font-extrabold text-slate-900 shadow-xl transition hover:bg-lime-300 active:scale-95 md:bottom-6 md:right-4"
-            >
-              <Plus className="h-5 w-5" strokeWidth={3} />
-              Спросить здесь
-            </Link>
+            {!selected && (
+              <Link
+                href="/create"
+                className="absolute bottom-24 right-3 z-10 flex items-center gap-1.5 rounded-full bg-lime-400 py-3 pl-4 pr-5 text-[15px] font-extrabold text-slate-900 shadow-xl transition hover:bg-lime-300 active:scale-95 md:bottom-6 md:right-4"
+              >
+                <Plus className="h-5 w-5" strokeWidth={3} />
+                Спросить здесь
+              </Link>
+            )}
 
             {selected && (
               <div className="absolute inset-x-3 bottom-20 z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px]">
