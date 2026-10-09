@@ -70,6 +70,7 @@ def my_notifications(db: Session = Depends(get_db), user: User = Depends(get_cur
 def list_threads(
     search: str | None = Query(None),
     tag: str | None = Query(None, description="имя тега без #"),
+    author_id: int | None = Query(None),
     has_geo: bool | None = Query(None),
     is_offtop: bool | None = Query(None),
     sort: str = Query("new", pattern="^(new|top|near)$"),
@@ -80,6 +81,8 @@ def list_threads(
     q = db.query(Thread).options(joinedload(Thread.place)).order_by(Thread.id.desc())
     if before_id:
         q = q.filter(Thread.id < before_id)
+    if author_id:
+        q = q.filter(Thread.author_id == author_id)
     if search:
         q = q.filter(Thread.body_md.ilike(f"%{search}%"))
     if tag:

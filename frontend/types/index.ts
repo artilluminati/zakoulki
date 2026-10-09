@@ -44,6 +44,7 @@ export interface User {
   username: string;
   email: string;
   avatar?: string | null;
+  role?: string;
   created_at: string;
 }
 

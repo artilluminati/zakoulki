@@ -82,7 +82,7 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
           {(t.author_username ?? "?").slice(0, 1).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[15px] font-bold">{t.author_username ?? "житель"}</div>
+          <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
           <div className="text-xs text-slate-500">
             {new Date(t.created_at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
             {t.is_offtop ? " · оффтоп" : " · вопрос"}

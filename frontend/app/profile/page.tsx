@@ -12,7 +12,7 @@ export default function ProfilePage() {
   const [mine, setMine] = useState<ThreadV5[]>([]);
 
   useEffect(() => {
-    if (user) fetchThreads({ limit: 50 }).then((all) => setMine(all.filter((t) => t.author_id === user.id))).catch(() => {});
+    if (user) fetchThreads({ author_id: user.id, limit: 50 }).then(setMine).catch(() => {});
   }, [user]);
 
   if (loading) return <div className="mx-auto max-w-2xl px-3 pt-10">Загружаем…</div>;
@@ -32,6 +32,7 @@ export default function ProfilePage() {
         </div>
         <div className="mt-3 flex gap-4 text-sm">
           <span><b>{mine.length}</b> <span className="text-slate-500">вопросов</span></span>
+          {user.role === "admin" && <Link href="/admin" className="font-bold text-emerald-700">Админка →</Link>}
         </div>
       </div>
       <h2 className="font-extrabold">Мои вопросы</h2>
