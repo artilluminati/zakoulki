@@ -34,7 +34,9 @@ def _out(p: GeoPlace) -> dict:
 def search_places(q: str = Query(min_length=2), lat: float | None = None, lng: float | None = None,
                   db: Session = Depends(get_db)):
     """Своя база + бесплатный HTTP Геокодер (адреса). Организаций у Яндекса бесплатно нет."""
-    items = db.query(GeoPlace).filter(GeoPlace.name.ilike(f"%{q}%")).limit(10).all()
+    items = db.query(GeoPlace).filter(
+        (GeoPlace.name.ilike(f"%{q}%")) | (GeoPlace.address.ilike(f"%{q}%")) | (GeoPlace.street.ilike(f"%{q}%"))
+    ).limit(10).all()
     out = [_out(p) for p in items]
     key = settings.YANDEX_GEOCODER_KEY
     if key and len(out) < 10:
