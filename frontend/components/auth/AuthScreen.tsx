@@ -15,7 +15,7 @@ export default function AuthScreen({ mode }: { mode: "login" | "register" }) {
         </Link>
         <h1 className="text-center text-xl font-extrabold">{mode === "login" ? "С возвращением" : "Создать аккаунт"}</h1>
         <p className="mb-4 text-center text-sm text-slate-500">
-          {mode === "login" ? "Отвечайте соседям и спрашивайте город" : "Спрашивайте город за минуту"}
+          {mode === "login" ? "Обсуждайте городские вопросы и отвечайте другим" : "Задавайте вопросы городу за минуту"}
         </p>
         <AuthPanel initialMode={mode} onSuccess={() => router.push("/")} />
         <p className="mt-4 text-center text-[13px] text-slate-500">

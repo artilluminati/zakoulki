@@ -94,7 +94,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {item("/create", "Создать", PlusCircle)}
           {item(user ? "/profile" : "/login", "Профиль", User)}
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-[13px] text-slate-500">
-            Спрашивайте город. Точки на карте — это вопросы соседей: отопление, дороги, стройки.
+            Спрашивайте о городе: от ямы во дворе до судьбы парка — вопросы с местом видны на карте.
           </div>
         </aside>
         <main className="min-w-0 flex-1 pb-24 md:pb-12">{children}</main>

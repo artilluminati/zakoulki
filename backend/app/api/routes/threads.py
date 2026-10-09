@@ -35,11 +35,13 @@ class CommentCreate(BaseModel):
 def _thread_out(t: Thread, db: Session) -> dict:
     from app.models.thread_photo import ThreadPhoto
     photos = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).all()
+    cats = [{"id": c.id, "name": c.name, "slug": c.slug} for c in (t.categories or [])]
     return {
         "id": t.id, "author_id": t.author_id,
         "author_username": db.get(User, t.author_id).username if db.get(User, t.author_id) else None,
         "title": t.title,
         "body_md": t.body_md, "body_html": t.body_html,
+        "categories": cats,
         "photos": [{"id": p.id, "url": f"/uploads/{p.file_name}"} for p in photos],
         "is_offtop": t.is_offtop,
         "place": {"id": t.place.id, "name": t.place.name, "address": t.place.address,
@@ -71,6 +73,7 @@ def list_threads(
     search: str | None = Query(None),
     tag: str | None = Query(None, description="имя тега без #"),
     author_id: int | None = Query(None),
+    category_id: int | None = Query(None),
     has_geo: bool | None = Query(None),
     is_offtop: bool | None = Query(None),
     sort: str = Query("new", pattern="^(new|top|near)$"),
@@ -87,6 +90,9 @@ def list_threads(
         q = q.filter(Thread.body_md.ilike(f"%{search}%"))
     if tag:
         q = q.join(ThreadTag, ThreadTag.thread_id == Thread.id).join(Tag, ThreadTag.tag_id == Tag.id).filter(Tag.name == tag.lower())
+    if category_id:
+        from app.models.thread import thread_categories
+        q = q.join(thread_categories, thread_categories.c.thread_id == Thread.id).filter(thread_categories.c.category_id == category_id)
     if has_geo is True:
         q = q.filter(Thread.place_id.isnot(None))
     if has_geo is False:

@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", 
 
 export const metadata: Metadata = {
   title: { default: "Закоулки — вопросы города", template: "%s · Закоулки" },
-  description: "Геосоцсеть: спрашивайте город, отвечайте соседям, смотрите вопросы на карте.",
+  description: "Платформа городских вопросов: от ямы во дворе до судьбы парка. Спрашивайте, отвечайте, смотрите на карте.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

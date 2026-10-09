@@ -61,7 +61,7 @@ export default function MdEditor({
               if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); wrap("*", "*"); }
               if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); wrap("[", "](https://)"); }
             }}
-            placeholder={placeholder ?? "Что происходит рядом? @ — человек, + — место, # — тема"}
+            placeholder={placeholder ?? "О чем хотите спросить? @ — человек, + — место, # — тема"}
             rows={compact ? 3 : 5}
             className="w-full resize-y bg-white px-3 py-2 text-[15px] outline-none placeholder:text-slate-400"
           />

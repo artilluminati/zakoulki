@@ -14,6 +14,7 @@ type Sort = "new" | "top" | "near";
 export default function FeedPage() {
   const params = useSearchParams();
   const search = params.get("search") ?? "";
+  const categoryParam = params.get("category");
   const { user } = useAuth();
   const [items, setItems] = useState<ThreadV5[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,7 @@ export default function FeedPage() {
     try {
       const data = await fetchThreads({
         search: search || undefined,
+        category_id: categoryParam ? Number(categoryParam) : undefined,
         sort: sort === "near" ? "new" : sort,
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
@@ -37,7 +39,7 @@ export default function FeedPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [sort, filter, search]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [sort, filter, search, categoryParam]);
 
   const post = async () => {
     if (!draft.trim() || posting) return;
@@ -55,7 +57,7 @@ export default function FeedPage() {
       {/* композер */}
       {user ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <MdEditor value={draft} onChange={setDraft} compact placeholder="Что происходит рядом? @ — человек, + — место" />
+          <MdEditor value={draft} onChange={setDraft} compact placeholder="О чем хотите спросить? @ — человек, + — место" />
           <div className="mt-2 flex items-center justify-between">
             <span className="text-xs text-slate-400">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
             <div className="flex gap-2">

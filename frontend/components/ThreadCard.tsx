@@ -114,6 +114,16 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
         <ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} />
       </Link>
 
+      {t.categories && t.categories.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {t.categories.map((c) => (
+            <Link key={c.id} href={`/?category=${c.id}`} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 hover:bg-slate-200">
+              {c.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {t.photos && t.photos.length > 0 && (
         <div className={`mt-2 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
           {t.photos.slice(0, 4).map((p) => (
