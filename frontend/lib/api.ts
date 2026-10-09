@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_URL =
+  typeof window === "undefined"
+    ? "http://127.0.0.1:8000/api" // SSR: бэкенд на том же хосте
+    : process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // FastAPI отдаёт загруженные фото статикой на /uploads, а не под префиксом
 // /api — вычисляем origin бэкенда один раз, чтобы строить абсолютные ссылки.

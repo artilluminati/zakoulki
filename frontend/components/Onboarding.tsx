@@ -1,0 +1,63 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { X } from "lucide-react";
+
+const KEY = "zakoulki_onboarding_v1";
+
+const STEPS = [
+  { title: "Что происходит рядом", text: "Лента вопросов соседей: отопление, ямы, стройки. Без выбора города — сразу контент.", emoji: "🏘" },
+  { title: "Спросите город", text: "Напишите вопрос, прикрепите точку — ответят те, кто рядом.", emoji: "💬" },
+  { title: "Точка на карте", text: "Каждый вопрос с местом виден на карте. Дубли подсвечиваем заранее.", emoji: "📍" },
+];
+
+export default function Onboarding() {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(KEY)) setOpen(true);
+    } catch { setOpen(true); }
+  }, []);
+
+  if (!open) return null;
+  const s = STEPS[step];
+
+  const close = () => {
+    try { localStorage.setItem(KEY, "1"); } catch {}
+    setOpen(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 md:items-center">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div className="text-5xl">{s.emoji}</div>
+          <button onClick={close} aria-label="Пропустить" className="rounded-full p-1 text-slate-400 hover:bg-slate-100">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <h2 className="mt-3 text-xl font-extrabold">{s.title}</h2>
+        <p className="mt-1 text-[15px] text-slate-600">{s.text}</p>
+        <div className="mt-3 flex gap-1.5">
+          {STEPS.map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full ${i === step ? "bg-lime-500" : "bg-slate-200"}`} />
+          ))}
+        </div>
+        <div className="mt-4 flex gap-2">
+          {step < STEPS.length - 1 ? (
+            <>
+              <button onClick={close} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold">Пропустить</button>
+              <button onClick={() => setStep(step + 1)} className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white">Далее</button>
+            </>
+          ) : (
+            <button onClick={close} className="flex-1 rounded-xl bg-lime-400 py-2.5 text-sm font-extrabold text-slate-900 hover:bg-lime-300">
+              Смотреть ленту
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

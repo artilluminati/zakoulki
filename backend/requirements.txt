@@ -10,3 +10,5 @@ pwdlib[argon2]
 pillow
 python-multipart
 email-validator
+markdown
+bleach

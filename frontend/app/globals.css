@@ -4,29 +4,34 @@
   --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
-html,
+html, body { height: 100%; margin: 0; }
+
 body {
-  height: 100%;
-  margin: 0;
+  background: #f6f7f4;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Аккуратный скроллбар внутри окон рабочего стола и карточек — вместо
-   массивного системного, чтобы интерфейс выглядел более цельно. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
-}
+* { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,.2) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(15,23,42,.18); border-radius: 999px; }
+::selection { background: rgba(132,204,22,.35); }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* рендер тредов: чипы мест с иконкой (не эмодзи) */
+.thread-html a.place {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #ecfdf5; color: #047857;
+  border: 1px solid #a7f3d0; border-radius: 999px;
+  padding: 1px 10px 1px 6px; font-size: 13px; font-weight: 600;
+  text-decoration: none; white-space: nowrap; vertical-align: baseline;
 }
+.thread-html a.place:hover { background: #d1fae5; }
+.thread-html p { margin: 0 0 8px; }
+.thread-html p:last-child { margin-bottom: 0; }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-}
-
-::selection {
-  background: rgba(163, 230, 53, 0.35);
+/* тултип места */
+.place-tooltip {
+  position: absolute; z-index: 50; width: 240px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(2,6,23,.16); overflow: hidden;
 }

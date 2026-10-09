@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
-from app.api.routes import auth, users, cities, categories, places, posts, photos
+from app.api.routes import auth, users, cities, categories, places, posts, photos, threads, geo_places
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -25,6 +25,8 @@ app.include_router(categories.router, prefix=api_prefix)
 app.include_router(places.router, prefix=api_prefix)
 app.include_router(posts.router, prefix=api_prefix)
 app.include_router(photos.router, prefix=api_prefix)
+app.include_router(threads.router, prefix=api_prefix)
+app.include_router(geo_places.router, prefix=api_prefix)
 
 
 @app.get("/")
