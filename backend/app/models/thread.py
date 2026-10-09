@@ -31,7 +31,7 @@ class Thread(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    author = relationship("User")
+    author = relationship("User", back_populates="threads")
     place = relationship("GeoPlace")
     categories = relationship("Category", secondary=thread_categories)
     comments = relationship("ThreadComment", back_populates="thread", cascade="all, delete-orphan")

@@ -69,6 +69,7 @@ def my_notifications(db: Session = Depends(get_db), user: User = Depends(get_cur
 @router.get("")
 def list_threads(
     search: str | None = Query(None),
+    tag: str | None = Query(None, description="имя тега без #"),
     has_geo: bool | None = Query(None),
     is_offtop: bool | None = Query(None),
     sort: str = Query("new", pattern="^(new|top|near)$"),
@@ -81,6 +82,8 @@ def list_threads(
         q = q.filter(Thread.id < before_id)
     if search:
         q = q.filter(Thread.body_md.ilike(f"%{search}%"))
+    if tag:
+        q = q.join(ThreadTag, ThreadTag.thread_id == Thread.id).join(Tag, ThreadTag.tag_id == Tag.id).filter(Tag.name == tag.lower())
     if has_geo is True:
         q = q.filter(Thread.place_id.isnot(None))
     if has_geo is False:

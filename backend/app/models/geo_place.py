@@ -23,3 +23,5 @@ class GeoPlace(Base):
     preview_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    author = relationship("User", back_populates="places")

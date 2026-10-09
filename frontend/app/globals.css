@@ -26,6 +26,10 @@ body {
   text-decoration: none; white-space: nowrap; vertical-align: baseline;
 }
 .thread-html a.place:hover { background: #d1fae5; }
+.thread-html a.tag {
+  color: #047857; font-weight: 600; text-decoration: none;
+}
+.thread-html a.tag:hover { text-decoration: underline; }
 .thread-html p { margin: 0 0 8px; }
 .thread-html p:last-child { margin-bottom: 0; }
 

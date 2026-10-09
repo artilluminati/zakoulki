@@ -58,6 +58,12 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
         r'<a class="place" data-place-id="\1" href="/map?place=\1">📍\2</a>',
         html,
     )
+    # #теги -> ссылки на /tag/
+    html = re.sub(
+        r"(?<!\w)#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})",
+        r'<a class="tag" href="/tag/\1">#\1</a>',
+        html,
+    )
     if comments_mode:
         # в комментах режем заголовки
         html = re.sub(r"</?h[1-3]>", "", html)

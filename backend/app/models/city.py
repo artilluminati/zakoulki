@@ -17,5 +17,3 @@ class City(Base):
     center_lng: Mapped[float] = mapped_column(Float)
     default_zoom: Mapped[int] = mapped_column(Integer, default=13)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    places = relationship("Place", back_populates="city")

@@ -17,5 +17,5 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    places = relationship("Place", back_populates="author")
-    posts = relationship("Post", back_populates="author")
+    places = relationship("GeoPlace", back_populates="author")
+    threads = relationship("Thread", back_populates="author")
