@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.models.user import User
 from app.models.geo_place import GeoPlace
 from app.models.thread import Thread
@@ -32,9 +33,37 @@ def _out(p: GeoPlace) -> dict:
 @router.get("/search")
 def search_places(q: str = Query(min_length=2), lat: float | None = None, lng: float | None = None,
                   db: Session = Depends(get_db)):
-    """Поиск по своим местам (Яндекс-прокси подключим когда будет ключ — см. QUESTIONS.md:6)."""
+    """Своя база + бесплатный HTTP Геокодер (адреса). Организаций у Яндекса бесплатно нет."""
     items = db.query(GeoPlace).filter(GeoPlace.name.ilike(f"%{q}%")).limit(10).all()
-    return [_out(p) for p in items]
+    out = [_out(p) for p in items]
+    key = settings.YANDEX_GEOCODER_KEY
+    if key and len(out) < 10:
+        try:
+            import urllib.parse
+            import urllib.request
+            import json as _json
+            params = urllib.parse.urlencode({"apikey": key, "geocode": q, "format": "json", "results": 5, "lang": "ru_RU"})
+            with urllib.request.urlopen(f"https://geocode-maps.yandex.ru/v1/?{params}", timeout=5) as r:
+                data = _json.load(r)
+            for f in data.get("response", {}).get("GeoObjectCollection", {}).get("featureMember", []):
+                g = f.get("GeoObject", {})
+                pos = g.get("Point", {}).get("pos", "").split()
+                if len(pos) != 2:
+                    continue
+                meta = g.get("metaDataProperty", {}).get("GeocoderMetaData", {})
+                out.append({
+                    "id": 0, "name": g.get("name", q),
+                    "address": meta.get("text"),
+                    "district": None,
+                    "street": None,
+                    "lat": float(pos[1]), "lng": float(pos[0]),
+                    "yandex_kind": "address", "preview_url": None,
+                })
+                if len(out) >= 10:
+                    break
+        except Exception:
+            pass
+    return out
 
 
 @router.post("", status_code=201)

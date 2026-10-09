@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import PlaceSuggest from "./PlaceSuggest";
+import { renderPreview } from "@/lib/mdPreview";
 
 export default function MdEditor({
   value, onChange, placeholder, compact = false,
@@ -69,21 +70,31 @@ export default function MdEditor({
             <PlaceSuggest
               query={plusQuery}
               onClose={() => setPlusQuery(null)}
-              onPick={(p) => {
+              onPick={async (p) => {
                 const el = ref.current;
                 if (!el) return;
+                let pid = p.id;
+                if (pid === 0) {
+                  // результат геокодера — закрепляем в своей базе
+                  const { createGeoPlace } = await import("@/lib/v5");
+                  const saved = await createGeoPlace({
+                    name: p.name, latitude: p.lat, longitude: p.lng,
+                    address: p.address, district: p.district, street: p.street,
+                  });
+                  pid = saved.id;
+                }
                 const pos = el.selectionStart ?? value.length;
-                const before = value.slice(0, pos).replace(/\+[а-яА-ЯёЁa-zA-Z0-9 ]*$/, `+[${p.id}:${p.name}] `);
-                const next = before + value.slice(pos);
-                onChange(next);
+                const before = value.slice(0, pos).replace(/\+[а-яА-ЯёЁa-zA-Z0-9 ]*$/, `+[${pid}:${p.name}] `);
+                onChange(before + value.slice(pos));
               }}
             />
           )}
         </>
       ) : (
-        <div className="min-h-[80px] px-3 py-2 text-[15px] text-slate-500">
-          Превью отрендерит сервер: места — чипом с иконкой и тултипом (фото + улица · район).
-        </div>
+        <div
+          className="pv-preview min-h-[80px] px-3 py-2 text-[15px] leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
+        />
       )}
       <div className="border-t border-slate-100 px-3 py-1 text-xs text-slate-400">
         **жирный** *курсив* [текст](ссылка) · `@` человек · `+` место · `#` тег

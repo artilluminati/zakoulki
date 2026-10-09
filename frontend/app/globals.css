@@ -30,6 +30,18 @@ body {
   color: #047857; font-weight: 600; text-decoration: none;
 }
 .thread-html a.tag:hover { text-decoration: underline; }
+
+/* клиентское превью редактора */
+.pv-preview p { margin: 0 0 6px; }
+.pv-preview p:last-child { margin-bottom: 0; }
+.pv-preview .pv-list { margin: 0 0 6px 18px; list-style: disc; }
+.pv-preview .pv-quote { margin: 0 0 6px; padding-left: 10px; border-left: 3px solid #a7f3d0; color: #475569; }
+.pv-preview code { background: #f1f5f9; border-radius: 6px; padding: 0 5px; font-size: 13px; }
+.pv-preview a { color: #047857; font-weight: 600; }
+.pv-place { display: inline-block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 999px; padding: 0 8px; font-size: 13px; font-weight: 600; }
+.pv-user { font-weight: 700; color: #0f172a; }
+.pv-tag { color: #047857; font-weight: 600; }
+.pv-empty { color: #94a3b8; }
 .thread-html p { margin: 0 0 8px; }
 .thread-html p:last-child { margin-bottom: 0; }
 

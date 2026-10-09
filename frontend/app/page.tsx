@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- эффекты ниже синхронизируют состояние с сервером/localStorage, это их прямая задача */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
@@ -41,7 +42,7 @@ export default function FeedPage() {
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await fetchThreads({
@@ -56,18 +57,22 @@ export default function FeedPage() {
       setItems(data);
     } catch { setItems([]); }
     setLoading(false);
-  };
+  }, [sort, filter, search, categoryParam, geo]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [sort, filter, search, categoryParam, geo]);
+  useEffect(() => { load(); }, [load]);
 
   const pickSort = (s: Sort) => {
     setGeoError(false);
     if (s === "near" && !geo) {
-      navigator.geolocation?.getCurrentPosition(
-        (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => setGeoError(true),
-        { timeout: 8000 }
-      );
+      if (!("geolocation" in navigator)) {
+        setGeoError(true);
+      } else {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => setGeoError(true),
+          { timeout: 8000 }
+        );
+      }
     }
     setSort(s);
   };
@@ -131,9 +136,9 @@ export default function FeedPage() {
           Определяем ваше местоположение…
         </div>
       )}
-      {geoError && (
+      {sort === "near" && geoError && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800">
-          Геолокация недоступна — показываем все новое
+          Не можем определить местоположение — показываем новое
         </div>
       )}
 

@@ -45,10 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // первичную проверку сессии держим в эффекте: читаем токен из внешнего хранилища
+  /* eslint-disable react-hooks/set-state-in-effect -- синхронизация с localStorage при старте */
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
-
+  /* eslint-enable react-hooks/set-state-in-effect */
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.post("/auth/login", { email, password });
     localStorage.setItem("token", res.data.access_token);

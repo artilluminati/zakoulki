@@ -5,7 +5,7 @@
  * можно было безопасно вывести её в JSX (объект как children — краш React).
  */
 export function getApiError(err: unknown, fallback = "Неизвестная ошибка"): string {
-  const detail = (err as any)?.response?.data?.detail;
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
 
   if (!detail) return fallback;
   if (typeof detail === "string") return detail;

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- эффекты ниже синхронизируют состояние с сервером/localStorage */
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -26,7 +27,6 @@ export default function CreatePage() {
         if (d.body) setBody(d.body);
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [addr, setAddr] = useState("");
   const [found, setFound] = useState<GeoPlaceV5[]>([]);
@@ -55,7 +55,8 @@ export default function CreatePage() {
   }, []);
 
   const useGeolocation = () => {
-    navigator.geolocation?.getCurrentPosition(async (pos) => {
+    if (!("geolocation" in navigator)) { setError("Не можем определить местоположение"); return; }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
       setPendingGeo({ latitude, longitude });
       try { setNearby(await fetchNearbyThreads(latitude, longitude)); } catch {}
@@ -72,12 +73,15 @@ export default function CreatePage() {
         placeId = p.id;
       }
       const t = await createThread({ title: title || null, body_md: body, place_id: placeId, category_ids: catIds });
-      for (const f of files.slice(0, 5)) {
+      for (const f of files) {
         try { await uploadThreadPhoto(t.id, f); } catch {}
       }
       try { localStorage.removeItem(DRAFT_KEY); } catch {}
       router.push(`/thread/${t.id}`);
-    } catch (e: any) { setError(e?.response?.data?.detail ?? "Не опубликовалось"); setSaving(false); }
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "Не опубликовалось";
+      setError(msg); setSaving(false);
+    }
   };
 
   return (
@@ -113,10 +117,10 @@ export default function CreatePage() {
       {/* фото */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700">
-          📷 Добавить фото ({files.length}/5)
+          📷 Добавить фото{files.length > 0 ? ` (${files.length})` : ""}
           <input
             type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 5))}
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </label>
         {files.length > 0 && (
@@ -184,7 +188,7 @@ export default function CreatePage() {
           {saving ? "Публикуем…" : "Опубликовать"}
         </button>
       </div>
-      <p className="pb-24 text-center text-xs text-slate-400 md:pb-8">Черновик никуда не сохраняется кроме этой страницы (localStorage — следующим шагом).</p>
+      <p className="pb-24 text-center text-xs text-slate-400 md:pb-8">Черновик сохраняется автоматически</p>
     </div>
   );
 }

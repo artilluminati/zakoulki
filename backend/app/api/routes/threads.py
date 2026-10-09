@@ -224,17 +224,15 @@ def upload_thread_photo(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Фото треда (до 5, 10МБ)."""
+    """Фото треда."""
     from app.models.thread_photo import ThreadPhoto
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
     if t.author_id != user.id:
         raise HTTPException(403, "Недостаточно прав")
-    if db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == thread_id).count() >= 5:
-        raise HTTPException(400, "Не больше 5 фото")
     if file.size and file.size > 10 * 1024 * 1024:
-        raise HTTPException(400, "Файл больше 10МБ")
+        raise HTTPException(400, "Файл слишком большой")
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     ext = os.path.splitext(file.filename or "")[1] or ".jpg"

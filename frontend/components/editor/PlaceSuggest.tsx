@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- дебаунс-поиск мест по вводу */
 
 import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
@@ -25,7 +26,7 @@ export default function PlaceSuggest({ query, onPick, onClose }: { query: string
   return (
     <div className="absolute z-50 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
       <div className="border-b border-slate-100 px-3 py-1.5 text-xs text-slate-400">
-        {loading ? "Ищем места…" : items.length ? `Места: ${items.length}` : "Ничего не нашли — точка создастся при публикации"}
+        {loading ? "Ищем места…" : items.length ? `Места: ${items.length}` : "Ничего не нашли — уточните название"}
       </div>
       {items.map((p) => (
         <button
@@ -39,7 +40,7 @@ export default function PlaceSuggest({ query, onPick, onClose }: { query: string
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold">{p.name}</span>
-            <span className="block truncate text-xs text-slate-500">{[p.address, p.district].filter(Boolean).join(" · ")}</span>
+            <span className="block truncate text-xs text-slate-500">{[p.address, p.district].filter(Boolean).join(" · ")}{p.id === 0 ? " · Яндекс" : ""}</span>
           </span>
         </button>
       ))}

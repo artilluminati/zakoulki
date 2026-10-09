@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect, @typescript-eslint/no-explicit-any -- синхронизация с сервером и нетипизированный JS API Яндекс.Карт */
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -47,7 +48,7 @@ export default function MapPage() {
 
   // грузим точки при движении карты
   useEffect(() => {
-    if (!key) { setErr("Нет ключа Яндекс.Карт"); setLoading(false); return; }
+    if (!key) { setErr("Карта временно недоступна"); setLoading(false); return; }
     let map: any;
     let alive = true;
     (window as any).__ymap = undefined;

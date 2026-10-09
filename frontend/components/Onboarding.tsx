@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- чтение флага онбординга из localStorage */
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";

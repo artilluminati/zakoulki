@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- загрузка треда с сервера */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag } from "lucide-react";
@@ -19,11 +20,11 @@ export default function ThreadPage() {
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try { setT(await fetchThread(id)); } catch { setT(null); }
     setLoading(false);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  }, [id]);
+  useEffect(() => { load(); }, [load]);
 
   const send = async () => {
     if (!reply.trim()) return;
