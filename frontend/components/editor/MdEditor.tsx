@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import PlaceSuggest from "./PlaceSuggest";
+import UserSuggest from "./UserSuggest";
 import { renderPreview } from "@/lib/mdPreview";
 
 export default function MdEditor({
@@ -12,6 +13,7 @@ export default function MdEditor({
   const ref = useRef<HTMLTextAreaElement>(null);
   const [tab, setTab] = useState<"write" | "preview">("write");
   const [plusQuery, setPlusQuery] = useState<string | null>(null);
+  const [userQuery, setUserQuery] = useState<string | null>(null);
 
   const wrap = (before: string, after = "") => {
     const el = ref.current;
@@ -24,10 +26,11 @@ export default function MdEditor({
   };
 
   const trackPlus = (v: string, cursor: number) => {
-    // ищем `+слово` перед курсором
     const before = v.slice(0, cursor);
-    const m = before.match(/\+([а-яА-ЯёЁa-zA-Z0-9 ]{0,40})$/);
-    setPlusQuery(m ? m[1].trimStart() : null);
+    const pm = before.match(/\+([а-яА-ЯёЁa-zA-Z0-9 ]{0,40})$/);
+    setPlusQuery(pm ? pm[1].trimStart() : null);
+    const um = before.match(/(?:^|\s)@([а-яА-ЯёЁa-zA-Z0-9_]{0,40})$/);
+    setUserQuery(um ? um[1] : null);
   };
 
   return (
@@ -42,7 +45,7 @@ export default function MdEditor({
             <button type="button" title="Ссылка (Ctrl+K)" onClick={() => wrap("[", "](https://)")} className="rounded px-2 py-1 hover:bg-slate-200">🔗</button>
           </>
         )}
-        <button type="button" title="Человек" onClick={() => ref.current && (ref.current.setRangeText("@", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value))} className="rounded px-2 py-1 hover:bg-slate-200">@</button>
+        <button type="button" title="Человек" onClick={() => ref.current && (ref.current.setRangeText("@", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">@</button>
         <button type="button" title="Место" onClick={() => ref.current && (ref.current.setRangeText("+", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">📍</button>
         <button type="button" title="Тег" onClick={() => ref.current && (ref.current.setRangeText("#", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">#</button>
         <div className="ml-auto flex shrink-0 rounded-lg bg-slate-200/70 p-0.5 text-xs">
@@ -57,7 +60,7 @@ export default function MdEditor({
             value={value}
             onChange={(e) => { onChange(e.target.value); trackPlus(e.target.value, e.target.selectionStart ?? 0); }}
             onKeyDown={(e) => {
-              if (e.key === "Escape") setPlusQuery(null);
+              if (e.key === "Escape") { setPlusQuery(null); setUserQuery(null); }
               if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") { e.preventDefault(); wrap("**", "**"); }
               if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); wrap("*", "*"); }
               if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); wrap("[", "](https://)"); }
@@ -85,6 +88,19 @@ export default function MdEditor({
                 }
                 const pos = el.selectionStart ?? value.length;
                 const before = value.slice(0, pos).replace(/\+[а-яА-ЯёЁa-zA-Z0-9 ]*$/, `+[${pid}:${p.name}] `);
+                onChange(before + value.slice(pos));
+              }}
+            />
+          )}
+          {userQuery !== null && (
+            <UserSuggest
+              query={userQuery}
+              onClose={() => setUserQuery(null)}
+              onPick={(u) => {
+                const el = ref.current;
+                if (!el) return;
+                const pos = el.selectionStart ?? value.length;
+                const before = value.slice(0, pos).replace(/@([а-яА-ЯёЁa-zA-Z0-9_]*)$/, `@[${u.id}:${u.username}] `);
                 onChange(before + value.slice(pos));
               }}
             />

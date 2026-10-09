@@ -23,6 +23,16 @@ export async function likeThread(id: number) {
   return res.data as { liked: boolean };
 }
 
+export async function bookmarkThread(id: number) {
+  const res = await api.post(`/threads/${id}/bookmark`);
+  return res.data as { bookmarked: boolean };
+}
+
+export async function fetchBookmarks() {
+  const res = await api.get<ThreadV5[]>("/threads/bookmarks/mine");
+  return res.data;
+}
+
 export async function commentThread(id: number, body_md: string, parent_id?: number | null) {
   const res = await api.post(`/threads/${id}/comments`, { body_md, parent_id });
   return res.data;

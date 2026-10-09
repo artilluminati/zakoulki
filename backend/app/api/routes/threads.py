@@ -199,7 +199,29 @@ def like_thread(thread_id: int, db: Session = Depends(get_db), user: User = Depe
     return {"liked": True}
 
 
-class ReportCreate(BaseModel):
+@router.post("/{thread_id}/bookmark")
+def bookmark_thread(thread_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.thread_bookmark import ThreadBookmark
+    if not db.get(Thread, thread_id):
+        raise HTTPException(404, "Тред не найден")
+    ex = db.get(ThreadBookmark, {"user_id": user.id, "thread_id": thread_id})
+    if ex:
+        db.delete(ex); db.commit()
+        return {"bookmarked": False}
+    db.add(ThreadBookmark(user_id=user.id, thread_id=thread_id))
+    db.commit()
+    return {"bookmarked": True}
+
+
+@router.get("/bookmarks/mine")
+def my_bookmarks(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.thread_bookmark import ThreadBookmark
+    ids = [b.thread_id for b in db.query(ThreadBookmark).filter(ThreadBookmark.user_id == user.id).order_by(ThreadBookmark.created_at.desc()).all()]
+    if not ids:
+        return []
+    items = db.query(Thread).filter(Thread.id.in_(ids)).all()
+    by_id = {t.id: t for t in items}
+    return [_thread_out(by_id[i], db) for i in ids if i in by_id]
     reason: str = Field(pattern="^(spam|abuse|offtopic|other)$")
     text: str | None = Field(default=None, max_length=500)
     comment_id: int | None = None

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { MapPin, MessageCircle, Eye, Heart, Bookmark } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
-import { likeThread, reportThread } from "@/lib/v5";
+import { likeThread, reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 
 export function timeAgo(iso: string) {
@@ -81,8 +81,15 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
   const toast = useToast();
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(t.likes_count);
+  const [bookmarked, setBookmarked] = useState(false);
   const [menu, setMenu] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const onBookmark = async () => {
+    setBookmarked(!bookmarked);
+    toast(bookmarked ? "Убрано из закладок" : "В закладках", "info");
+    try { await bookmarkThread(t.id); } catch { setBookmarked(bookmarked); }
+  };
 
   const onLike = async () => {
     setLiked(!liked);
@@ -182,7 +189,9 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
           <Heart className={`h-4 w-4 ${liked ? "fill-red-500" : ""}`} /> {likes}
         </button>
         <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
-        <button className="ml-auto flex items-center gap-1.5 hover:text-slate-800"><Bookmark className="h-4 w-4" /> </button>
+        <button onClick={onBookmark} className={`ml-auto flex items-center gap-1.5 ${bookmarked ? "text-emerald-600" : "hover:text-slate-800"}`}>
+          <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-emerald-600" : ""}`} />
+        </button>
       </div>
     </article>
   );

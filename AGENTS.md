@@ -1,0 +1,56 @@
+# AGENTS.md
+
+## Концепция проекта
+
+Геосоцсеть-форум: лента вопросов + карта. Тред первичен, точка на карте — опциональный атрибут. v1/v2/v3 выброшены целиком — не воскрешать.
+
+## Стек и запуск
+
+- Backend: FastAPI + PostgreSQL + Alembic. `backend/venv` уже создан, зависимости установлены.
+- Frontend: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4.
+- Сервисы: `systemctl --user start zakoulki-backend.service zakoulki-frontend.service` (backend :8000, frontend :3001).
+- Тестовый юзер: `tester@test.ru` / `test1234`, роль `admin`.
+- Сид данных: `cd backend && venv/bin/python -m app.db.seed_v5`.
+
+## Порядок проверки после правок
+
+```bash
+cd backend && venv/bin/python -c "import app.main; print('ok')"
+cd ../frontend && npx tsc --noEmit && npm run lint && npm run build
+systemctl --user restart zakoulki-backend.service zakoulki-frontend.service
+```
+
+Страницы должны отдавать 200: `/`, `/map`, `/create`, `/thread/[id]`, `/tag/[tag]`, `/user/[username]`, `/profile`, `/admin`, `/login`, `/register`.
+
+## Архитектурные детали
+
+- API: все v5-эндпоинты под `/api` (роутеры в `backend/app/api/routes/`).
+- Текст треда/комментария: `body_md` (markdown + `@[id:name]`/`+[id:name]`/`#тег`) → бэк рендерит `body_html` через `backend/app/services/markdown.py`.
+- Санитизация: bleach в markdown-сервисе, клиентский превью в `frontend/lib/mdPreview.ts` — не обходить ни один из двух.
+- Фронт ходит в бэк через `frontend/lib/api.ts` (axios) → `/api/*` → Next.js rewrites → backend. Прямых запросов к :8000 из браузера быть не должно.
+- Карта: Яндекс.Карты 2.x, ключ в `frontend/.env.local` (`NEXT_PUBLIC_YANDEX_MAPS_API_KEY`). Кастомные SVG-пины в `frontend/lib/mapIcons.ts`.
+- Поиск мест: своя таблица `geo_places` + опциональный HTTP Геокодер (`YANDEX_GEOCODER_KEY` в `backend/.env`). Без ключа — только свои места.
+- Поиск организаций у Яндекса бесплатно НЕТ. Организации — из своей базы.
+- Миграции: Alembic, каждый PR — отдельная миграция. Не редактировать старые миграции.
+
+## Ключевые файлы
+
+- `backend/app/services/markdown.py` — рендер/парсинг markdown + извлечение `@`/`+`/`#`.
+- `backend/app/api/routes/threads.py` — CRUD тредов, комменты, лайки, закладки, жалобы, уведомления.
+- `backend/app/api/routes/geo_places.py` — поиск мест, nearby, map-points.
+- `frontend/components/editor/MdEditor.tsx` — редактор с тулбаром, `@`/`+` меню, превью.
+- `frontend/components/ThreadCard.tsx` — карточка треда + `ThreadHtml` (рендер чипов мест/тегов/юзеров).
+- `docs/TODO.md` — активный список задач, новый входящий пользовательский фидбек добавляется в конец.
+- `docs/QUESTIONS.md` — открытые вопросы и лог решений.
+- `docs/STARTUP-v5.md` — полный запуск с нуля.
+
+## Финальный проход (после закрытия всех задач выше)
+- [ ] 13. Пробежать по всем разделам и улучшить то что имеется (дизайн, микроанимации, состояния, доступность). Записано в AGENTS.md и TODO.md, не пропускать.
+
+## Чего не делать
+
+- Не добавлять выбор города как вход в приложение — концепция v5 без обязательных городов.
+- Не вводить жесткие типы тредов (опрос/проблема/статусы) — есть только вопрос и оффтоп.
+- Не показывать технические термины пользователю (localStorage, API, ключ, сервер).
+- Не бросать текущую задачу из середины — доводить до конца или явно пометить `[~]` в TODO.
+- Не перескакивать через задачи в `docs/TODO.md` — выполнять по порядку.

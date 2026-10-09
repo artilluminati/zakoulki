@@ -14,10 +14,9 @@ except ImportError:
 
 ALLOWED_TAGS = ["p", "br", "strong", "em", "code", "pre", "blockquote", "ul", "ol", "li", "a", "h1", "h2", "h3"]
 ALLOWED_ATTRS = {"a": ["href", "class", "data-place-id", "data-user-id", "data-tag"]}
-
 USER_RE = re.compile(r"@\[(\d+):([^\]]+)\]")
 PLACE_RE = re.compile(r"\+\[(\d+):([^\]]+)\]")
-TAG_RE = re.compile(r"(?<!\w)#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
+TAG_RE = re.compile(r"(?<![\wа-яА-ЯёЁ])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
 
 # словарь авто-тегов: слово -> тег
 AUTO_TAGS = {
@@ -58,9 +57,15 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
         r'<a class="place" data-place-id="\1" href="/map?place=\1">📍\2</a>',
         html,
     )
-    # #теги -> ссылки на /tag/
+    # @username без id -> @ссылка (пользователь есть у нас или нет)
     html = re.sub(
-        r"(?<!\w)#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})",
+        r'(?<![\wа-яА-ЯёЁ])@([а-яА-ЯёЁa-zA-Z0-9_]{2,50})',
+        r'<a class="user-mention" href="/user/\1">@\1</a>',
+        html,
+    )
+    # теги #слово (кириллица и латиница) — только внутри текста, не в начале строки (там заголовок)
+    html = re.sub(
+        r"(?<=[\s(])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})",
         r'<a class="tag" href="/tag/\1">#\1</a>',
         html,
     )

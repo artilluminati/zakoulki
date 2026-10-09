@@ -6,10 +6,11 @@ from app.models.thread import Thread, thread_categories
 from app.models.thread_comment import ThreadComment
 from app.models.thread_extra import Tag, ThreadTag, ThreadMention, ThreadLike
 from app.models.thread_photo import ThreadPhoto
+from app.models.thread_bookmark import ThreadBookmark
 from app.models.report import Report
 
 __all__ = [
     "User", "City", "Category",
     "GeoPlace", "Thread", "thread_categories", "ThreadComment",
-    "Tag", "ThreadTag", "ThreadMention", "ThreadLike", "ThreadPhoto", "Report",
+    "Tag", "ThreadTag", "ThreadMention", "ThreadLike", "ThreadPhoto", "ThreadBookmark", "Report",
 ]

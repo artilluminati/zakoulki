@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -6,6 +6,13 @@ from app.models.user import User
 from app.schemas.user import UserOut
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+@router.get("/search")
+def search_users(q: str = Query(min_length=2, max_length=50), limit: int = Query(10, le=30),
+                  db: Session = Depends(get_db)):
+    return [{"id": u.id, "username": u.username, "email": u.email}
+            for u in db.query(User).filter(User.username.ilike(f"%{q}%")).limit(limit).all()]
 
 
 @router.get("/by-username/{username}", response_model=UserOut)

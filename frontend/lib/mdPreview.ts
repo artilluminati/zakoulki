@@ -16,8 +16,8 @@ function inline(src: string): string {
   s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>");
   // ссылки [текст](url) — только http(s)
   s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
-  // теги #слово
-  s = s.replace(/(^|[\s(])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})/g, '$1<span class="pv-tag">#$2</span>');
+  // теги #слово (кириллица и латиница) — только после пробела/скобки, чтобы не ломать заголовки
+  s = s.replace(/([\s(])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})/g, '$1<span class="pv-tag">#$2</span>');
   return s;
 }
 

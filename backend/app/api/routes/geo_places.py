@@ -65,6 +65,33 @@ def search_places(q: str = Query(min_length=2), lat: float | None = None, lng: f
                     break
         except Exception:
             pass
+    # Nominatim (OpenStreetMap) — бесплатный геокодер без ключа, 1 req/s
+    if len(out) < 10:
+        try:
+            import urllib.parse
+            import urllib.request
+            import json as _json
+            params = urllib.parse.urlencode({"q": q, "format": "json", "limit": 5, "accept-language": "ru", "countrycodes": "ru"})
+            req = urllib.request.Request(
+                f"https://nominatim.openstreetmap.org/search?{params}",
+                headers={"User-Agent": "zakoulki-app/1.0"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as r:
+                data = _json.load(r)
+            for item in data:
+                addr = item.get("address", {})
+                out.append({
+                    "id": 0, "name": item.get("display_name", q).split(",")[0],
+                    "address": item.get("display_name"),
+                    "district": addr.get("city") or addr.get("town") or addr.get("district"),
+                    "street": addr.get("road"),
+                    "lat": float(item.get("lat", 0)), "lng": float(item.get("lon", 0)),
+                    "yandex_kind": "address", "preview_url": None,
+                })
+                if len(out) >= 10:
+                    break
+        except Exception:
+            pass
     return out
 
 
