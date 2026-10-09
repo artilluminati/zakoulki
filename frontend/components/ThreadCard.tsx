@@ -5,6 +5,19 @@ import Link from "next/link";
 import { MapPin, MessageCircle, Eye, Heart, Bookmark } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { likeThread, reportThread } from "@/lib/v5";
+import { useToast } from "@/lib/toast";
+
+export function timeAgo(iso: string) {
+  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return "только что";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} мин назад`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} ч назад`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} дн назад`;
+  return new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
 
 function avatarColor(name?: string | null) {
   let h = 0;
@@ -65,14 +78,30 @@ export function ThreadHtml({ html, placePreview }: { html: string; placePreview?
 }
 
 export default function ThreadCard({ t }: { t: ThreadV5 }) {
+  const toast = useToast();
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(t.likes_count);
   const [menu, setMenu] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const onLike = async () => {
     setLiked(!liked);
     setLikes((v) => (liked ? v - 1 : v + 1));
     try { await likeThread(t.id); } catch { setLiked(liked); }
+  };
+
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(`${location.origin}/thread/${t.id}`);
+      toast("Ссылка скопирована", "success");
+    } catch { toast("Не скопировалось", "error"); }
+    setMenu(false);
+  };
+
+  const report = async () => {
+    try { await reportThread(t.id, "offtopic"); toast("Жалоба отправлена", "success"); }
+    catch { toast("Не отправилось", "error"); }
+    setMenu(false);
   };
 
   return (
@@ -84,7 +113,7 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
         <div className="min-w-0 flex-1">
           <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
           <div className="text-xs text-slate-500">
-            {new Date(t.created_at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+            {timeAgo(t.created_at)}
             {t.is_offtop ? " · оффтоп" : " · вопрос"}
           </div>
         </div>
@@ -92,16 +121,10 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
           <button onClick={() => setMenu(!menu)} className="rounded-full px-2 py-1 text-slate-400 hover:bg-slate-100">•••</button>
           {menu && (
             <div className="absolute right-0 z-10 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-              <button
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-                onClick={async () => { await navigator.clipboard.writeText(`${location.origin}/thread/${t.id}`); setMenu(false); }}
-              >
+              <button className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50" onClick={share}>
                 Поделиться
               </button>
-              <button
-                className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50"
-                onClick={async () => { await reportThread(t.id, "offtopic").catch(() => {}); setMenu(false); }}
-              >
+              <button className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50" onClick={report}>
                 Пожаловаться
               </button>
             </div>
@@ -128,8 +151,14 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
         <div className={`mt-2 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
           {t.photos.slice(0, 4).map((p) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.id} src={p.url} alt="" loading="lazy" className="h-40 w-full object-cover" />
+            <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-40 w-full cursor-zoom-in object-cover" />
           ))}
+        </div>
+      )}
+      {lightbox && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4" onClick={() => setLightbox(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
         </div>
       )}
 

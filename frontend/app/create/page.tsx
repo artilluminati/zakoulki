@@ -14,6 +14,7 @@ export default function CreatePage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [place, setPlace] = useState<GeoPlaceV5 | null>(null);
+  const [pendingGeo, setPendingGeo] = useState<{ latitude: number; longitude: number } | null>(null);
 
   // черновик: загрузка один раз + автосохранение
   useEffect(() => {
@@ -56,11 +57,8 @@ export default function CreatePage() {
   const useGeolocation = () => {
     navigator.geolocation?.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
-      try {
-        const p = await createGeoPlace({ name: "Точка на карте", latitude, longitude, address: "Моя геолокация" });
-        setPlace(p);
-        setNearby(await fetchNearbyThreads(latitude, longitude));
-      } catch (e: any) { setError("Не удалось создать точку"); }
+      setPendingGeo({ latitude, longitude });
+      try { setNearby(await fetchNearbyThreads(latitude, longitude)); } catch {}
     }, () => setError("Геолокация недоступна"));
   };
 
@@ -68,7 +66,12 @@ export default function CreatePage() {
     if (!body.trim() || saving) return;
     setSaving(true); setError(null);
     try {
-      const t = await createThread({ title: title || null, body_md: body, place_id: place?.id ?? null, category_ids: catIds });
+      let placeId = place?.id ?? null;
+      if (!placeId && pendingGeo) {
+        const p = await createGeoPlace({ name: "Точка на карте", latitude: pendingGeo.latitude, longitude: pendingGeo.longitude, address: "Моя геолокация" });
+        placeId = p.id;
+      }
+      const t = await createThread({ title: title || null, body_md: body, place_id: placeId, category_ids: catIds });
       for (const f of files.slice(0, 5)) {
         try { await uploadThreadPhoto(t.id, f); } catch {}
       }
@@ -130,8 +133,8 @@ export default function CreatePage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600" /> Место</span>
-          {place ? (
-            <button onClick={() => setPlace(null)} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
+          {place || pendingGeo ? (
+            <button onClick={() => { setPlace(null); setPendingGeo(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
           ) : (
             <button onClick={useGeolocation} className="text-xs font-bold text-emerald-700">Моя геолокация</button>
           )}
@@ -140,6 +143,11 @@ export default function CreatePage() {
           <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
             <div className="font-bold text-emerald-800">{place.name}</div>
             <div className="text-xs text-emerald-600">{[place.address, place.district].filter(Boolean).join(" · ")}</div>
+          </div>
+        ) : pendingGeo ? (
+          <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
+            <div className="font-bold text-emerald-800">Точка на карте</div>
+            <div className="text-xs text-emerald-600">Ваша геолокация · прикрепится при публикации</div>
           </div>
         ) : (
           <>

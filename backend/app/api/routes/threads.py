@@ -74,6 +74,7 @@ def list_threads(
     tag: str | None = Query(None, description="имя тега без #"),
     author_id: int | None = Query(None),
     category_id: int | None = Query(None),
+    place_id: int | None = Query(None),
     has_geo: bool | None = Query(None),
     is_offtop: bool | None = Query(None),
     sort: str = Query("new", pattern="^(new|top|near)$"),
@@ -86,6 +87,8 @@ def list_threads(
         q = q.filter(Thread.id < before_id)
     if author_id:
         q = q.filter(Thread.author_id == author_id)
+    if place_id:
+        q = q.filter(Thread.place_id == place_id)
     if search:
         q = q.filter(Thread.body_md.ilike(f"%{search}%"))
     if tag:
@@ -106,6 +109,7 @@ def list_threads(
         q = q.filter(GeoPlace.longitude.between(lng - delta, lng + delta))
     if sort == "top":
         q = q.order_by(Thread.likes_count.desc(), Thread.id.desc())
+    q = q.distinct()
     items = q.limit(limit).all()
     return [_thread_out(t, db) for t in items]
 
@@ -165,6 +169,20 @@ def add_comment(thread_id: int, data: CommentCreate, db: Session = Depends(get_d
     t.comments_count += 1
     db.commit(); db.refresh(c)
     return {"id": c.id, "body_html": c.body_html}
+
+
+@router.delete("/comments/{comment_id}", status_code=204)
+def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    c = db.get(ThreadComment, comment_id)
+    if not c:
+        raise HTTPException(404, "Комментарий не найден")
+    if c.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Недостаточно прав")
+    t = db.get(Thread, c.thread_id)
+    db.delete(c)
+    if t:
+        t.comments_count = max(0, t.comments_count - 1)
+    db.commit()
 
 
 @router.post("/{thread_id}/like")

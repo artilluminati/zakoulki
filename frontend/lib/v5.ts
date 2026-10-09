@@ -28,6 +28,10 @@ export async function commentThread(id: number, body_md: string, parent_id?: num
   return res.data;
 }
 
+export async function deleteComment(commentId: number) {
+  await api.delete(`/threads/comments/${commentId}`);
+}
+
 export async function reportThread(id: number, reason: string, text?: string, comment_id?: number) {
   const res = await api.post(`/threads/${id}/report`, { reason, text, comment_id });
   return res.data;
@@ -45,7 +49,7 @@ export async function fetchNearbyThreads(lat: number, lng: number, radius = 0.3)
 
 export async function fetchMapPoints(bbox: { north: number; south: number; east: number; west: number }) {
   const res = await api.get("/geo-places/map-points", { params: bbox });
-  return res.data as { id: number; lat: number; lng: number; is_offtop: boolean }[];
+  return res.data as { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null }[];
 }
 
 export async function createGeoPlace(p: { name: string; latitude: number; longitude: number; address?: string | null; district?: string | null; street?: string | null }) {

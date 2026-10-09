@@ -22,6 +22,8 @@ export default function FeedPage() {
   const [filter, setFilter] = useState<"all" | "important" | "offtop">("all");
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoError, setGeoError] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -29,7 +31,8 @@ export default function FeedPage() {
       const data = await fetchThreads({
         search: search || undefined,
         category_id: categoryParam ? Number(categoryParam) : undefined,
-        sort: sort === "near" ? "new" : sort,
+        sort: sort === "near" ? "near" : sort,
+        ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
         limit: 20,
@@ -39,7 +42,19 @@ export default function FeedPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [sort, filter, search, categoryParam]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [sort, filter, search, categoryParam, geo]);
+
+  const pickSort = (s: Sort) => {
+    setGeoError(false);
+    if (s === "near" && !geo) {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => setGeoError(true),
+        { timeout: 8000 }
+      );
+    }
+    setSort(s);
+  };
 
   const post = async () => {
     if (!draft.trim() || posting) return;
@@ -78,7 +93,7 @@ export default function FeedPage() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex rounded-full bg-white p-1 text-sm shadow-sm border border-slate-200">
           {(["new", "top", "near"] as Sort[]).map((s) => (
-            <button key={s} onClick={() => setSort(s)} className={`rounded-full px-3 py-1.5 font-semibold ${sort === s ? "bg-slate-900 text-white" : "text-slate-500"}`}>
+            <button key={s} onClick={() => pickSort(s)} className={`rounded-full px-3 py-1.5 font-semibold ${sort === s ? "bg-slate-900 text-white" : "text-slate-500"}`}>
               {s === "new" ? "Новые" : s === "top" ? "Обсуждают" : "Рядом"}
             </button>
           ))}
@@ -91,6 +106,17 @@ export default function FeedPage() {
           ))}
         </div>
       </div>
+
+      {sort === "near" && !geo && !geoError && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center text-[13px] text-slate-500">
+          Определяем ваше местоположение…
+        </div>
+      )}
+      {geoError && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800">
+          Геолокация недоступна — показываем все новое
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-white shadow-sm" />)}</div>

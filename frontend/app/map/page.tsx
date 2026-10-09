@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
+import { MapPin, Plus, X, MessageCircle, Navigation } from "lucide-react";
 import { fetchMapPoints, fetchThread } from "@/lib/v5";
+import { api } from "@/lib/api";
+import { makePin, CLUSTER_ICON, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import type { ThreadV5 } from "@/types/v5";
 
 function loadYandex(key: string): Promise<any> {
@@ -19,24 +21,36 @@ function loadYandex(key: string): Promise<any> {
   });
 }
 
+interface MapPt { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; }
+
 const FILTERS = ["Все", "Вопросы", "С фото", "Обсуждают"] as const;
+type Filter = (typeof FILTERS)[number];
+
+function passFilter(p: MapPt, f: Filter) {
+  if (f === "Вопросы") return !p.is_offtop;
+  if (f === "С фото") return p.has_photo;
+  return true;
+}
 
 export default function MapPage() {
   const params = useSearchParams();
   const focusPlace = params.get("place");
   const ref = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
+  const marksRef = useRef<Map<number, any>>(new Map());
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [count, setCount] = useState(0);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Все");
+  const [filter, setFilter] = useState<Filter>("Все");
+  const [pts, setPts] = useState<MapPt[]>([]);
   const [selected, setSelected] = useState<ThreadV5 | null>(null);
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
 
+  // грузим точки при движении карты
   useEffect(() => {
     if (!key) { setErr("Нет ключа Яндекс.Карт"); setLoading(false); return; }
     let map: any;
     let alive = true;
+    (window as any).__ymap = undefined;
     (async () => {
       try {
         const ymaps = await loadYandex(key);
@@ -45,47 +59,79 @@ export default function MapPage() {
           center: [55.755, 37.617], zoom: 11,
           controls: ["zoomControl", "geolocationControl"],
         });
-        mapRef.current = map;
-        const load = async () => {
-          const b = map.getBounds();
-          const pts = await fetchMapPoints({ south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1] }).catch(() => []);
-          return pts as { id: number; lat: number; lng: number; is_offtop: boolean }[];
-        };
+        (window as any).__ymap = map;
         const paint = async () => {
-          const pts = await load();
-          map.geoObjects.removeAll();
-          const clusterer = new ymaps.Clusterer({ preset: "islands#invertedVioletClusterIcons", groupByCoordinates: false });
-          const marks = pts.map((p) => {
-            const m = new ymaps.Placemark(
-              [p.lat, p.lng], {},
-              { preset: p.is_offtop ? "islands#grayDotIcon" : "islands#greenDotIcon" }
-            );
-            m.events.add("click", async () => {
-              try { setSelected(await fetchThread(p.id)); } catch {}
-            });
-            return m;
-          });
-          clusterer.add(marks);
-          map.geoObjects.add(clusterer);
-          setCount(pts.length);
+          const b = map.getBounds();
+          const list = await fetchMapPoints({ south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1] }).catch(() => [] as MapPt[]);
+          if (!alive) return;
+          setPts(list);
+          setCount(list.length);
         };
         await paint();
         if (!alive) return;
         setLoading(false);
+        // фокус на месте из ?place=
+        if (focusPlace) {
+          try {
+            const p = (await api.get(`/geo-places/${focusPlace}`)).data;
+            map.setCenter([p.lat, p.lng], 15);
+            const at = await api.get("/threads", { params: { place_id: p.id, limit: 1 } });
+            if (at.data?.[0]) setSelected(await fetchThread(at.data[0].id));
+          } catch {}
+        }
         map.events.add("boundschange", () => { paint().catch(() => {}); });
       } catch { if (alive) { setErr("Карта не загрузилась"); setLoading(false); } }
     })();
-    return () => { alive = false; try { map?.destroy(); } catch {} mapRef.current = null; };
+    return () => { alive = false; try { map?.destroy(); } catch {} };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+
+  // перерисовка меток при смене точек/фильтра/выбора
+  useEffect(() => {
+    const map = (window as any).__ymap;
+    if (!map || !(window as any).ymaps) return;
+    const ymaps = (window as any).ymaps;
+    map.geoObjects.removeAll();
+    marksRef.current.clear();
+    const visible = (filter === "Обсуждают"
+      ? [...pts].sort((a, b) => b.comments - a.comments)
+      : pts
+    ).filter((p) => passFilter(p, filter));
+    const clusterer = new ymaps.Clusterer({
+      groupByCoordinates: false,
+      clusterIcons: [{ href: CLUSTER_ICON, size: [56, 56], offset: [-28, -28] }],
+      clusterIconContentLayout: ymaps.templateLayoutFactory.createClass(
+        '<div style="color:#a3e635;font-weight:800;font-size:16px;line-height:56px;width:56px;text-align:center;">{{ properties.geoObjects.length }}</div>'
+      ),
+    });
+    for (const p of visible) {
+      const isSel = selected?.id === p.id;
+      const href = makePin({
+        color: p.is_offtop ? "#64748b" : "#059669",
+        glyph: p.is_offtop ? "chat" : "q",
+        photoUrl: p.has_photo ? p.cover_url : null,
+        selected: isSel,
+      });
+      const m = new ymaps.Placemark([p.lat, p.lng], { balloonContentBody: " " }, {
+        iconLayout: "default#image", iconImageHref: href,
+        iconImageSize: PIN_SIZE, iconImageOffset: PIN_OFFSET,
+        hideIconOnBalloonOpen: false,
+      });
+      m.events.add("click", async () => {
+        try { setSelected(await fetchThread(p.id)); } catch {}
+      });
+      marksRef.current.set(p.id, m);
+      clusterer.add(m);
+    }
+    map.geoObjects.add(clusterer);
+  }, [pts, filter, selected]);
 
   return (
     <div className="-mx-3 md:mx-0 md:pt-4">
       <div className="relative h-[calc(100svh-3.5rem-3.75rem)] overflow-hidden md:h-[calc(100svh-3.5rem-2rem)] md:rounded-3xl md:border md:border-slate-200 md:shadow-sm">
         <div ref={ref} className="absolute inset-0 bg-slate-100" />
 
-        {loading && (
-          <div className="absolute inset-0 z-10 animate-pulse bg-slate-200/70" />
-        )}
+        {loading && <div className="absolute inset-0 z-10 animate-pulse bg-slate-200/70" />}
 
         {err ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-50 p-6">
@@ -95,7 +141,6 @@ export default function MapPage() {
           </div>
         ) : (
           <>
-            {/* поиск поверх карты */}
             <div className="absolute left-3 right-3 top-3 z-10 md:left-4 md:right-auto md:w-[380px]">
               <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
                 <MapPin className="h-5 w-5 shrink-0 text-emerald-600" />
@@ -122,12 +167,10 @@ export default function MapPage() {
               </div>
             </div>
 
-            {/* счетчик */}
             <div className="absolute right-3 top-3 z-10 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur md:right-4">
               {count} на экране
             </div>
 
-            {/* FAB */}
             <Link
               href="/create"
               className="absolute bottom-24 right-3 z-10 flex items-center gap-1.5 rounded-full bg-lime-400 py-3 pl-4 pr-5 text-[15px] font-extrabold text-slate-900 shadow-xl transition hover:bg-lime-300 active:scale-95 md:bottom-6 md:right-4"
@@ -136,7 +179,6 @@ export default function MapPage() {
               Спросить здесь
             </Link>
 
-            {/* bottom-sheet превью треда */}
             {selected && (
               <div className="absolute inset-x-3 bottom-20 z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px]">
                 <div className="flex items-start gap-3 p-3.5">
@@ -178,17 +220,11 @@ export default function MapPage() {
                 </Link>
               </div>
             )}
-
-            {focusPlace && !selected && (
-              <div className="absolute bottom-20 left-3 z-10 rounded-full bg-white/95 px-3 py-1.5 text-xs text-slate-500 shadow-lg md:bottom-6 md:left-4">
-                Ищем место #{focusPlace}…
-              </div>
-            )}
           </>
         )}
       </div>
       <p className="hidden px-1 pt-2 text-xs text-slate-400 md:block">
-        Кластеры цифрами — приближайте. Тап по точке открывает вопрос.
+        Зеленые — вопросы, серые — оффтоп, с фото — круглые. Кластеры цифрами.
       </p>
     </div>
   );

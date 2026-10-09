@@ -60,9 +60,26 @@ def nearby_threads(lat: float, lng: float, radius: float = Query(0.3, descriptio
 def map_points(north: float, south: float, east: float, west: float,
                limit: int = Query(200, le=500), db: Session = Depends(get_db)):
     """Легковесные точки для кластеризации на карте."""
+    from app.models.thread_photo import ThreadPhoto
     items = (db.query(Thread).join(GeoPlace, Thread.place_id == GeoPlace.id)
              .filter(GeoPlace.latitude.between(south, north))
              .filter(GeoPlace.longitude.between(west, east))
-             .order_by(Thread.id.desc()).limit(limit).all())
-    return [{"id": t.id, "lat": t.place.latitude, "lng": t.place.longitude,
-             "is_offtop": t.is_offtop} for t in items if t.place]
+             .order_by(Thread.comments_count.desc(), Thread.id.desc()).limit(limit).all())
+    out = []
+    for t in items:
+        cover = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).first()
+        out.append({"id": t.id, "lat": t.place.latitude, "lng": t.place.longitude,
+                    "is_offtop": t.is_offtop,
+                    "comments": t.comments_count,
+                    "has_photo": cover is not None,
+                    "cover_url": f"/uploads/{cover.file_name}" if cover else None})
+    return out
+
+
+@router.get("/{place_id}")
+def get_place(place_id: int, db: Session = Depends(get_db)):
+    p = db.get(GeoPlace, place_id)
+    if not p:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Место не найдено")
+    return _out(p)
