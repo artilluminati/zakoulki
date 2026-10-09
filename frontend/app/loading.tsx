@@ -1,7 +1,9 @@
 export default function Loading() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-lime-400" />
+    <main className="mx-auto flex max-w-2xl flex-col items-center gap-3 px-4 pt-10">
+      {[0, 1].map((i) => (
+        <div key={i} className="h-36 w-full animate-pulse rounded-2xl bg-white shadow-sm" />
+      ))}
     </main>
   );
 }

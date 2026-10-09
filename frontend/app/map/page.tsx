@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MapPin, Plus, X, MessageCircle, Navigation } from "lucide-react";
 import { fetchMapPoints, fetchThread } from "@/lib/v5";
-import { api } from "@/lib/api";
+import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_ICON, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import type { ThreadV5 } from "@/types/v5";
 
@@ -109,7 +109,7 @@ export default function MapPage() {
       const href = makePin({
         color: p.is_offtop ? "#64748b" : "#059669",
         glyph: p.is_offtop ? "chat" : "q",
-        photoUrl: p.has_photo ? p.cover_url : null,
+        photoUrl: p.has_photo && p.cover_url ? apiOrigin + p.cover_url : null,
         selected: isSel,
       });
       const m = new ymaps.Placemark([p.lat, p.lng], { balloonContentBody: " " }, {

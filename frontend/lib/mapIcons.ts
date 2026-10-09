@@ -17,7 +17,7 @@ export interface PinOpts {
 export function makePin({ color, glyph = "q", photoUrl, selected = false }: PinOpts): string {
   const path = glyph === "q" ? GLYPH_Q : GLYPH_CHAT;
   const inner = photoUrl
-    ? `<clipPath id="c"><circle cx="22" cy="22" r="13"/></clipPath><image href="${photoUrl}" x="9" y="9" width="26" height="26" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/><circle cx="22" cy="22" r="13" fill="none" stroke="#fff" stroke-width="3"/>`
+    ? `<clipPath id="c"><circle cx="22" cy="22" r="13"/></clipPath><image href="${photoUrl}" xlink:href="${photoUrl}" x="9" y="9" width="26" height="26" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/><circle cx="22" cy="22" r="13" fill="none" stroke="#fff" stroke-width="3"/>`
     : `<g fill="#fff"><path d="${path}" transform="translate(-4,-4) scale(1)"/></g>`;
   const ring = selected ? `<circle cx="22" cy="22" r="20" fill="none" stroke="#a3e635" stroke-width="3"/>` : "";
   return svgUri(

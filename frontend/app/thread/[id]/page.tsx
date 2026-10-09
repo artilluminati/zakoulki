@@ -17,6 +17,7 @@ export default function ThreadPage() {
   const [t, setT] = useState<Awaited<ReturnType<typeof fetchThread>> | null>(null);
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const load = async () => {
     try { setT(await fetchThread(id)); } catch { setT(null); }
@@ -45,8 +46,14 @@ export default function ThreadPage() {
           <div className={`mt-3 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
             {t.photos.map((p) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={p.id} src={p.url} alt="" loading="lazy" className="h-56 w-full object-cover" />
+              <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-56 w-full cursor-zoom-in object-cover" />
             ))}
+          </div>
+        )}
+        {lightbox && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4" onClick={() => setLightbox(null)}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
           </div>
         )}
         {t.place && (
@@ -81,7 +88,7 @@ export default function ThreadPage() {
                   </button>
                 )}
               </div>
-              <div className="thread-html mt-0.5 text-[14px]" dangerouslySetInnerHTML={{ __html: c.body_html }} />
+              <div className="mt-0.5"><ThreadHtml html={c.body_html} /></div>
             </div>
           ))}
           {(t.comments ?? []).length === 0 && <p className="text-sm text-slate-400">Пока нет ответов — станьте первым.</p>}
