@@ -1,15 +1,24 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect -- дебаунс-поиск мест по вводу */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 import { searchGeoPlaces } from "@/lib/v5";
 import type { GeoPlaceV5 } from "@/types/v5";
+import type { SuggestCtlRef } from "./suggest";
 
 /** Выпадающее меню мест для триггера `+`: ввод после + ищет, выбор вставляет +[id:name] */
-export default function PlaceSuggest({ query, onPick, onClose }: { query: string; onPick: (p: GeoPlaceV5) => void; onClose: () => void }) {
+export default function PlaceSuggest({ query, onPick, onClose, ctlRef }: {
+  query: string;
+  onPick: (p: GeoPlaceV5) => void;
+  onClose: () => void;
+  ctlRef: SuggestCtlRef;
+}) {
   const [items, setItems] = useState<GeoPlaceV5[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hi, setHi] = useState(0);
+  const hiRef = useRef(0);
+  const itemsRef = useRef<GeoPlaceV5[]>([]);
 
   useEffect(() => {
     if (query.length < 2) { setItems([]); return; }
@@ -21,6 +30,33 @@ export default function PlaceSuggest({ query, onPick, onClose }: { query: string
     return () => clearTimeout(t);
   }, [query]);
 
+  useEffect(() => { itemsRef.current = items; }, [items]);
+  useEffect(() => { hiRef.current = 0; setHi(0); }, [query]);
+
+  useEffect(() => {
+    ctlRef.current = {
+      move(d) {
+        const n = itemsRef.current.length;
+        if (!n) return;
+        const next = Math.min(Math.max(hiRef.current + d, 0), n - 1);
+        hiRef.current = next;
+        setHi(next);
+      },
+      peek: () => hiRef.current,
+      count: () => itemsRef.current.length,
+      enter: () => {
+        const it = itemsRef.current[hiRef.current];
+        if (!it) return false;
+        onPick(it);
+        onClose();
+        return true;
+      },
+    };
+    return () => { ctlRef.current = null; };
+  }, [ctlRef, onPick, onClose]);
+
+  const pickHi = (i: number) => { hiRef.current = i; setHi(i); };
+
   if (query.length < 2) return null;
 
   return (
@@ -28,12 +64,13 @@ export default function PlaceSuggest({ query, onPick, onClose }: { query: string
       <div className="border-b border-slate-100 px-3 py-1.5 text-xs text-slate-400">
         {loading ? "Ищем места…" : items.length ? `Места: ${items.length}` : "Ничего не нашли — уточните название"}
       </div>
-      {items.map((p) => (
+      {items.map((p, i) => (
         <button
-          key={p.id}
+          key={`${p.id}-${p.name}-${i}`}
           type="button"
+          onMouseEnter={() => pickHi(i)}
           onClick={() => { onPick(p); onClose(); }}
-          className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-emerald-50"
+          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left ${i === hi ? "bg-emerald-50" : ""}`}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
             <MapPin className="h-4 w-4 text-emerald-700" />

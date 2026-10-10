@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bold, Italic, Quote, List, Link2, AtSign, MapPin, Hash, Copy, Check } from "lucide-react";
 import PlaceSuggest from "./PlaceSuggest";
 import UserSuggest from "./UserSuggest";
+import type { SuggestCtl } from "./suggest";
 import { renderLine } from "@/lib/mdPreview";
 
 export default function MdEditor({
@@ -19,6 +20,8 @@ export default function MdEditor({
   const [copied, setCopied] = useState(false);
   const caretRef = useRef<number | null>(null);
   const downRef = useRef<{ x: number; y: number } | null>(null);
+  const plusCtl = useRef<SuggestCtl | null>(null);
+  const userCtl = useRef<SuggestCtl | null>(null);
 
   const lines = value.split("\n");
 
@@ -94,6 +97,32 @@ export default function MdEditor({
     const pos = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
     if ((e.nativeEvent as KeyboardEvent & { isComposing?: boolean }).isComposing) return;
+    // навигация по открытому меню: вниз/вверх/enter
+    const ctl = plusQuery !== null ? plusCtl.current : userQuery !== null ? userCtl.current : null;
+    const menuOpen = plusQuery !== null || userQuery !== null;
+    if (e.key === "ArrowDown" && ctl && menuOpen) {
+      e.preventDefault();
+      ctl.move(1);
+      return;
+    }
+    if (e.key === "ArrowUp" && ctl && menuOpen) {
+      e.preventDefault();
+      if (ctl.peek() === 0) {
+        // на первом пункте вверх — закрыть как Esc
+        setPlusQuery(null);
+        setUserQuery(null);
+      } else {
+        ctl.move(-1);
+      }
+      return;
+    }
+    if (e.key === "Enter" && ctl && menuOpen && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      if (ctl.count() > 0 && ctl.enter()) {
+        e.preventDefault();
+        return;
+      }
+      // пустое меню — обычный перенос строки
+    }
     if (e.key === "Escape") { setPlusQuery(null); setUserQuery(null); el.blur(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") { e.preventDefault(); wrapSelection("**", "**"); return; }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); wrapSelection("*", "*"); return; }
@@ -260,10 +289,10 @@ export default function MdEditor({
         )}
       </div>
       {plusQuery !== null && safeActive !== null && (
-        <PlaceSuggest query={plusQuery} onClose={() => setPlusQuery(null)} onPick={pickPlace} />
+        <PlaceSuggest query={plusQuery} onClose={() => setPlusQuery(null)} onPick={pickPlace} ctlRef={plusCtl} />
       )}
       {userQuery !== null && safeActive !== null && (
-        <UserSuggest query={userQuery} onClose={() => setUserQuery(null)} onPick={pickUser} />
+        <UserSuggest query={userQuery} onClose={() => setUserQuery(null)} onPick={pickUser} ctlRef={userCtl} />
       )}
     </div>
   );
