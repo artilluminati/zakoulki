@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- чтение сохраненного scope из localStorage */
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 

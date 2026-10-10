@@ -191,6 +191,27 @@ def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"
     return [{"name": name, "count": count} for name, count in rows]
 
 
+@router.get("/resolve")
+def resolve_scope(name: str = Query(min_length=2, max_length=200), db: Session = Depends(get_db)):
+    """Умное поле: по названию города/района вернуть всю иерархию.
+    Точное совпадение с городом важнее района."""
+    from sqlalchemy import func
+    city_row = (db.query(GeoPlace.city, GeoPlace.region, GeoPlace.country, func.count(GeoPlace.id).label("c"))
+                .filter(GeoPlace.city.ilike(name))
+                .group_by(GeoPlace.city, GeoPlace.region, GeoPlace.country)
+                .order_by(func.count(GeoPlace.id).desc()).first())
+    if city_row and city_row[0]:
+        return {"district": None, "city": city_row[0], "region": city_row[1], "country": city_row[2] or "Россия"}
+    row = (db.query(GeoPlace.district, GeoPlace.city, GeoPlace.region, GeoPlace.country,
+                    func.count(GeoPlace.id).label("c"))
+           .filter(GeoPlace.district.ilike(name))
+           .group_by(GeoPlace.district, GeoPlace.city, GeoPlace.region, GeoPlace.country)
+           .order_by(func.count(GeoPlace.id).desc()).first())
+    if not row or not row[0]:
+        return {"district": None, "city": None, "region": None, "country": "Россия"}
+    return {"district": row[0], "city": row[1], "region": row[2], "country": row[3] or "Россия"}
+
+
 @router.get("/{place_id}")
 def get_place(place_id: int, db: Session = Depends(get_db)):
     p = db.get(GeoPlace, place_id)

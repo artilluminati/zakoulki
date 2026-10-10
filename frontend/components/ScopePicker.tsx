@@ -1,83 +1,122 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- дебаунс-поиск и чтение сохраненного scope */
 
 import { useEffect, useState } from "react";
-import { Globe2 } from "lucide-react";
+import { Globe2, MapPin, X } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Scope } from "@/lib/scope";
+import { scopeLabel, type Scope } from "@/lib/scope";
 
-const LEVELS = [
-  { key: "country", label: "Страна", placeholder: "Например, Россия" },
-  { key: "region", label: "Регион", placeholder: "Область, край…" },
-  { key: "city", label: "Город", placeholder: "Город, округ…" },
-  { key: "district", label: "Район", placeholder: "Район города…" },
-] as const;
+interface SuggestItem { name: string; count: number; level: "city" | "district"; }
 
-/** Каскадный выбор: страна → регион → город → район. Пусто = весь мир. */
+/** Одно умное поле: город или район. Иерархию подтягивает /resolve. Без стран — мы про Россию. */
 export default function ScopePicker({ value, onChange }: {
   value: Scope;
   onChange: (s: Scope) => void;
 }) {
-  const [draft, setDraft] = useState<Scope>(value);
-  const [options, setOptions] = useState<Record<string, { name: string; count: number }[]>>({});
+  const [q, setQ] = useState("");
+  const [items, setItems] = useState<SuggestItem[]>([]);
+  const [resolving, setResolving] = useState(false);
 
-  useEffect(() => { setDraft(value); }, [value]);
+  useEffect(() => {
+    if (q.trim().length < 2) { setItems([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const [cities, districts] = await Promise.all([
+          api.get("/geo-places/suggest", { params: { level: "city", q: q.trim(), limit: 5 } }),
+          api.get("/geo-places/suggest", { params: { level: "district", q: q.trim(), limit: 5 } }),
+        ]);
+        const list: SuggestItem[] = [
+          ...(cities.data ?? []).map((c: { name: string; count: number }) => ({ ...c, level: "city" as const })),
+          ...(districts.data ?? []).map((d: { name: string; count: number }) => ({ ...d, level: "district" as const })),
+        ];
+        setItems(list.slice(0, 8));
+      } catch { setItems([]); }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q]);
 
-  const parentOf = (key: string): string | undefined => {
-    if (key === "region") return draft.country;
-    if (key === "city") return draft.region || draft.country;
-    if (key === "district") return draft.city || draft.region || draft.country;
-    return undefined;
-  };
-
-  const loadOptions = async (key: string, q: string) => {
+  const pick = async (name: string) => {
+    setResolving(true);
     try {
-      const params: Record<string, string> = { level: key };
-      if (q) params.q = q;
-      const parent = parentOf(key);
-      if (parent) params.parent = parent;
-      const res = await api.get("/geo-places/suggest", { params });
-      setOptions((o) => ({ ...o, [key]: res.data ?? [] }));
+      const res = await api.get("/geo-places/resolve", { params: { name } });
+      const r = res.data;
+      onChange({
+        ...(r.country ? { country: r.country } : {}),
+        ...(r.region ? { region: r.region } : {}),
+        ...(r.city ? { city: r.city } : {}),
+        ...(r.district ? { district: r.district } : {}),
+      });
     } catch { /* ignore */ }
+    finally { setResolving(false); }
+    setQ("");
+    setItems([]);
   };
 
-  const set = (key: keyof Scope, v: string) => {
-    const next = { ...draft, [key]: v.trim() || undefined } as Scope;
-    // смена верхнего уровня сбрасывает нижние
-    const order: (keyof Scope)[] = ["country", "region", "city", "district"];
-    const idx = order.indexOf(key);
-    for (let i = idx + 1; i < order.length; i++) delete next[order[i]];
-    setDraft(next);
-    onChange(next);
-  };
+  const hasScope = !!(value.country || value.region || value.city || value.district);
 
   return (
     <div className="space-y-2">
-      {LEVELS.map(({ key, label, placeholder }) => (
-        <div key={key}>
-          <div className="mb-1 text-xs font-bold text-slate-500">{label}</div>
-          <input
-            value={draft[key] ?? ""}
-            name={key}
-            list={`scope-${key}`}
-            onChange={(e) => { set(e.target.name as keyof Scope, e.target.value); }}
-            onFocus={(e) => loadOptions(key, e.target.value)}
-            placeholder={placeholder}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
-          />
-          <datalist id={`scope-${key}`}>
-            {(options[key] ?? []).map((o) => (
-              <option key={o.name} value={o.name}>{o.count} мест</option>
-            ))}
-          </datalist>
+      {hasScope && (
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
+          <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span className="min-w-0 flex-1 truncate font-bold text-emerald-800">{scopeLabel(value)}</span>
+          <button
+            type="button"
+            onClick={() => onChange({})}
+            aria-label="Сбросить"
+            className="rounded-full p-1 text-emerald-600/60 hover:bg-emerald-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-      ))}
-      <button
-        type="button"
-        onClick={() => { setDraft({}); onChange({}); }}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-      >
-        <Globe2 className="h-4 w-4" /> Весь мир
-      </button>
+      )}
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (items.length > 0) pick(items[0].name);
+            else if (q.trim().length >= 2) pick(q.trim());
+          }
+        }}
+        placeholder="Город или район…"
+        maxLength={100}
+        className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white"
+      />
+      {resolving && <div className="text-center text-xs text-slate-400">Определяем…</div>}
+      {items.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-slate-200">
+          {items.map((it) => (
+            <button
+              key={`${it.level}-${it.name}`}
+              type="button"
+              onClick={() => pick(it.name)}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50"
+            >
+              <MapPin className="h-4 w-4 shrink-0 text-slate-300" />
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{it.name}</span>
+              <span className="shrink-0 text-[11px] text-slate-400">{it.level === "city" ? "город" : "район"}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange({ country: "Россия" })}
+          className="rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+        >
+          Вся Россия
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange({})}
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+        >
+          <Globe2 className="h-4 w-4" /> Весь мир
+        </button>
+      </div>
     </div>
   );
 }

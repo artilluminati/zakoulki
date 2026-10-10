@@ -126,8 +126,7 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
         map.geoObjects.add(poly);
         polyRef.current = poly;
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dots = (map as any).__dots as any[] | undefined;
+      const dots = (map as any).__dots as Array<{ remove?: unknown }> | undefined;
       dots?.forEach((d) => { try { map.geoObjects.remove(d); } catch { /* ignore */ } });
       const fresh: any[] = [];
       if (areaMode) {
@@ -173,7 +172,6 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
       try { setFound(await searchGeoPlaces(q.trim())); } catch { setFound([]); }
     }, 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- дебаунс-поиск по вводу
   }, [q]);
 
   return (
