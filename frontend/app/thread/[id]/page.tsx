@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Heart, Eye, Flag, ImagePlus } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto } from "@/lib/v5";
+import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto } from "@/lib/v5";
 import { ThreadHtml, timeAgo } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import { useAuth } from "@/lib/auth";
@@ -25,6 +25,7 @@ export default function ThreadPage() {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  const [editPhotos, setEditPhotos] = useState<{ id: number; url: string }[]>([]);
   const [editCommentId, setEditCommentId] = useState<number | null>(null);
   const [editCommentBody, setEditCommentBody] = useState("");
   const canEdit = !!user && !!t && (user.id === t.author_id || user.role === "admin");
@@ -33,6 +34,7 @@ export default function ThreadPage() {
     if (!t) return;
     setEditTitle(t.title ?? "");
     setEditBody(t.body_md);
+    setEditPhotos(t.photos ?? []);
     setEditing(true);
   };
 
@@ -134,7 +136,49 @@ export default function ThreadPage() {
             <div className="mt-2">
               <MdEditor value={editBody} onChange={setEditBody} />
             </div>
-            <div className="mt-2 flex gap-2">
+            {editPhotos.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                {editPhotos.map((p) => (
+                  <span key={p.id} className="relative overflow-hidden rounded-xl bg-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt="" className="h-24 w-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await deletePhoto(p.id);
+                          setEditPhotos(editPhotos.filter((x) => x.id !== p.id));
+                        } catch {
+                          toast("Не удалилось", "error");
+                        }
+                      }}
+                      aria-label="Убрать фото"
+                      className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-1 text-white"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                <ImagePlus className="h-4 w-4" /> Добавить фото
+                <input
+                  type="file" accept="image/*" multiple className="hidden"
+                  onChange={async (e) => {
+                    const list = Array.from(e.target.files ?? []);
+                    e.target.value = "";
+                    if (!t || list.length === 0) return;
+                    try {
+                      const uploaded = await Promise.all(list.map((f) => uploadThreadPhoto(t.id, f)));
+                      setEditPhotos((prev) => [...prev, ...uploaded]);
+                    } catch {
+                      toast("Какое-то фото не загрузилось", "error");
+                    }
+                  }}
+                />
+              </label>
               <button onClick={saveEdit} disabled={!editBody.trim()} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Сохранить</button>
               <button onClick={() => setEditing(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold">Отмена</button>
             </div>

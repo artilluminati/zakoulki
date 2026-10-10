@@ -61,6 +61,10 @@ export async function uploadCommentPhoto(commentId: number, file: File) {
   return res.data as { id: number; url: string };
 }
 
+export async function deletePhoto(photoId: number) {
+  await api.delete(`/threads/photos/${photoId}`);
+}
+
 export async function reportThread(id: number, reason: string, text?: string, comment_id?: number) {
   const res = await api.post(`/threads/${id}/report`, { reason, text, comment_id });
   return res.data;

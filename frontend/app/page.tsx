@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
-import { fetchThreads, createThread } from "@/lib/v5";
-import { MessagesSquare, CheckCircle2 } from "lucide-react";
+import { fetchThreads, createThread, uploadThreadPhoto } from "@/lib/v5";
+import { MessagesSquare, CheckCircle2, ImagePlus, X } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -27,6 +27,7 @@ export default function FeedPage() {
   const [sort, setSort] = useState<Sort>("new");
   const [filter, setFilter] = useState<"all" | "important" | "offtop">("all");
   const [draft, setDraft] = useState("");
+  const [draftFiles, setDraftFiles] = useState<File[]>([]);
   const [posting, setPosting] = useState(false);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState(false);
@@ -110,8 +111,12 @@ export default function FeedPage() {
     if (!draft.trim() || posting) return;
     setPosting(true);
     try {
-      await createThread({ body_md: draft });
+      const t = await createThread({ body_md: draft });
+      for (const f of draftFiles) {
+        try { await uploadThreadPhoto(t.id, f); } catch { /* ignore */ }
+      }
       setDraft("");
+      setDraftFiles([]);
       toast("Опубликовано", "success");
       load();
     } catch {
@@ -126,9 +131,29 @@ export default function FeedPage() {
       {user ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
           <MdEditor value={draft} onChange={setDraft} compact placeholder="О чем хотите спросить? @ — человек, + — место" />
+          {draftFiles.length > 0 && (
+            <div className="mt-2 flex gap-1.5 overflow-x-auto">
+              {draftFiles.map((f, i) => (
+                <span key={`${f.name}-${f.size}-${i}`} className="flex shrink-0 items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs">
+                  {f.name.slice(0, 16)}
+                  <button type="button" onClick={() => setDraftFiles(draftFiles.filter((_, j) => j !== i))} aria-label="Убрать фото" className="text-slate-400 hover:text-red-500">✕</button>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="mt-2 flex items-center justify-between">
             <span className="text-xs text-slate-400">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
             <div className="flex gap-2">
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" title="Прикрепить фото">
+                <ImagePlus className="h-4 w-4" />
+                <input
+                  type="file" accept="image/*" multiple className="hidden"
+                  onChange={(e) => {
+                    setDraftFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
               <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">Расширить</Link>
               <button onClick={post} disabled={!draft.trim() || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
                 {posting ? "…" : "Опубликовать"}

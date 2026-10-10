@@ -430,6 +430,32 @@ def upload_comment_photo(
     return {"id": ph.id, "file_name": ph.file_name, "url": f"/uploads/{ph.file_name}"}
 
 
+@router.delete("/photos/{photo_id}", status_code=204)
+def delete_photo(photo_id: int, db: Session = Depends(get_db),
+                 user: User = Depends(get_current_user)):
+    """Удаление своего фото треда/ответа (или админом)."""
+    from app.models.thread_photo import ThreadPhoto
+    ph = db.get(ThreadPhoto, photo_id)
+    if not ph:
+        raise HTTPException(404, "Фото не найдено")
+    allowed = user.role == "admin"
+    if not allowed:
+        if ph.comment_id is not None:
+            c = db.get(ThreadComment, ph.comment_id)
+            allowed = c is not None and c.author_id == user.id
+        else:
+            t = db.get(Thread, ph.thread_id)
+            allowed = t is not None and t.author_id == user.id
+    if not allowed:
+        raise HTTPException(403, "Недостаточно прав")
+    try:
+        os.remove(os.path.join(settings.UPLOAD_DIR, ph.file_name))
+    except OSError:
+        pass
+    db.delete(ph)
+    db.commit()
+
+
 def _save_photo(db: Session, file: UploadFile, thread_id: int, comment_id: int | None = None):
     from app.models.thread_photo import ThreadPhoto
     if file.size and file.size > 10 * 1024 * 1024:
