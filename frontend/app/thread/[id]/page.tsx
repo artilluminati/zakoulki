@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- эффекты синхронизируют состояние с сервером/файлами */
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -18,6 +19,7 @@ export default function ThreadPage() {
   const [t, setT] = useState<Awaited<ReturnType<typeof fetchThread>> | null>(null);
   const [reply, setReply] = useState("");
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const [replyThumbs, setReplyThumbs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -67,6 +69,22 @@ export default function ThreadPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
+  // превью выбранных фото ответа
+  useEffect(() => {
+    const urls = replyFiles.map((f) => URL.createObjectURL(f));
+    setReplyThumbs(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [replyFiles]);
+
+  const pasteFiles = (e: React.ClipboardEvent) => {
+    const imgs = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+    if (imgs.length > 0) {
+      e.preventDefault();
+      setReplyFiles((prev) => [...prev, ...imgs]);
+      toast(`Фото добавлено: ${imgs.length}`, "success");
+    }
+  };
+
   // подсветка коммента из уведомления (#comment-123)
   useEffect(() => {
     if (loading) return;
@@ -81,7 +99,7 @@ export default function ThreadPage() {
   }, [loading, t]);
 
   const send = async () => {
-    if (!reply.trim() || sending) return;
+    if ((!reply.trim() && replyFiles.length === 0) || sending) return;
     setSending(true);
     try {
       const c = await commentThread(Number(id), reply);
@@ -289,10 +307,26 @@ export default function ThreadPage() {
                 <>
                   <div className="mt-0.5"><ThreadHtml html={c.body_html} /></div>
                   {c.photos && c.photos.length > 0 && (
-                    <div className="mt-1.5 overflow-hidden rounded-xl bg-slate-100">
+                    <div className="mt-1.5 grid gap-1.5 overflow-hidden rounded-xl bg-slate-100 sm:grid-cols-2">
                       {c.photos.map((p) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="max-h-72 w-full cursor-zoom-in object-contain" />
+                        <span key={p.id} className="relative block">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="max-h-72 w-full cursor-zoom-in object-contain" />
+                          {(user && (user.id === c.author_id || user.role === "admin")) && (
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try { await deletePhoto(p.id); load(); }
+                                catch { toast("Не удалилось", "error"); }
+                              }}
+                              aria-label="Убрать фото"
+                              className="absolute right-1.5 top-1.5 rounded-full bg-slate-900/70 p-1 text-white"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </span>
                       ))}
                     </div>
                   )}
@@ -303,20 +337,28 @@ export default function ThreadPage() {
           {(t.comments ?? []).length === 0 && <p className="text-sm text-slate-400">Пока нет ответов — станьте первым.</p>}
         </div>
         {user ? (
-          <div className="mt-3">
+          <div className="mt-3" onPaste={pasteFiles}>
             <MdEditor value={reply} onChange={setReply} compact placeholder="Написать ответ… @ + #" />
             {replyFiles.length > 0 && (
-              <div className="mt-2 flex gap-1.5 overflow-x-auto">
-                {replyFiles.map((f, i) => (
-                  <span key={`${f.name}-${f.size}-${i}`} className="flex shrink-0 items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs">
-                    {f.name.slice(0, 16)}
-                    <button type="button" onClick={() => setReplyFiles(replyFiles.filter((_, j) => j !== i))} aria-label="Убрать фото" className="text-slate-400 hover:text-red-500">✕</button>
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                {replyThumbs.map((src, i) => (
+                  <span key={`${replyFiles[i]?.name}-${replyFiles[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="h-20 w-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => setReplyFiles(replyFiles.filter((_, j) => j !== i))}
+                      aria-label="Убрать фото"
+                      className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-1 text-white"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </span>
                 ))}
               </div>
             )}
             <div className="mt-2 flex gap-2">
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" title="Прикрепить фото (можно вставить из буфера Ctrl+V)">
                 <ImagePlus className="h-4 w-4" /> Фото
                 <input
                   type="file" accept="image/*" multiple className="hidden"
@@ -326,7 +368,7 @@ export default function ThreadPage() {
                   }}
                 />
               </label>
-              <button onClick={send} disabled={!reply.trim() || sending} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
+              <button onClick={send} disabled={(!reply.trim() && replyFiles.length === 0) || sending} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
                 {sending ? "Отправляем…" : "Ответить"}
               </button>
             </div>

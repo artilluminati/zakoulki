@@ -139,7 +139,7 @@ export default function CreatePage() {
   };
 
   const publish = async () => {
-    if (!body.trim() || saving) return;
+    if ((!body.trim() && files.length === 0) || saving) return;
     setSaving(true); setError(null);
     try {
       let placeId = place && place.id > 0 ? place.id : null;
@@ -307,7 +307,7 @@ export default function CreatePage() {
       {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
 
       <div className="sticky bottom-20 flex gap-2 md:bottom-6">
-        <button onClick={publish} disabled={!body.trim() || saving} className="flex-1 rounded-2xl bg-lime-400 py-3 text-[15px] font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
+        <button onClick={publish} disabled={(!body.trim() && files.length === 0) || saving} className="flex-1 rounded-2xl bg-lime-400 py-3 text-[15px] font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
           {saving ? "Публикуем…" : "Опубликовать"}
         </button>
       </div>

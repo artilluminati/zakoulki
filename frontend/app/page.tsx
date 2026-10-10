@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import { fetchThreads, createThread, uploadThreadPhoto } from "@/lib/v5";
-import { MessagesSquare, CheckCircle2, ImagePlus, X } from "lucide-react";
+import { MessagesSquare, CheckCircle2, ImagePlus } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -108,7 +108,7 @@ export default function FeedPage() {
   };
 
   const post = async () => {
-    if (!draft.trim() || posting) return;
+    if ((!draft.trim() && draftFiles.length === 0) || posting) return;
     setPosting(true);
     try {
       const t = await createThread({ body_md: draft });
@@ -129,7 +129,17 @@ export default function FeedPage() {
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       {/* композер */}
       {user ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div
+          className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+          onPaste={(e) => {
+            const imgs = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+            if (imgs.length > 0) {
+              e.preventDefault();
+              setDraftFiles((prev) => [...prev, ...imgs]);
+              toast(`Фото добавлено: ${imgs.length}`, "success");
+            }
+          }}
+        >
           <MdEditor value={draft} onChange={setDraft} compact placeholder="О чем хотите спросить? @ — человек, + — место" />
           {draftFiles.length > 0 && (
             <div className="mt-2 flex gap-1.5 overflow-x-auto">
@@ -155,7 +165,7 @@ export default function FeedPage() {
                 />
               </label>
               <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">Расширить</Link>
-              <button onClick={post} disabled={!draft.trim() || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
+              <button onClick={post} disabled={(!draft.trim() && draftFiles.length === 0) || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
                 {posting ? "…" : "Опубликовать"}
               </button>
             </div>

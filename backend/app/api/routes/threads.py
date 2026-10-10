@@ -22,7 +22,7 @@ router = APIRouter(prefix="/threads", tags=["threads-v5"])
 
 
 class ThreadCreate(BaseModel):
-    body_md: str = Field(min_length=1, max_length=5000)
+    body_md: str = Field(min_length=0, max_length=5000)
     title: str | None = Field(default=None, max_length=150)  # Q3: опционально
     place_id: int | None = None
     category_ids: list[int] = []
@@ -30,7 +30,7 @@ class ThreadCreate(BaseModel):
 
 
 class CommentCreate(BaseModel):
-    body_md: str = Field(min_length=1, max_length=2000)
+    body_md: str = Field(min_length=0, max_length=2000)
     parent_id: int | None = None
 
 
