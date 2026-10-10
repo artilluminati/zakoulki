@@ -31,6 +31,9 @@ export default function FeedPage() {
   const [draftFiles, setDraftFiles] = useState<File[]>([]);
   const [draftThumbs, setDraftThumbs] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pickFiles = () => fileRef.current?.click();
 
   useEffect(() => {
     const urls = draftFiles.map((f) => URL.createObjectURL(f));
@@ -170,16 +173,17 @@ export default function FeedPage() {
           <div className="mt-2 flex items-center justify-between">
             <span className="text-xs text-slate-400">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
             <div className="flex gap-2">
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" title="Прикрепить фото">
+              <button type="button" onClick={pickFiles} title="Прикрепить фото" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
                 <ImagePlus className="h-4 w-4" />
-                <input
-                  type="file" accept="image/*" multiple className="hidden"
-                  onChange={(e) => {
-                    setDraftFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+              </button>
+              <input
+                ref={fileRef}
+                type="file" accept="image/*" multiple className="hidden" tabIndex={-1}
+                onChange={(e) => {
+                  setDraftFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+                  e.target.value = "";
+                }}
+              />
               <PasteButton small onPaste={(imgs) => { setDraftFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
               <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">Расширить</Link>
               <button onClick={post} disabled={(!draft.trim() && draftFiles.length === 0) || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">

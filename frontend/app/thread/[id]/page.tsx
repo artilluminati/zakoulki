@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect -- эффекты синхронизируют состояние с сервером/файлами */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
@@ -22,6 +22,7 @@ export default function ThreadPage() {
   const [t, setT] = useState<Awaited<ReturnType<typeof fetchThread>> | null>(null);
   const [reply, setReply] = useState("");
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const replyFileRef = useRef<HTMLInputElement>(null);
   const [replyThumbs, setReplyThumbs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -412,16 +413,17 @@ export default function ThreadPage() {
               </div>
             )}
             <div className="mt-2 flex gap-2">
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" title="Выбрать файл">
+              <button type="button" onClick={() => replyFileRef.current?.click()} title="Выбрать файл" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
                 <ImagePlus className="h-4 w-4" />
-                <input
-                  type="file" accept="image/*" multiple className="hidden"
-                  onChange={(e) => {
-                    setReplyFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+              </button>
+              <input
+                ref={replyFileRef}
+                type="file" accept="image/*" multiple className="hidden" tabIndex={-1}
+                onChange={(e) => {
+                  setReplyFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+                  e.target.value = "";
+                }}
+              />
               <PasteButton small onPaste={(imgs) => { setReplyFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
               <button onClick={send} disabled={(!reply.trim() && replyFiles.length === 0) || sending} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
                 {sending ? "Отправляем…" : "Ответить"}
