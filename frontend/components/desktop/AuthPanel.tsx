@@ -95,7 +95,7 @@ export default function AuthPanel({ initialMode = "login", onSuccess }: Props) {
         <input className={input} placeholder="Имя пользователя" value={username}
           onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={50} />
       )}
-      <input className={input} placeholder="Email" type="email" value={email}
+      <input className={input} placeholder="Email или ник" value={email}
         onChange={(e) => setEmail(e.target.value)} required />
       <div className="relative">
         <input className={`${input} pr-11`} placeholder="Пароль" type={showPw ? "text" : "password"}

@@ -25,9 +25,13 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(data: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == data.email).first()
+    # вход по email ИЛИ нику через одно поле
+    login = data.email.strip()
+    user = db.query(User).filter(User.email == login).first()
+    if not user:
+        user = db.query(User).filter(User.username == login).first()
     if not user or not verify_password(data.password, user.password_hash):
-        raise HTTPException(400, "Неверный email или пароль")
+        raise HTTPException(400, "Неверный логин или пароль")
     token = create_access_token(subject=str(user.id))
     return Token(access_token=token)
 

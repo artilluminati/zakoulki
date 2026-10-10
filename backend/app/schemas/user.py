@@ -10,7 +10,7 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str  # email или ник — одно поле входа
     password: str
 
 
