@@ -5,6 +5,7 @@ function svgUri(svg: string) {
 }
 
 const GLYPH_Q = "M20 12c0-3.6 2.6-6 6-6s6 2.4 6 6c0 4.5-4 5.2-4 9h-4c0-3.4 4-4.4 4-7.4 0-1.5-1-2.6-2-2.6s-2 1.1-2 2.6l-4-1.6zM24 30.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z";
+const GLYPH_Q_T = "translate(4.2,3.8) scale(0.8)"; // чуть меньше, чтобы знак помещался в круг
 const GLYPH_CHAT = "M12 11h16v10H18l-4 4v-4h-2V11zm2 2v6h10v-6H14z";
 
 export interface PinOpts {
@@ -16,9 +17,10 @@ export interface PinOpts {
 
 export function makePin({ color, glyph = "q", photoUrl, selected = false }: PinOpts): string {
   const path = glyph === "q" ? GLYPH_Q : GLYPH_CHAT;
+  const tf = glyph === "q" ? GLYPH_Q_T : "translate(-4,-4) scale(1)";
   const inner = photoUrl
     ? `<clipPath id="c"><circle cx="22" cy="22" r="13"/></clipPath><image href="${photoUrl}" xlink:href="${photoUrl}" x="9" y="9" width="26" height="26" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/><circle cx="22" cy="22" r="13" fill="none" stroke="#fff" stroke-width="3"/>`
-    : `<g fill="#fff"><path d="${path}" transform="translate(-4,-4) scale(1)"/></g>`;
+    : `<g fill="#fff"><path d="${path}" transform="${tf}"/></g>`;
   const ring = selected ? `<circle cx="22" cy="22" r="20" fill="none" stroke="#a3e635" stroke-width="3"/>` : "";
   return svgUri(
     `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="48" viewBox="0 0 44 48">` +
@@ -41,6 +43,11 @@ export const CLUSTER_ICON = svgUri(
     `<circle cx="32" cy="30" r="26" fill="none" stroke="rgba(163,230,53,.30)" stroke-width="8"/>` +
     `</svg>`
 );
+
+/** Прозрачная заглушка 1px: сам кружок кластера рисует HTML-layout ниже,
+ *  так цифра всегда в заливке независимо от загрузки картинки. */
+export const CLUSTER_BLANK =
+  "data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=";
 
 export const CLUSTER_SIZE: [number, number] = [64, 64];
 export const CLUSTER_OFFSET: [number, number] = [-32, -32];

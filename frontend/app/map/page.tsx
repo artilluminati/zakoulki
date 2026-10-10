@@ -8,7 +8,7 @@ import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react"
 import { fetchMapPoints, fetchThread } from "@/lib/v5";
 import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
-import { makePin, CLUSTER_ICON, CLUSTER_SIZE, CLUSTER_OFFSET, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
+import { makePin, CLUSTER_BLANK, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import { useToast } from "@/lib/toast";
 import type { ThreadV5 } from "@/types/v5";
 
@@ -107,9 +107,12 @@ export default function MapPage() {
     setCount(visible.length);
     const clusterer = new ymaps.Clusterer({
       groupByCoordinates: false,
-      clusterIcons: [{ href: CLUSTER_ICON, size: [...CLUSTER_SIZE], offset: [...CLUSTER_OFFSET] }],
+      gridSize: 64,
+      // кружок рисует HTML-layout (не зависит от загрузки картинки),
+      // иконка — прозрачная заглушка того же размера
+      clusterIcons: [{ href: CLUSTER_BLANK, size: [64, 64], offset: [-32, -32] }],
       clusterIconContentLayout: ymaps.templateLayoutFactory.createClass(
-        '<div style="color:#a3e635;font-weight:800;font-size:18px;line-height:64px;width:64px;text-align:center;">{{ properties.geoObjects.length }}</div>'
+        '<div style="width:64px;height:64px;border-radius:50%;background:#0f172a;border:4px solid #a3e635;box-shadow:0 4px 14px rgba(2,6,23,.35);display:flex;align-items:center;justify-content:center;color:#a3e635;font-weight:800;font-size:18px;font-family:system-ui,sans-serif;">{{ properties.geoObjects.length }}</div>'
       ),
     });
     // тап по кластеру на крупном зуме — список тредов, а не бесконечный зум
