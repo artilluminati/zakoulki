@@ -41,6 +41,27 @@ export default function FeedPage() {
   const [posting, setPosting] = useState(false);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState(false);
+  const [geoPending, setGeoPending] = useState(false);
+
+  const requestGeo = async () => {
+    setGeoError(false);
+    setGeoPending(true);
+    try {
+      if (!("geolocation" in navigator)) throw new Error("unsupported");
+      const withPerms = navigator as Navigator & { permissions?: { query(o: { name: string }): Promise<{ state: string }> } };
+      if (withPerms.permissions?.query) {
+        const st = await withPerms.permissions.query({ name: "geolocation" });
+        if (st.state === "denied") throw new Error("denied");
+      }
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+      setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    } catch {
+      setGeoError(true);
+    } finally {
+      setGeoPending(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,18 +83,7 @@ export default function FeedPage() {
   useEffect(() => { load(); }, [load]);
 
   const pickSort = (s: Sort) => {
-    setGeoError(false);
-    if (s === "near" && !geo) {
-      if (!("geolocation" in navigator)) {
-        setGeoError(true);
-      } else {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => setGeoError(true),
-          { timeout: 8000 }
-        );
-      }
-    }
+    if (s === "near" && !geo && !geoPending) requestGeo();
     setSort(s);
   };
 
@@ -131,14 +141,15 @@ export default function FeedPage() {
         )}
       </div>
 
-      {sort === "near" && !geo && !geoError && (
+      {sort === "near" && geoPending && (
         <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center text-[13px] text-slate-500">
           Определяем ваше местоположение…
         </div>
       )}
-      {sort === "near" && geoError && (
+      {sort === "near" && geoError && !geoPending && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800">
-          Не можем определить местоположение — показываем новое
+          Не можем определить местоположение — разрешите доступ в браузере или показываем новое.
+          <button onClick={requestGeo} className="ml-2 font-bold underline">Попробовать снова</button>
         </div>
       )}
 

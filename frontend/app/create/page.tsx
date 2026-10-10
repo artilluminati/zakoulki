@@ -54,13 +54,28 @@ export default function CreatePage() {
     api.get("/categories").then((r) => setAllCats(r.data)).catch(() => {});
   }, []);
 
-  const useGeolocation = () => {
-    if (!("geolocation" in navigator)) { setError("Не можем определить местоположение"); return; }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
+  const [geoLocating, setGeoLocating] = useState(false);
+
+  const useGeolocation = async () => {
+    setError(null);
+    setGeoLocating(true);
+    try {
+      if (!("geolocation" in navigator)) throw new Error("unsupported");
+      const withPerms = navigator as Navigator & { permissions?: { query(o: { name: string }): Promise<{ state: string }> } };
+      if (withPerms.permissions?.query) {
+        const st = await withPerms.permissions.query({ name: "geolocation" });
+        if (st.state === "denied") throw new Error("denied");
+      }
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
       const { latitude, longitude } = pos.coords;
       setPendingGeo({ latitude, longitude });
-      try { setNearby(await fetchNearbyThreads(latitude, longitude)); } catch {}
-    }, () => setError("Геолокация недоступна"));
+      try { setNearby(await fetchNearbyThreads(latitude, longitude)); } catch { /* ignore */ }
+    } catch {
+      setError("Не можем определить местоположение — разрешите доступ в браузере");
+    } finally {
+      setGeoLocating(false);
+    }
   };
 
   const publish = async () => {
@@ -140,7 +155,9 @@ export default function CreatePage() {
           {place || pendingGeo ? (
             <button onClick={() => { setPlace(null); setPendingGeo(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
           ) : (
-            <button onClick={useGeolocation} className="text-xs font-bold text-emerald-700">Моя геолокация</button>
+            <button onClick={useGeolocation} disabled={geoLocating} className="text-xs font-bold text-emerald-700 disabled:opacity-50">
+              {geoLocating ? "Определяем…" : "Моя геолокация"}
+            </button>
           )}
         </div>
         {place ? (
