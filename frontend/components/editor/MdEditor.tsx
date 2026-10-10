@@ -32,23 +32,20 @@ export default function MdEditor({
     setActive(idx);
   };
 
-  // если строк стало меньше чем active (очистка извне) — сбрасываем
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- сброс вышедшего за границы индекса
-  useEffect(() => {
-    if (active !== null && active >= lines.length) setActive(null);
-  }, [lines.length, active]);
+  // если строк стало меньше чем active (очистка извне) — считаем сброшенным без эффекта
+  const safeActive = active !== null && active < lines.length ? active : null;
 
   // фокус + каретка после активации строки
   useEffect(() => {
     const el = areaRef.current;
-    if (el && active !== null) {
+    if (el && safeActive !== null) {
       el.focus({ preventScroll: true });
       const pos = caretRef.current ?? el.value.length;
       caretRef.current = null;
       el.setSelectionRange(pos, pos);
       autoGrow(el);
     }
-  }, [active]);
+  }, [safeActive]);
 
   const commitLines = (next: string[], focusIdx?: number, caret?: number) => {
     onChange(next.join("\n"));
@@ -218,7 +215,7 @@ export default function MdEditor({
         </div>
       </div>
       <div className="px-3 py-2">
-        {lines.length === 1 && lines[0] === "" && active === null ? (
+        {lines.length === 1 && lines[0] === "" && safeActive === null ? (
           <div
             onClick={() => focusActive(0, 0)}
             className="cursor-text text-[15px] leading-6 text-slate-400"
@@ -227,7 +224,7 @@ export default function MdEditor({
           </div>
         ) : (
           lines.map((line, i) =>
-            i === active ? (
+            i === safeActive ? (
               <textarea
                 key={i}
                 ref={areaRef}
@@ -262,10 +259,10 @@ export default function MdEditor({
           )
         )}
       </div>
-      {plusQuery !== null && active !== null && (
+      {plusQuery !== null && safeActive !== null && (
         <PlaceSuggest query={plusQuery} onClose={() => setPlusQuery(null)} onPick={pickPlace} />
       )}
-      {userQuery !== null && active !== null && (
+      {userQuery !== null && safeActive !== null && (
         <UserSuggest query={userQuery} onClose={() => setUserQuery(null)} onPick={pickUser} />
       )}
     </div>
