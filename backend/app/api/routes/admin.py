@@ -76,7 +76,10 @@ def admin_reports(status: str | None = Query(None, pattern="^(new|reviewed|rejec
     if status:
         q = q.filter(Report.status == status)
     items = q.limit(100).all()
-    return [{"id": r.id, "reporter_id": r.reporter_id, "thread_id": r.thread_id,
+    reporter_ids = {r.reporter_id for r in items}
+    reporters = {u.id: u.username for u in db.query(User).filter(User.id.in_(reporter_ids)).all()} if reporter_ids else {}
+    return [{"id": r.id, "reporter_id": r.reporter_id, "reporter": reporters.get(r.reporter_id),
+             "thread_id": r.thread_id,
              "comment_id": r.comment_id, "reason": r.reason, "text": r.text,
              "status": r.status} for r in items]
 

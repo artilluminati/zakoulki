@@ -136,7 +136,8 @@ export default function ThreadPage() {
           {(t.comments ?? []).map((c) => (
             <div key={c.id} id={`comment-${c.id}`} className="rounded-xl bg-slate-50 px-3 py-2">
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <span>#{c.id} · {timeAgo(c.created_at)}</span>
+                <span className="font-bold text-slate-600">{c.author_username ? `@${c.author_username}` : "кто-то"}</span>
+                <span>· {timeAgo(c.created_at)}</span>
                 {(user && (user.id === c.author_id || user.role === "admin")) && (
                   <button
                     onClick={() => removeComment(c.id)}

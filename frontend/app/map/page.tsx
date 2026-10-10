@@ -263,6 +263,7 @@ export default function MapPage() {
                   )}
                   <div className="min-w-0 flex-1">
                     {selected.title && <div className="truncate text-[15px] font-extrabold">{selected.title}</div>}
+                    <div className="truncate text-[13px] text-slate-500">@{selected.author_username}</div>
                     <div className="flex items-center gap-3 truncate text-[13px] text-slate-500">
                       <span className="truncate">{selected.place?.name ?? "Без точки"}</span>
                       <span className="flex shrink-0 items-center gap-1"><MessageCircle className="h-3.5 w-3.5" />{selected.comments_count}</span>

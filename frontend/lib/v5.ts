@@ -9,7 +9,7 @@ export async function fetchThreads(params: Record<string, string | number | bool
 }
 
 export async function fetchThread(id: number | string) {
-  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; body_html: string; created_at: string }[] }>(`/threads/${id}`);
+  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; author_username?: string | null; body_html: string; created_at: string }[] }>(`/threads/${id}`);
   return res.data;
 }
 

@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 
 interface AdminUser { id: number; username: string; email: string; role: string; created_at: string; }
-interface Report { id: number; reporter_id: number; thread_id?: number | null; comment_id?: number | null; reason: string; text?: string | null; status: string; }
+interface Report { id: number; reporter_id: number; reporter?: string; thread_id?: number | null; comment_id?: number | null; reason: string; text?: string | null; status: string; }
 
 const REASONS: Record<string, string> = { spam: "Спам", abuse: "Оскорбления", offtopic: "Не по теме", other: "Другое" };
 
@@ -135,7 +135,7 @@ export default function AdminPage() {
           <div key={r.id} className="border-b border-slate-50 px-4 py-2.5 text-sm last:border-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">{REASONS[r.reason] ?? r.reason}</span>
-              <span className="text-slate-500">#{r.id} от {r.reporter_id}</span>
+              <span className="text-slate-500">#{r.id} · @{r.reporter ?? r.reporter_id}</span>
               {r.thread_id && <Link href={`/thread/${r.thread_id}`} className="font-bold text-emerald-700 hover:underline">тред #{r.thread_id}</Link>}
               <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${r.status === "new" ? "bg-amber-100 font-bold text-amber-800" : "bg-slate-100 text-slate-400"}`}>
                 {r.status === "new" ? "новая" : r.status === "reviewed" ? "разобрана" : "отклонена"}

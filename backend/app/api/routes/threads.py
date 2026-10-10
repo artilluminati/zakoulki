@@ -213,8 +213,11 @@ def get_thread(thread_id: int, db: Session = Depends(get_db)):
     t.views += 1; db.commit()
     out = _thread_out(t, db)
     comments = db.query(ThreadComment).filter(ThreadComment.thread_id == thread_id).order_by(ThreadComment.id).all()
-    out["comments"] = [{"id": c.id, "parent_id": c.parent_id, "author_id": c.author_id,
-                        "body_html": c.body_html, "created_at": c.created_at} for c in comments]
+    out["comments"] = [{
+        "id": c.id, "parent_id": c.parent_id, "author_id": c.author_id,
+        "author_username": (db.get(User, c.author_id).username if db.get(User, c.author_id) else None),
+        "body_html": c.body_html, "created_at": c.created_at,
+    } for c in comments]
     return out
 
 
