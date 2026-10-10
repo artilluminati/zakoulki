@@ -1,10 +1,30 @@
 import { api } from "@/lib/api";
 import type { ThreadV5, GeoPlaceV5 } from "@/types/v5";
+import type { Scope } from "@/lib/scope";
 
-export async function fetchThreads(params: Record<string, string | number | boolean | undefined> = {}) {
-  const clean: Record<string, string | number | boolean> = {};
-  for (const [k, v] of Object.entries(params)) if (v !== undefined) clean[k] = v;
-  const res = await api.get<ThreadV5[]>("/threads", { params: clean });
+/** Параметры региона: комбо «город и область» идет через OR, обычное — через AND. */
+export function scopeParams(s: Scope): Record<string, string | string[]> {
+  if (s.any && s.any.length > 0) return { geo_any: s.any };
+  const p: Record<string, string> = {};
+  if (s.district) p.district = s.district;
+  if (s.city) p.city = s.city;
+  if (s.region) p.region = s.region;
+  if (s.country) p.country = s.country;
+  return p;
+}
+
+function toSearchParams(params: Record<string, string | number | boolean | string[] | undefined>): URLSearchParams {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined) continue;
+    if (Array.isArray(v)) v.forEach((x) => sp.append(k, x));
+    else sp.append(k, String(v));
+  }
+  return sp;
+}
+
+export async function fetchThreads(params: Record<string, string | number | boolean | string[] | undefined> = {}) {
+  const res = await api.get<ThreadV5[]>("/threads", { params: toSearchParams(params) });
   return res.data;
 }
 
@@ -100,8 +120,8 @@ export async function fetchNearbyThreads(lat: number, lng: number, radius = 0.3)
   return res.data as { id: number; body_md: string; place_name?: string }[];
 }
 
-export async function fetchMapPoints(bbox: { north: number; south: number; east: number; west: number; district?: string; city?: string; region?: string; country?: string }) {
-  const res = await api.get("/geo-places/map-points", { params: bbox });
+export async function fetchMapPoints(bbox: { north: number; south: number; east: number; west: number; district?: string; city?: string; region?: string; country?: string; geo_any?: string[] }) {
+  const res = await api.get("/geo-places/map-points", { params: toSearchParams(bbox) });
   return res.data as { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; area?: [number, number][] | null }[];
 }
 

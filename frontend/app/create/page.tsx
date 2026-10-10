@@ -12,6 +12,7 @@ import PollBuilder, { type PollDraft } from "@/components/PollBuilder";
 import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
+import { useScope } from "@/lib/scope";
 import Link from "next/link";
 import type { GeoPlaceV5 } from "@/types/v5";
 
@@ -28,6 +29,7 @@ export default function CreatePage() {
   const params = useSearchParams();
   const toast = useToast();
   const { user, loading: authLoading } = useAuth();
+  const { scope } = useScope();
   const DRAFT_KEY = "zakoulki_draft_v1";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -236,6 +238,8 @@ export default function CreatePage() {
       }
       const t = await createThread({
         title: title || null, body_md: body, place_id: placeId, tags,
+        city: scope.city ?? null, district: scope.district ?? null,
+        region: scope.region ?? null, country: scope.country ?? null,
         poll: poll && poll.question.trim() && poll.options.filter((o) => o.trim()).length >= 2
           ? { question: poll.question.trim(), options: poll.options.map((o) => o.trim()).filter(Boolean), multiple: poll.multiple }
           : null,

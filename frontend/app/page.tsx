@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import PasteButton from "@/components/PasteButton";
-import { fetchThreads, createThread, uploadThreadPhoto } from "@/lib/v5";
+import { fetchThreads, createThread, uploadThreadPhoto, scopeParams } from "@/lib/v5";
 import { MessagesSquare, CheckCircle2, ImagePlus, X } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
@@ -83,10 +83,7 @@ export default function FeedPage() {
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
-        ...(scope.district ? { district: scope.district } : {}),
-        ...(scope.city ? { city: scope.city } : {}),
-        ...(scope.region ? { region: scope.region } : {}),
-        ...(scope.country ? { country: scope.country } : {}),
+        ...scopeParams(scope),
         limit: PAGE,
       });
       setItems(data);
@@ -110,10 +107,7 @@ export default function FeedPage() {
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
-        ...(scope.district ? { district: scope.district } : {}),
-        ...(scope.city ? { city: scope.city } : {}),
-        ...(scope.region ? { region: scope.region } : {}),
-        ...(scope.country ? { country: scope.country } : {}),
+        ...scopeParams(scope),
         limit: PAGE,
         before_id: last.id,
       });
@@ -135,7 +129,11 @@ export default function FeedPage() {
     if ((!draft.trim() && draftFiles.length === 0) || posting) return;
     setPosting(true);
     try {
-      const t = await createThread({ body_md: draft });
+      const t = await createThread({
+        body_md: draft,
+        city: scope.city ?? null, district: scope.district ?? null,
+        region: scope.region ?? null, country: scope.country ?? null,
+      });
       for (const f of draftFiles) {
         try { await uploadThreadPhoto(t.id, f); } catch { /* ignore */ }
       }

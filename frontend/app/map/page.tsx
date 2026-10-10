@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
-import { fetchMapPoints, fetchThread, reverseGeocode } from "@/lib/v5";
+import { fetchMapPoints, fetchThread, reverseGeocode, scopeParams } from "@/lib/v5";
 import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_BLANK, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
@@ -88,10 +88,7 @@ export default function MapPage() {
           const s = scopeRef.current;
           const list = await fetchMapPoints({
             south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
-            ...(s.district ? { district: s.district } : {}),
-            ...(s.city ? { city: s.city } : {}),
-            ...(s.region ? { region: s.region } : {}),
-            ...(s.country ? { country: s.country } : {}),
+            ...scopeParams(s),
           }).catch(() => [] as MapPt[]);
           if (!alive || my !== reqRef.current) return;
           setPts(list);
@@ -161,10 +158,7 @@ export default function MapPage() {
       const b = map.getBounds();
       const list = await fetchMapPoints({
         south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
-        ...(scope.district ? { district: scope.district } : {}),
-        ...(scope.city ? { city: scope.city } : {}),
-        ...(scope.region ? { region: scope.region } : {}),
-        ...(scope.country ? { country: scope.country } : {}),
+        ...scopeParams(scope),
       }).catch(() => [] as MapPt[]);
       if (alive) setPts(list);
     })();

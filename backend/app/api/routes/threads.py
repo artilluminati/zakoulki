@@ -198,16 +198,23 @@ def list_threads(
     city: str | None = Query(None, description="город/округ"),
     region: str | None = Query(None, description="область/регион"),
     country: str | None = Query(None, description="страна"),
+    geo_any: list[str] | None = Query(None, description="город ИЛИ область: несколько значений через OR"),
     sort: str = Query("new", pattern="^(new|top|near)$"),
     lat: float | None = None, lng: float | None = None, radius: float | None = Query(None, description="км"),
     before_id: int | None = None, limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
     q = db.query(Thread).options(joinedload(Thread.place)).order_by(Thread.id.desc())
-    if district or city or region or country:
+    if district or city or region or country or geo_any:
         # место треда ИЛИ его собственная привязка (оффтоп)
         from sqlalchemy import or_ as _loc_or
         q = q.outerjoin(GeoPlace, Thread.place_id == GeoPlace.id)
+        if geo_any:
+            vals = [v for v in geo_any if v]
+            q = q.filter(_loc_or(
+                GeoPlace.city.in_(vals), GeoPlace.district.in_(vals), GeoPlace.region.in_(vals),
+                Thread.city.in_(vals), Thread.district.in_(vals), Thread.region.in_(vals),
+            ))
         if district:
             q = q.filter(_loc_or(GeoPlace.district == district, Thread.district == district))
         if city:

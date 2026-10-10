@@ -131,12 +131,17 @@ def nearby_threads(lat: float, lng: float, radius: float = Query(0.3, descriptio
 def map_points(north: float, south: float, east: float, west: float,
                district: str | None = None, city: str | None = None,
                region: str | None = None, country: str | None = None,
+               geo_any: list[str] | None = Query(None),
                limit: int = Query(200, le=500), db: Session = Depends(get_db)):
     """Легковесные точки для кластеризации на карте."""
+    from sqlalchemy import or_ as _or2
     from app.models.thread_photo import ThreadPhoto
     items = (db.query(Thread).join(GeoPlace, Thread.place_id == GeoPlace.id)
              .filter(GeoPlace.latitude.between(south, north))
              .filter(GeoPlace.longitude.between(west, east)))
+    if geo_any:
+        vals = [v for v in geo_any if v]
+        items = items.filter(_or2(GeoPlace.city.in_(vals), GeoPlace.district.in_(vals), GeoPlace.region.in_(vals)))
     if district:
         items = items.filter(GeoPlace.district == district)
     if city:

@@ -8,12 +8,14 @@ export interface Scope {
   region?: string;
   city?: string;
   district?: string;
+  any?: string[];
+  anyLabel?: string;
 }
 
 const KEY = "zakoulki_scope_v1";
 
 export function scopeLabel(s: Scope): string {
-  return s.district ?? s.city ?? s.region ?? s.country ?? "Весь мир";
+  return s.anyLabel ?? s.district ?? s.city ?? s.region ?? s.country ?? "Вся Россия";
 }
 
 interface ScopeCtx {
@@ -25,12 +27,14 @@ interface ScopeCtx {
 const Ctx = createContext<ScopeCtx>({ scope: {}, setScope: () => {}, clearScope: () => {} });
 
 export function ScopeProvider({ children }: { children: ReactNode }) {
-  const [scope, setScopeState] = useState<Scope>({});
+  // по умолчанию — вся Россия (мира пока нет в интерфейсе)
+  const [scope, setScopeState] = useState<Scope>({ country: "Россия" });
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) setScopeState(JSON.parse(raw) as Scope);
+      else localStorage.setItem(KEY, JSON.stringify({ country: "Россия" }));
     } catch { /* ignore */ }
   }, []);
 

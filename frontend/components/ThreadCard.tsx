@@ -224,15 +224,20 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
         <ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} />
       </Link>
 
-      {t.tags && t.tags.length > 0 && (
+      {(t.tags?.length || (!t.place && (t.district || t.city))) ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {t.tags.map((tag) => (
+          {(t.tags ?? []).map((tag) => (
             <Link key={tag} href={`/tag/${encodeURIComponent(tag)}`} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200">
               {tag}
             </Link>
           ))}
+          {!t.place && (t.district || t.city) && (
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+              {[t.district, t.city].filter(Boolean).join(", ")}
+            </span>
+          )}
         </div>
-      )}
+      ) : null}
       {t.poll && (
         <Link href={`/thread/${t.id}`} className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-slate-800">
           <BarChart3 className="h-4 w-4 text-emerald-600" /> Опрос: {t.poll.question} · голосов: {t.poll.total}
