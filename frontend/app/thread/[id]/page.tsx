@@ -294,6 +294,9 @@ export default function ThreadPage() {
             )}
             <div className="flex items-center gap-2 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
               <MapPin className="h-4 w-4" /> {t.place.name}
+              {t.place.area && t.place.area.length >= 3 && (
+                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white">территория</span>
+              )}
             </div>
             <div className="px-3 py-1.5 text-xs text-slate-500">{[t.place.address, t.place.district].filter(Boolean).join(" · ")}</div>
             <Link href={`/map?place=${t.place.id}`} className="block bg-slate-50 px-3 py-2 text-[13px] font-bold text-emerald-700">Открыть на карте →</Link>
