@@ -32,9 +32,30 @@ export default function CreatePage() {
   const [found, setFound] = useState<GeoPlaceV5[]>([]);
   const [nearby, setNearby] = useState<{ id: number; body_md: string; place_name?: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [thumbs, setThumbs] = useState<string[]>([]);
+
+  // превью выбранных фото, revoke при изменении/размонтировании
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setThumbs(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
   const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // выбор места из поиска: результат геокодера (id 0) сначала закрепляем в своей базе
+  const pickFound = async (p: GeoPlaceV5) => {
+    try {
+      const picked = p.id === 0
+        ? await createGeoPlace({ name: p.name, latitude: p.lat, longitude: p.lng, address: p.address, district: p.district, street: p.street })
+        : p;
+      setPlace(picked);
+      fetchNearbyThreads(picked.lat, picked.lng).then(setNearby).catch(() => { /* ignore */ });
+    } catch {
+      setError("Не получилось прикрепить место");
+    }
+  };
 
   useEffect(() => {
     if (addr.length < 3) { setFound([]); return; }
@@ -77,7 +98,7 @@ export default function CreatePage() {
     if (!body.trim() || saving) return;
     setSaving(true); setError(null);
     try {
-      let placeId = place?.id ?? null;
+      let placeId = place && place.id > 0 ? place.id : null;
       if (!placeId && pendingGeo) {
         const p = await createGeoPlace({ name: "Точка на карте", latitude: pendingGeo.latitude, longitude: pendingGeo.longitude, address: "Моя геолокация" });
         placeId = p.id;
@@ -116,15 +137,25 @@ export default function CreatePage() {
           <ImagePlus className="h-5 w-5" /> Добавить фото{files.length > 0 ? ` (${files.length})` : ""}
           <input
             type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+            onChange={(e) => setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])}
           />
         </label>
         {files.length > 0 && (
-          <div className="mt-2 flex gap-1.5 overflow-x-auto">
-            {files.map((f, i) => (
-              <span key={i} className="shrink-0 rounded-lg bg-slate-100 px-2 py-1 text-xs">{f.name.slice(0, 18)}</span>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {thumbs.map((src, i) => (
+              <span key={`${files[i]?.name}-${files[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="h-24 w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                  aria-label="Убрать фото"
+                  className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-1 text-white"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
             ))}
-            <button onClick={() => setFiles([])} className="shrink-0 text-xs text-red-500">очистить</button>
           </div>
         )}
       </div>
@@ -160,9 +191,9 @@ export default function CreatePage() {
               className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
             />
             {found.map((p) => (
-              <button key={p.id} onClick={() => { setPlace(p); fetchNearbyThreads(p.lat, p.lng).then(setNearby).catch(() => {}); }} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50">
-                <MapPin className="h-4 w-4 text-emerald-600" />
-                <span><span className="block text-sm font-bold">{p.name}</span><span className="block text-xs text-slate-500">{p.address}</span></span>
+              <button key={`${p.id}-${p.name}`} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50">
+                <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span className="min-w-0"><span className="block truncate text-sm font-bold">{p.name}</span><span className="block truncate text-xs text-slate-500">{p.address}</span></span>
               </button>
             ))}
           </>

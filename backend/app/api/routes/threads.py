@@ -156,6 +156,8 @@ def list_threads(
 
 @router.post("", status_code=201)
 def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    if data.place_id is not None and not db.get(GeoPlace, data.place_id):
+        raise HTTPException(404, "Место не найдено")
     html, entities = render_markdown(data.body_md)
     # вопрос = есть основная точка ИЛИ упоминание места в тексте
     is_offtop = data.place_id is None and not entities["place_ids"]

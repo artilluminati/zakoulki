@@ -12,9 +12,9 @@ export default function MdEditor({
   value: string; onChange: (v: string) => void; placeholder?: string; compact?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  const [tab, setTab] = useState<"write" | "preview">("write");
   const [plusQuery, setPlusQuery] = useState<string | null>(null);
   const [userQuery, setUserQuery] = useState<string | null>(null);
+  const [scroll, setScroll] = useState(0);
 
   const wrap = (before: string, after = "") => {
     const el = ref.current;
@@ -49,29 +49,37 @@ export default function MdEditor({
         <button type="button" title="Упомянуть человека" onClick={() => ref.current && (ref.current.setRangeText("@", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded p-2 hover:bg-slate-200"><AtSign className="h-4 w-4" /></button>
         <button type="button" title="Прикрепить место" onClick={() => ref.current && (ref.current.setRangeText("+", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded p-2 hover:bg-slate-200"><MapPin className="h-4 w-4" /></button>
         <button type="button" title="Тег" onClick={() => ref.current && (ref.current.setRangeText("#", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded p-2 hover:bg-slate-200"><Hash className="h-4 w-4" /></button>
-        <div className="ml-auto flex shrink-0 rounded-lg bg-slate-200/70 p-0.5 text-xs">
-          <button type="button" onClick={() => setTab("write")} className={`rounded-md px-2 py-1 ${tab === "write" ? "bg-white shadow" : ""}`}>Писать</button>
-          <button type="button" onClick={() => setTab("preview")} className={`rounded-md px-2 py-1 ${tab === "preview" ? "bg-white shadow" : ""}`}>Просмотр</button>
+        <div className="ml-auto flex shrink-0 items-center px-1 text-[11px] text-slate-400">
+          возможен markdown
         </div>
       </div>
-      {tab === "write" ? (
-        <>
-          <textarea
-            ref={ref}
-            value={value}
-            onChange={(e) => { onChange(e.target.value); trackPlus(e.target.value, e.target.selectionStart ?? 0); }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") { setPlusQuery(null); setUserQuery(null); }
-              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") { e.preventDefault(); wrap("**", "**"); }
-              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); wrap("*", "*"); }
-              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); wrap("[", "](https://)"); }
-            }}
-            placeholder={placeholder ?? "О чем хотите спросить? @ — человек, + — место, # — тема"}
-            rows={compact ? 3 : 5}
-            className="w-full resize-y bg-white px-3 py-2 text-[15px] outline-none placeholder:text-slate-400"
-          />
-          {plusQuery !== null && (
-            <PlaceSuggest
+      <div className="relative">
+        {value && (
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden px-3 py-2">
+            <div
+              className="pv-preview whitespace-pre-wrap break-words text-[15px] leading-6"
+              style={{ transform: `translateY(${-scroll}px)` }}
+              dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
+            />
+          </div>
+        )}
+        <textarea
+          ref={ref}
+          value={value}
+          onChange={(e) => { onChange(e.target.value); trackPlus(e.target.value, e.target.selectionStart ?? 0); }}
+          onScroll={(e) => setScroll(e.currentTarget.scrollTop)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") { setPlusQuery(null); setUserQuery(null); }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") { e.preventDefault(); wrap("**", "**"); }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); wrap("*", "*"); }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); wrap("[", "](https://)"); }
+          }}
+          placeholder={placeholder ?? "О чем хотите спросить? @ — человек, + — место, # — тема"}
+          rows={compact ? 3 : 5}
+          className="relative w-full resize-y whitespace-pre-wrap break-words bg-transparent px-3 py-2 text-[15px] leading-6 text-transparent caret-slate-900 outline-none selection:bg-lime-200/60 placeholder:text-slate-400"
+        />
+        {plusQuery !== null && (
+          <PlaceSuggest
               query={plusQuery}
               onClose={() => setPlusQuery(null)}
               onPick={async (p) => {
@@ -106,13 +114,7 @@ export default function MdEditor({
               }}
             />
           )}
-        </>
-      ) : (
-        <div
-          className="pv-preview min-h-[80px] px-3 py-2 text-[15px] leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
-        />
-      )}
+      </div>
     </div>
   );
 }
