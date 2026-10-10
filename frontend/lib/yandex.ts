@@ -1,4 +1,5 @@
 /** Singleton-загрузка JS API Яндекс.Карт. Ключ — NEXT_PUBLIC_YANDEX_MAPS_API_KEY. */
+/* eslint-disable @typescript-eslint/no-explicit-any -- JS API Яндекс.Карт без типов */
 
 declare global {
   interface Window {

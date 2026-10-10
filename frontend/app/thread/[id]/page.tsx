@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable react-hooks/set-state-in-effect -- загрузка треда с сервера */
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any -- JS API Яндекс.Карт без типов */
 
 import { useEffect, useRef } from "react";
 import { loadYandex } from "@/lib/yandex";
@@ -13,7 +14,7 @@ export default function MiniMap({ lat, lng, onMove }: {
   const mapRef = useRef<any>(null);
   const markRef = useRef<any>(null);
   const onMoveRef = useRef(onMove);
-  onMoveRef.current = onMove;
+  useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
 
   useEffect(() => {
