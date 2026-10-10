@@ -7,17 +7,29 @@ import { MapPin, X, ImagePlus } from "lucide-react";
 import MdEditor from "@/components/editor/MdEditor";
 import TagPicker from "@/components/TagPicker";
 import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto } from "@/lib/v5";
+import { useToast } from "@/lib/toast";
 import type { GeoPlaceV5 } from "@/types/v5";
+
+function cleanSnippet(raw: string): string {
+  return raw
+    .replace(/@\[(\d+):([^\]]+)\]/g, "@$2")
+    .replace(/\+\[(\d+):([^\]]+)\]/g, "$2")
+    .replace(/\*\*|__|\*|`|#{1,6}\s|> /g, "")
+    .slice(0, 80);
+}
 
 export default function CreatePage() {
   const router = useRouter();
+  const toast = useToast();
   const DRAFT_KEY = "zakoulki_draft_v1";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [place, setPlace] = useState<GeoPlaceV5 | null>(null);
   const [pendingGeo, setPendingGeo] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [picking, setPicking] = useState(false);
 
-  // черновик: загрузка один раз + автосохранение
+  // черновик: загрузка один раз + автосохранение (точка и теги тоже, фото — нет)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
@@ -25,8 +37,10 @@ export default function CreatePage() {
         const d = JSON.parse(raw);
         if (d.title) setTitle(d.title);
         if (d.body) setBody(d.body);
+        if (Array.isArray(d.tags)) setTags(d.tags.slice(0, 5));
+        if (d.place && typeof d.place.id === "number" && d.place.id > 0) setPlace(d.place);
       }
-    } catch {}
+    } catch { /* ignore */ }
   }, []);
   const [addr, setAddr] = useState("");
   const [found, setFound] = useState<GeoPlaceV5[]>([]);
@@ -40,12 +54,14 @@ export default function CreatePage() {
     setThumbs(urls);
     return () => urls.forEach((u) => URL.revokeObjectURL(u));
   }, [files]);
-  const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // выбор места из поиска: результат геокодера (id 0) сначала закрепляем в своей базе
   const pickFound = async (p: GeoPlaceV5) => {
+    if (picking) return;
+    setPicking(true);
+    setError(null);
     try {
       const picked = p.id === 0
         ? await createGeoPlace({ name: p.name, latitude: p.lat, longitude: p.lng, address: p.address, district: p.district, street: p.street })
@@ -54,6 +70,8 @@ export default function CreatePage() {
       fetchNearbyThreads(picked.lat, picked.lng).then(setNearby).catch(() => { /* ignore */ });
     } catch {
       setError("Не получилось прикрепить место");
+    } finally {
+      setPicking(false);
     }
   };
 
@@ -67,8 +85,8 @@ export default function CreatePage() {
 
   // автосохранение черновика
   useEffect(() => {
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body })); } catch { /* ignore */ }
-  }, [title, body]);
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body, tags, place })); } catch { /* ignore */ }
+  }, [title, body, tags, place]);
 
   const [geoLocating, setGeoLocating] = useState(false);
 
@@ -104,10 +122,12 @@ export default function CreatePage() {
         placeId = p.id;
       }
       const t = await createThread({ title: title || null, body_md: body, place_id: placeId, tags });
+      let failedPhotos = 0;
       for (const f of files) {
-        try { await uploadThreadPhoto(t.id, f); } catch {}
+        try { await uploadThreadPhoto(t.id, f); } catch { failedPhotos += 1; }
       }
-      try { localStorage.removeItem(DRAFT_KEY); } catch {}
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+      if (failedPhotos > 0) toast(`Опубликовано, но ${failedPhotos} фото не загрузилось`, "error");
       router.push(`/thread/${t.id}`);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "Не опубликовалось";
@@ -191,7 +211,7 @@ export default function CreatePage() {
               className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
             />
             {found.map((p) => (
-              <button key={`${p.id}-${p.name}`} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50">
+              <button key={`${p.id}-${p.name}`} disabled={picking} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 disabled:opacity-50">
                 <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
                 <span className="min-w-0"><span className="block truncate text-sm font-bold">{p.name}</span><span className="block truncate text-xs text-slate-500">{p.address}</span></span>
               </button>
@@ -203,7 +223,7 @@ export default function CreatePage() {
             <div className="text-xs font-bold text-amber-800">Рядом уже обсуждают ({nearby.length}) — гляньте, чтобы не дублировать:</div>
             {nearby.map((n) => (
               <a key={n.id} href={`/thread/${n.id}`} className="mt-1 block truncate text-[13px] text-amber-900 underline">
-                #{n.id} {n.body_md.slice(0, 80)} {n.place_name ? `· ${n.place_name}` : ""}
+                #{n.id} {cleanSnippet(n.body_md)} {n.place_name ? `· ${n.place_name}` : ""}
               </a>
             ))}
           </div>

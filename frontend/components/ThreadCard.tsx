@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, MessageCircle, Eye, Heart, Bookmark } from "lucide-react";
+import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { likeThread, reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
@@ -83,18 +83,32 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
   const [likes, setLikes] = useState(t.likes_count);
   const [bookmarked, setBookmarked] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [reportMode, setReportMode] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const needAuth = (e: unknown) =>
+    (e as { response?: { status?: number } })?.response?.status === 401;
 
   const onBookmark = async () => {
     setBookmarked(!bookmarked);
-    toast(bookmarked ? "Убрано из закладок" : "В закладках", "info");
-    try { await bookmarkThread(t.id); } catch { setBookmarked(bookmarked); }
+    try {
+      await bookmarkThread(t.id);
+      toast(bookmarked ? "Убрано из закладок" : "В закладках", "info");
+    } catch (e) {
+      setBookmarked(bookmarked);
+      toast(needAuth(e) ? "Войдите, чтобы сохранять" : "Не получилось", "error");
+    }
   };
 
   const onLike = async () => {
     setLiked(!liked);
     setLikes((v) => (liked ? v - 1 : v + 1));
-    try { await likeThread(t.id); } catch { setLiked(liked); }
+    try { await likeThread(t.id); }
+    catch (e) {
+      setLiked(liked);
+      setLikes((v) => (liked ? v + 1 : v - 1));
+      toast(needAuth(e) ? "Войдите, чтобы оценить" : "Не получилось", "error");
+    }
   };
 
   const share = async () => {
@@ -102,14 +116,17 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
       await navigator.clipboard.writeText(`${location.origin}/thread/${t.id}`);
       toast("Ссылка скопирована", "success");
     } catch { toast("Не скопировалось", "error"); }
-    setMenu(false);
+    closeMenu();
   };
 
-  const report = async () => {
-    try { await reportThread(t.id, "offtopic"); toast("Жалоба отправлена", "success"); }
-    catch { toast("Не отправилось", "error"); }
+  const report = async (reason: string) => {
+    try { await reportThread(t.id, reason); toast("Жалоба отправлена", "success"); }
+    catch (e) { toast(needAuth(e) ? "Войдите, чтобы жаловаться" : "Не отправилось", "error"); }
     setMenu(false);
+    setReportMode(false);
   };
+
+  const closeMenu = () => { setMenu(false); setReportMode(false); };
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -125,16 +142,36 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
           </div>
         </div>
         <div className="relative">
-          <button onClick={() => setMenu(!menu)} className="rounded-full px-2 py-1 text-slate-400 hover:bg-slate-100">•••</button>
+          <button onClick={() => setMenu(!menu)} aria-label="Ещё" className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
           {menu && (
-            <div className="absolute right-0 z-10 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-              <button className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50" onClick={share}>
-                Поделиться
-              </button>
-              <button className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50" onClick={report}>
-                Пожаловаться
-              </button>
-            </div>
+            <>
+              <button aria-hidden tabIndex={-1} onClick={closeMenu} className="fixed inset-0 z-10 cursor-default" />
+              <div className="absolute right-0 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                {!reportMode ? (
+                  <>
+                    <button className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50" onClick={share}>
+                      Поделиться
+                    </button>
+                    <button className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50" onClick={() => setReportMode(true)}>
+                      Пожаловаться
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {[["spam", "Спам"], ["abuse", "Оскорбления"], ["offtopic", "Не по теме"], ["other", "Другое"]].map(([v, label]) => (
+                      <button key={v} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50" onClick={() => report(v)}>
+                        {label}
+                      </button>
+                    ))}
+                    <button className="block w-full border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-50" onClick={() => setReportMode(false)}>
+                      ← Назад
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -169,6 +206,9 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
       )}
       {lightbox && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4" onClick={() => setLightbox(null)}>
+          <button aria-label="Закрыть" className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white">
+            <X className="h-5 w-5" />
+          </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
         </div>

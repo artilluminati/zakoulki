@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- загрузка профиля с сервера */
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -14,13 +15,18 @@ export default function UserPage() {
   const [user, setUser] = useState<User | null>(null);
   const [threads, setThreads] = useState<ThreadV5[]>([]);
   const [missing, setMissing] = useState(false);
+  const [threadsFailed, setThreadsFailed] = useState(false);
 
   useEffect(() => {
     const name = decodeURIComponent(username);
+    setMissing(false);
+    setThreadsFailed(false);
     api.get(`/users/by-username/${encodeURIComponent(name)}`)
-      .then(async (r) => {
+      .then((r) => {
         setUser(r.data);
-        setThreads(await fetchThreads({ author_id: r.data.id, limit: 30 }));
+        fetchThreads({ author_id: r.data.id, limit: 30 })
+          .then(setThreads)
+          .catch(() => setThreadsFailed(true));
       })
       .catch(() => setMissing(true));
   }, [username]);
@@ -40,12 +46,20 @@ export default function UserPage() {
         </div>
       </div>
       <h2 className="font-extrabold">Вопросы · {threads.length}</h2>
-      {threads.length === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
-          Пока ничего не спрашивал(а)
+      {threadsFailed ? (
+        <div className="rounded-2xl border border-red-200 bg-white p-6 text-center text-sm text-slate-500">
+          Не загрузилось — обновите страницу.
         </div>
+      ) : (
+        <>
+          {threads.length === 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+              Пока ничего не спрашивал(а)
+            </div>
+          )}
+          <div className="space-y-3">{threads.map((t) => <ThreadCard key={t.id} t={t} />)}</div>
+        </>
       )}
-      <div className="space-y-3">{threads.map((t) => <ThreadCard key={t.id} t={t} />)}</div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
-export interface UserSuggestItem { id: number; username: string; email: string; }
+export interface UserSuggestItem { id: number; username: string; }
 
 /** Выпадающее меню для `@`: поиск пользователей, вставка @[id:username] */
 export default function UserSuggest({ query, onPick, onClose }: {
@@ -46,7 +46,6 @@ export default function UserSuggest({ query, onPick, onClose }: {
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold">@{u.username}</span>
-            <span className="block truncate text-xs text-slate-500">{u.email}</span>
           </span>
         </button>
       ))}

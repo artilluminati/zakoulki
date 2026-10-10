@@ -30,6 +30,8 @@ body {
   color: #047857; font-weight: 600; text-decoration: none;
 }
 .thread-html a.tag:hover { text-decoration: underline; }
+.thread-html a.user-mention { color: #0f172a; font-weight: 700; text-decoration: none; }
+.thread-html a.user-mention:hover { text-decoration: underline; }
 
 /* клиентское превью редактора */
 .pv-preview p { margin: 0 0 6px; }

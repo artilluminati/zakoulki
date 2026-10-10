@@ -9,6 +9,7 @@ import MdEditor from "@/components/editor/MdEditor";
 import { fetchThreads, createThread } from "@/lib/v5";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 
 type Sort = "new" | "top" | "near";
 
@@ -16,8 +17,10 @@ export default function FeedPage() {
   const params = useSearchParams();
   const search = params.get("search") ?? "";
   const { user } = useAuth();
+  const toast = useToast();
   const [items, setItems] = useState<ThreadV5[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [sort, setSort] = useState<Sort>("new");
@@ -76,7 +79,8 @@ export default function FeedPage() {
 
   const loadMore = async () => {
     const last = itemsRef.current[itemsRef.current.length - 1];
-    if (!last) return;
+    if (!last || loadingMore) return;
+    setLoadingMore(true);
     try {
       const data = await fetchThreads({
         search: search || undefined,
@@ -89,7 +93,11 @@ export default function FeedPage() {
       });
       setItems((prev) => [...prev, ...data]);
       setHasMore(data.length === PAGE);
-    } catch { /* тихо: старые уже на экране */ }
+    } catch {
+      toast("Не получилось догрузить", "error");
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const pickSort = (s: Sort) => {
@@ -103,8 +111,11 @@ export default function FeedPage() {
     try {
       await createThread({ body_md: draft });
       setDraft("");
+      toast("Опубликовано", "success");
       load();
-    } catch {}
+    } catch {
+      toast("Не опубликовалось — попробуйте ещё раз", "error");
+    }
     setPosting(false);
   };
 
@@ -132,6 +143,11 @@ export default function FeedPage() {
 
       {/* сортировка + фильтры */}
       <div className="flex flex-wrap items-center gap-2">
+        {search && (
+          <Link href="/" className="flex items-center gap-1 rounded-full border border-emerald-500 bg-emerald-50 px-3 py-1.5 text-[13px] font-bold text-emerald-700">
+            Поиск: {search} ✕
+          </Link>
+        )}
         <div className="flex rounded-full bg-white p-1 text-sm shadow-sm border border-slate-200">
           {(["new", "top", "near"] as Sort[]).map((s) => (
             <button key={s} onClick={() => pickSort(s)} className={`rounded-full px-3 py-1.5 font-semibold ${sort === s ? "bg-slate-900 text-white" : "text-slate-500"}`}>
@@ -179,8 +195,8 @@ export default function FeedPage() {
         <div className="space-y-3">
           {items.map((t) => <ThreadCard key={t.id} t={t} />)}
           {hasMore ? (
-            <button onClick={loadMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">
-              Показать ещё
+            <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              {loadingMore ? "Загружаем…" : "Показать ещё"}
             </button>
           ) : (
             <div className="py-6 text-center text-sm text-slate-400">Вы все прочитали 🎉</div>

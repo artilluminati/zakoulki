@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { fetchThreads } from "@/lib/v5";
+import { fetchThreads, fetchBookmarks } from "@/lib/v5";
 import { api } from "@/lib/api";
 import ThreadCard, { timeAgo } from "@/components/ThreadCard";
 import type { ThreadV5 } from "@/types/v5";
@@ -13,14 +13,23 @@ interface Notif { id: string | number; kind: string; author?: string; author_id?
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
   const [mine, setMine] = useState<ThreadV5[]>([]);
+  const [mineFailed, setMineFailed] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [saved, setSaved] = useState<ThreadV5[]>([]);
+  const [tab, setTab] = useState<"mine" | "saved">("mine");
 
   useEffect(() => {
     if (user) {
-      fetchThreads({ author_id: user.id, limit: 50 }).then(setMine).catch(() => {});
-      api.get("/threads/notifications/mine").then((r) => setNotifs(r.data ?? [])).catch(() => {});
+      fetchThreads({ author_id: user.id, limit: 50 }).then(setMine).catch(() => setMineFailed(true));
+      api.get("/threads/notifications/mine").then((r) => setNotifs(r.data ?? [])).catch(() => { /* ignore */ });
+      fetchBookmarks().then(setSaved).catch(() => { /* ignore */ });
     }
   }, [user]);
+
+  const logoutSafe = () => {
+    if (!window.confirm("Выйти из аккаунта?")) return;
+    logout();
+  };
 
   if (loading) return <div className="mx-auto max-w-2xl px-3 pt-10">Загружаем…</div>;
   if (!user) return <div className="mx-auto max-w-2xl px-3 pt-10 text-center">Войдите. <Link href="/login" className="underline">Войти</Link></div>;
@@ -35,18 +44,39 @@ export default function ProfilePage() {
             <div className="text-sm text-slate-500">{user.email}</div>
             <div className="text-xs text-slate-400">с нами с {new Date(user.created_at).toLocaleDateString("ru-RU")}</div>
           </div>
-          <button onClick={logout} className="ml-auto rounded-xl border border-slate-200 px-3 py-1.5 text-sm">Выйти</button>
+          <button onClick={logoutSafe} className="ml-auto rounded-xl border border-slate-200 px-3 py-1.5 text-sm">Выйти</button>
         </div>
         <div className="mt-3 flex gap-4 text-sm">
           <span><b>{mine.length}</b> <span className="text-slate-500">вопросов</span></span>
           {user.role === "admin" && <Link href="/admin" className="font-bold text-emerald-700">Админка →</Link>}
         </div>
       </div>
-      <h2 className="font-extrabold">Мои вопросы</h2>
-      <div className="space-y-3">
-        {mine.map((t) => <ThreadCard key={t.id} t={t} />)}
-        {mine.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400">Пока пусто. <Link href="/create" className="font-bold text-emerald-700">Спросить →</Link></div>}
+      <div className="flex gap-1.5">
+        {(["mine", "saved"] as const).map((tb) => (
+          <button
+            key={tb}
+            onClick={() => setTab(tb)}
+            className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold ${tab === tb ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-500"}`}
+          >
+            {tb === "mine" ? `Мои вопросы · ${mine.length}` : `Закладки · ${saved.length}`}
+          </button>
+        ))}
       </div>
+      {mineFailed ? (
+        <div className="rounded-2xl border border-red-200 bg-white p-6 text-center text-sm text-slate-500">
+          Не загрузилось — обновите страницу.
+        </div>
+      ) : tab === "mine" ? (
+        <div className="space-y-3">
+          {mine.map((t) => <ThreadCard key={t.id} t={t} />)}
+          {mine.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400">Пока пусто. <Link href="/create" className="font-bold text-emerald-700">Спросить →</Link></div>}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {saved.map((t) => <ThreadCard key={t.id} t={t} />)}
+          {saved.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400">Нет закладок — нажмите на флажок в карточке вопроса.</div>}
+        </div>
+      )}
 
       {notifs.length > 0 && (
         <>

@@ -2,14 +2,14 @@
 /* eslint-disable react-hooks/set-state-in-effect -- чтение флага онбординга из localStorage */
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, MessagesSquare, MapPin, HelpCircle } from "lucide-react";
 
 const KEY = "zakoulki_onboarding_v1";
 
 const STEPS = [
-  { title: "Вопросы города", text: "От ямы во дворе до судьбы парка — спрашивайте о важном, отвечайте тем, кто рядом.", emoji: "🏙" },
-  { title: "Спросите — ответят", text: "Опишите проблему, прикрепите точку на карте — вопрос увидят те, кому он важен.", emoji: "💬" },
-  { title: "Все на карте", text: "Каждый вопрос с местом виден на карте. Похожие темы подсвечиваем заранее, чтобы не дублировать.", emoji: "📍" },
+  { title: "Вопросы города", text: "От ямы во дворе до судьбы парка — спрашивайте о важном, отвечайте другим.", Icon: MessagesSquare },
+  { title: "Спросите — ответят", text: "Опишите проблему, прикрепите точку на карте — вопрос увидят те, кому он важен.", Icon: HelpCircle },
+  { title: "Все на карте", text: "Каждый вопрос с местом виден на карте. Похожие темы подсвечиваем заранее, чтобы не дублировать.", Icon: MapPin },
 ];
 
 export default function Onboarding() {
@@ -34,7 +34,9 @@ export default function Onboarding() {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 md:items-center">
       <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
         <div className="flex items-start justify-between">
-          <div className="text-5xl">{s.emoji}</div>
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-100">
+            <s.Icon className="h-7 w-7 text-lime-700" />
+          </span>
           <button onClick={close} aria-label="Пропустить" className="rounded-full p-1 text-slate-400 hover:bg-slate-100">
             <X className="h-5 w-5" />
           </button>

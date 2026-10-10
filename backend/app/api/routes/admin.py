@@ -39,19 +39,26 @@ def admin_set_role(user_id: int, data: RoleUpdate, db: Session = Depends(get_db)
     target = db.get(User, user_id)
     if not target:
         raise HTTPException(404, "Пользователь не найден")
+    if target.id == user.id and data.role != "admin":
+        raise HTTPException(400, "Нельзя снять роль с себя")
+    if data.role != "admin" and target.role == "admin":
+        others = db.query(User).filter(User.role == "admin", User.id != target.id).count()
+        if others == 0:
+            raise HTTPException(400, "Должен остаться хотя бы один администратор")
     target.role = data.role
     db.commit()
     return {"id": target.id, "role": target.role}
 
 
 @router.get("/reports")
-def admin_reports(status: str | None = None, db: Session = Depends(get_db),
+def admin_reports(status: str | None = Query(None, pattern="^(new|reviewed|rejected)$"),
+                  db: Session = Depends(get_db),
                   user: User = Depends(get_current_user)):
     require_admin(user)
-    q = db.query(Report).order_by(Report.id.desc()).limit(100)
-    items = q.all()
+    q = db.query(Report).order_by(Report.id.desc())
     if status:
-        items = [r for r in items if r.status == status]
+        q = q.filter(Report.status == status)
+    items = q.limit(100).all()
     return [{"id": r.id, "reporter_id": r.reporter_id, "thread_id": r.thread_id,
              "comment_id": r.comment_id, "reason": r.reason, "text": r.text,
              "status": r.status} for r in items]
@@ -66,3 +73,19 @@ def admin_delete_thread(thread_id: int, db: Session = Depends(get_db),
         raise HTTPException(404, "Тред не найден")
     db.delete(t)
     db.commit()
+
+
+class ReportStatus(BaseModel):
+    status: str = Field(pattern="^(reviewed|rejected)$")
+
+
+@router.patch("/reports/{report_id}")
+def admin_report_status(report_id: int, data: ReportStatus, db: Session = Depends(get_db),
+                        user: User = Depends(get_current_user)):
+    require_admin(user)
+    r = db.get(Report, report_id)
+    if not r:
+        raise HTTPException(404, "Жалоба не найдена")
+    r.status = data.status
+    db.commit()
+    return {"id": r.id, "status": r.status}

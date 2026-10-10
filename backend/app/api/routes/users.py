@@ -11,7 +11,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/search")
 def search_users(q: str = Query(min_length=2, max_length=50), limit: int = Query(10, le=30),
                   db: Session = Depends(get_db)):
-    return [{"id": u.id, "username": u.username, "email": u.email}
+    # email не отдаем — поиск публичный, достаточно id+username для @-меню
+    return [{"id": u.id, "username": u.username}
             for u in db.query(User).filter(User.username.ilike(f"%{q}%")).limit(limit).all()]
 
 

@@ -3,11 +3,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { MapPin, Plus, X, MessageCircle, Navigation } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
 import { fetchMapPoints, fetchThread } from "@/lib/v5";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_ICON, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
+import { useToast } from "@/lib/toast";
 import type { ThreadV5 } from "@/types/v5";
 
 function loadYandex(key: string): Promise<any> {
@@ -35,11 +36,14 @@ function passFilter(p: MapPt, f: Filter) {
 
 export default function MapPage() {
   const params = useSearchParams();
+  const router = useRouter();
+  const toast = useToast();
   const focusPlace = params.get("place");
   const ref = useRef<HTMLDivElement>(null);
-  const marksRef = useRef<Map<number, any>>(new Map());
+  const reqRef = useRef(0);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [count, setCount] = useState(0);
   const [filter, setFilter] = useState<Filter>("Все");
   const [pts, setPts] = useState<MapPt[]>([]);
@@ -62,30 +66,42 @@ export default function MapPage() {
         });
         (window as any).__ymap = map;
         const paint = async () => {
+          const my = ++reqRef.current;
           const b = map.getBounds();
           const list = await fetchMapPoints({ south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1] }).catch(() => [] as MapPt[]);
-          if (!alive) return;
+          if (!alive || my !== reqRef.current) return;
           setPts(list);
-          setCount(list.length);
         };
         await paint();
         if (!alive) return;
         setLoading(false);
-        // фокус на месте из ?place=
-        if (focusPlace) {
-          try {
-            const p = (await api.get(`/geo-places/${focusPlace}`)).data;
-            map.setCenter([p.lat, p.lng], 15);
-            const at = await api.get("/threads", { params: { place_id: p.id, limit: 1 } });
-            if (at.data?.[0]) setSelected(await fetchThread(at.data[0].id));
-          } catch {}
-        }
-        map.events.add("boundschange", () => { paint().catch(() => {}); });
+        setMapReady(true);
+        map.events.add("boundschange", () => { paint().catch(() => { /* ignore */ }); });
       } catch { if (alive) { setErr("Карта не загрузилась"); setLoading(false); } }
     })();
-    return () => { alive = false; try { map?.destroy(); } catch {} };
+    return () => { alive = false; try { map?.destroy(); } catch { /* ignore */ } };
+  }, [key, toast]);
+
+  // фокус на месте из ?place= — отдельным эффектом, чтобы работал и при смене параметра
+  useEffect(() => {
+    const map = (window as any).__ymap;
+    if (!mapReady || !map || !focusPlace) return;
+    let alive = true;
+    (async () => {
+      try {
+        const p = (await api.get(`/geo-places/${focusPlace}`)).data;
+        if (!alive) return;
+        map.setCenter([p.lat, p.lng], 15);
+        const at = await api.get("/threads", { params: { place_id: p.id, limit: 1 } });
+        if (!alive) return;
+        if (at.data?.[0]) setSelected(await fetchThread(at.data[0].id));
+      } catch {
+        toast("Не получилось открыть место", "error");
+      }
+    })();
+    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [mapReady, focusPlace]);
 
   // перерисовка меток при смене точек/фильтра/выбора
   useEffect(() => {
@@ -93,11 +109,11 @@ export default function MapPage() {
     if (!map || !(window as any).ymaps) return;
     const ymaps = (window as any).ymaps;
     map.geoObjects.removeAll();
-    marksRef.current.clear();
     const visible = (filter === "Обсуждают"
       ? [...pts].sort((a, b) => b.comments - a.comments)
       : pts
     ).filter((p) => passFilter(p, filter));
+    setCount(visible.length);
     const clusterer = new ymaps.Clusterer({
       groupByCoordinates: false,
       clusterIcons: [{ href: CLUSTER_ICON, size: [56, 56], offset: [-28, -28] }],
@@ -119,13 +135,13 @@ export default function MapPage() {
         hideIconOnBalloonOpen: false,
       });
       m.events.add("click", async () => {
-        try { setSelected(await fetchThread(p.id)); } catch {}
+        try { setSelected(await fetchThread(p.id)); }
+        catch { toast("Не получилось открыть вопрос", "error"); }
       });
-      marksRef.current.set(p.id, m);
       clusterer.add(m);
     }
     map.geoObjects.add(clusterer);
-  }, [pts, filter, selected]);
+  }, [pts, filter, selected, toast]);
 
   return (
     <div className="-mx-3 md:mx-0 md:pt-4">
@@ -148,7 +164,7 @@ export default function MapPage() {
                 <input
                   placeholder="Адрес, место, вопрос…"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") location.href = `/?search=${encodeURIComponent((e.target as HTMLInputElement).value)}`;
+                    if (e.key === "Enter") router.push(`/?search=${encodeURIComponent((e.target as HTMLInputElement).value)}`);
                   }}
                   className="w-full bg-transparent text-[15px] outline-none placeholder:text-slate-400"
                 />
@@ -195,8 +211,10 @@ export default function MapPage() {
                   )}
                   <div className="min-w-0 flex-1">
                     {selected.title && <div className="truncate text-[15px] font-extrabold">{selected.title}</div>}
-                    <div className="truncate text-[13px] text-slate-500">
-                      {selected.place?.name ?? "Без точки"} · 💬 {selected.comments_count} · ♥ {selected.likes_count}
+                    <div className="flex items-center gap-3 truncate text-[13px] text-slate-500">
+                      <span className="truncate">{selected.place?.name ?? "Без точки"}</span>
+                      <span className="flex shrink-0 items-center gap-1"><MessageCircle className="h-3.5 w-3.5" />{selected.comments_count}</span>
+                      <span className="flex shrink-0 items-center gap-1"><Heart className="h-3.5 w-3.5" />{selected.likes_count}</span>
                     </div>
                     <div className="mt-1.5 flex gap-2">
                       <Link href={`/thread/${selected.id}`} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-bold text-white">
