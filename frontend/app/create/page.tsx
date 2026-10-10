@@ -36,6 +36,18 @@ export default function CreatePage() {
   const [pendingLabel, setPendingLabel] = useState<{ name: string; address?: string | null } | null>(null);
   const [resolving, setResolving] = useState(false);
 
+  const resolveGeo = async (latitude: number, longitude: number) => {
+    setResolving(true);
+    try {
+      const r = await reverseGeocode(latitude, longitude);
+      setPendingLabel({ name: r.name, address: r.address });
+    } catch {
+      setPendingLabel({ name: "Точка на карте", address: null });
+    } finally {
+      setResolving(false);
+    }
+  };
+
   // точка с карты (?lat=&lng=[&name=][&address=]): сразу видна, без повторного геокодинга
   useEffect(() => {
     const la = params.get("lat");
@@ -54,18 +66,6 @@ export default function CreatePage() {
     fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const resolveGeo = async (latitude: number, longitude: number) => {
-    setResolving(true);
-    try {
-      const r = await reverseGeocode(latitude, longitude);
-      setPendingLabel({ name: r.name, address: r.address });
-    } catch {
-      setPendingLabel({ name: "Точка на карте", address: null });
-    } finally {
-      setResolving(false);
-    }
-  };
   const [tags, setTags] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
 
