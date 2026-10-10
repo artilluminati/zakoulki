@@ -54,17 +54,53 @@ def _thread_out(t: Thread, db: Session) -> dict:
 
 @router.get("/notifications/mine")
 def my_notifications(db: Session = Depends(get_db), user: User = Depends(get_current_user), limit: int = 20):
-    """Колокольчик: упоминания меня + ответы в моих тредах."""
-    mentions = (db.query(ThreadMention).filter(ThreadMention.kind == "user", ThreadMention.user_id == user.id)
-                .order_by(ThreadMention.id.desc()).limit(limit).all())
+    """Колокольчик: упоминания меня + ответы в моих тредах (с автором, временем и фрагментом)."""
+    import re
+    def clean(raw: str) -> str:
+        s = re.sub(r"@\[(\d+):([^\]]+)\]", r"@\2", raw)
+        s = re.sub(r"\+\[(\d+):([^\]]+)\]", r"\2", s)
+        return s[:80]
     out = []
-    for m in mentions:
-        out.append({"id": m.id, "kind": "mention", "thread_id": m.thread_id, "comment_id": m.comment_id})
-    replies = (db.query(ThreadComment).join(Thread, ThreadComment.thread_id == Thread.id)
+    # упоминания меня в тредах
+    mentions = (db.query(ThreadMention, Thread, ThreadComment)
+                .outerjoin(Thread, ThreadMention.thread_id == Thread.id)
+                .outerjoin(ThreadComment, ThreadMention.comment_id == ThreadComment.id)
+                .filter(ThreadMention.kind == "user", ThreadMention.user_id == user.id)
+                .order_by(ThreadMention.id.desc()).limit(limit).all())
+    for m, t, c in mentions:
+        author_id = c.author_id if c else t.author_id
+        author = db.get(User, author_id)
+        out.append({
+            "id": f"m{m.id}",
+            "kind": "mention",
+            "author": author.username if author else "кто-то",
+            "author_id": author_id,
+            "thread_id": t.id if t else None,
+            "comment_id": m.comment_id,
+            "title": t.title if t else None,
+            "snippet": clean(c.body_md) if c else (clean(t.body_md) if t else ""),
+            "created_at": m.created_at.isoformat() if hasattr(m.created_at, 'isoformat') else str(m.created_at),
+        })
+    # ответы в моих тредах
+    replies = (db.query(ThreadComment, Thread, User)
+               .join(Thread, ThreadComment.thread_id == Thread.id)
+               .join(User, ThreadComment.author_id == User.id)
                .filter(Thread.author_id == user.id, ThreadComment.author_id != user.id)
                .order_by(ThreadComment.id.desc()).limit(limit).all())
-    for c in replies:
-        out.append({"id": f"r{c.id}", "kind": "reply", "thread_id": c.thread_id, "comment_id": c.id})
+    for c, t, u in replies:
+        out.append({
+            "id": f"r{c.id}",
+            "kind": "reply",
+            "author": u.username,
+            "author_id": u.id,
+            "thread_id": t.id,
+            "comment_id": c.id,
+            "title": t.title,
+            "snippet": clean(c.body_md),
+            "created_at": c.created_at.isoformat() if hasattr(c.created_at, 'isoformat') else str(c.created_at),
+        })
+    # сортируем по времени (новые сверху)
+    out.sort(key=lambda x: x["created_at"], reverse=True)
     return out[:limit]
 
 

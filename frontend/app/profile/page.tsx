@@ -5,10 +5,10 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { fetchThreads } from "@/lib/v5";
 import { api } from "@/lib/api";
-import ThreadCard from "@/components/ThreadCard";
+import ThreadCard, { timeAgo } from "@/components/ThreadCard";
 import type { ThreadV5 } from "@/types/v5";
 
-interface Notif { id: string | number; kind: string; thread_id?: number | null; comment_id?: number | null; }
+interface Notif { id: string | number; kind: string; author?: string; author_id?: number; thread_id?: number | null; comment_id?: number | null; title?: string | null; snippet?: string; created_at?: string; }
 
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
@@ -58,8 +58,10 @@ export default function ProfilePage() {
                 href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"}
                 className="block border-b border-slate-50 px-4 py-2.5 text-sm last:border-0 hover:bg-slate-50"
               >
-                {n.kind === "mention" ? "Вас упомянули" : "Ответ в вашем треде"}
-                {n.thread_id ? <span className="text-slate-400"> · вопрос #{n.thread_id}</span> : ""}
+                <span className="font-bold">{n.author ?? "Кто-то"}</span>
+                <span className="text-slate-500"> {n.kind === "mention" ? "упомянул(а) вас" : "ответил(а) в вашем треде"}</span>
+                {n.snippet && <span className="mt-0.5 block truncate text-xs text-slate-400">{n.snippet}</span>}
+                {n.created_at && <span className="mt-0.5 block text-[11px] text-slate-300">{timeAgo(n.created_at)}</span>}
               </Link>
             ))}
           </div>

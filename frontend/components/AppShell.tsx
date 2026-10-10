@@ -6,12 +6,13 @@ import { useEffect, useState } from "react";
 import { Home, Map as MapIcon, PlusCircle, User, Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { timeAgo } from "@/components/ThreadCard";
 
 function BellButton() {
   const { user } = useAuth();
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<{ id: string | number; kind: string; thread_id?: number | null; comment_id?: number | null }[]>([]);
+  const [items, setItems] = useState<{ id: string | number; kind: string; author?: string; author_id?: number; thread_id?: number | null; comment_id?: number | null; title?: string | null; snippet?: string; created_at?: string }[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -29,12 +30,17 @@ function BellButton() {
         {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{count}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
           <div className="border-b border-slate-100 px-3 py-2 text-[13px] font-bold">Уведомления</div>
           {items.length === 0 && <div className="px-3 py-4 text-center text-[13px] text-slate-400">Пока тихо</div>}
           {items.map((n) => (
-            <Link key={String(n.id)} href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"} className="block px-3 py-2 text-sm hover:bg-slate-50">
-              {n.kind === "mention" ? "Вас упомянули" : "Ответ в вашем треде"} {n.thread_id ? `#${n.thread_id}` : ""}
+            <Link key={String(n.id)} href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"} className="block border-b border-slate-50 px-3 py-2.5 last:border-0 hover:bg-slate-50">
+              <div className="text-sm">
+                <span className="font-bold">{n.author}</span>
+                <span className="text-slate-500"> {n.kind === "mention" ? "упомянул(а) вас" : "ответил(а) в вашем треде"}</span>
+              </div>
+              {n.snippet && <div className="mt-0.5 truncate text-xs text-slate-400">{n.snippet}</div>}
+              {n.created_at && <div className="mt-0.5 text-[11px] text-slate-300">{timeAgo(n.created_at)}</div>}
             </Link>
           ))}
         </div>
