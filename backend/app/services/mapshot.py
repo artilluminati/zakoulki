@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw
 
 UA = {"User-Agent": "zakoulki-app/1.0"}
 W, H = 400, 250
-Z = 15
+MIN_Z, MAX_Z = 10, 18
 
 
 def _tile_xy(lat: float, lng: float, z: int) -> tuple[float, float]:
@@ -30,8 +30,27 @@ def _fetch_tile(x: int, y: int, z: int, timeout: int = 4):
     return Image.open(io.BytesIO(data)).convert("RGB")
 
 
+def _pick_zoom(area: list | None) -> tuple[float | None, float | None, int]:
+    """Центр (lat,lng) и зум по размеру полигона. Без полигона — точка, Z=15."""
+    if not area or len(area) < 3:
+        return None, None, 15
+    lats = [float(p[0]) for p in area if len(p) >= 2]
+    lngs = [float(p[1]) for p in area if len(p) >= 2]
+    if not lats:
+        return None, None, 15
+    clat = (min(lats) + max(lats)) / 2
+    clng = (min(lngs) + max(lngs)) / 2
+    span = max(max(lats) - min(lats), max(lngs) - min(lngs))
+    # span=0.0001 (~10м) → Z=18, span=0.1 (~10км) → Z=12
+    z = int(round(15 - math.log2(max(span, 0.0001) / 0.005)))
+    return clat, clng, max(MIN_Z, min(MAX_Z, z))
+
+
 def render_preview(lat: float, lng: float, out_path: str, area: list | None = None) -> bool:
     """True если получилось с тайлами, False если заглушка (тоже пишется)."""
+    clat, clng, Z = _pick_zoom(area)
+    if clat is not None and clng is not None:
+        lat, lng = clat, clng
     to_px = None
     try:
         xt, yt = _tile_xy(lat, lng, Z)
@@ -62,11 +81,21 @@ def render_preview(lat: float, lng: float, out_path: str, area: list | None = No
         try:
             pts = [to_px(float(p[0]), float(p[1])) for p in area if len(p) >= 2]
             if len(pts) >= 3:
-                d.polygon(pts, fill=(5, 150, 105, 60), outline=(5, 150, 105), width=3)
+                d.polygon(pts, fill=(5, 150, 105, 110), outline=(5, 150, 105), width=4)
         except Exception:
             pass
-    d.ellipse([cx - 26, cy - 26, cx + 26, cy + 26], fill=(163, 230, 53, 90))
-    d.ellipse([cx - 13, cy - 13, cx + 13, cy + 13], fill=(5, 150, 105), outline=(255, 255, 255), width=3)
+    d.ellipse([cx - 18, cy - 18, cx + 18, cy + 18], fill=(163, 230, 53, 90))
+    d.ellipse([cx - 9, cy - 9, cx + 9, cy + 9], fill=(5, 150, 105), outline=(255, 255, 255), width=3)
+    # масштабная линейка (1 км на центре широты)
+    if to_px:
+        try:
+            km_px = int(111.0 * math.cos(math.radians(lat)) / (2 ** Z) * 256)
+            y = H - 14
+            d.line([(8, y), (8 + km_px, y)], fill=(15, 23, 42), width=2)
+            d.line([(8, y - 4), (8, y + 4)], fill=(15, 23, 42), width=2)
+            d.line([(8 + km_px, y - 4), (8 + km_px, y + 4)], fill=(15, 23, 42), width=2)
+        except Exception:
+            pass
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     canvas.save(out_path, "PNG")
     return True

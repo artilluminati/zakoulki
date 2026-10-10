@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Home, Map as MapIcon, PlusCircle, User, Bell, Search, MapPinned, ChevronDown } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -15,6 +15,7 @@ function BellButton() {
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<{ id: string | number; kind: string; author?: string; author_id?: number; thread_id?: number | null; comment_id?: number | null; title?: string | null; snippet?: string; created_at?: string }[]>([]);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -23,6 +24,16 @@ function BellButton() {
       setCount((r.data ?? []).length);
     }).catch(() => { /* ignore */ });
   }, [user]);
+
+  // закрытие по клику вне (backdrop-blur ломает fixed, поэтому через document)
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   const toggle = () => {
     const next = !open;
@@ -40,15 +51,13 @@ function BellButton() {
 
   if (!user) return null;
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <button onClick={toggle} aria-label="Уведомления" className="relative flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
         <Bell className="h-5 w-5 text-slate-600" />
         {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{count}</span>}
       </button>
       {open && (
-        <>
-          <button aria-hidden tabIndex={-1} onClick={() => setOpen(false)} className="fixed inset-0 z-40 cursor-default" />
-          <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
           <div className="border-b border-slate-100 px-3 py-2 text-[13px] font-bold">Уведомления</div>
           {items.length === 0 && <div className="px-3 py-4 text-center text-[13px] text-slate-400">Пока тихо</div>}
           {items.map((n) => (
@@ -61,8 +70,7 @@ function BellButton() {
               {n.created_at && <div className="mt-0.5 text-[11px] text-slate-300">{timeAgo(n.created_at)}</div>}
             </Link>
           ))}
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -73,7 +81,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { scope, setScope } = useScope();
   const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeRef = useRef<HTMLDivElement>(null);
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+
+  // закрытие поповера региона по клику вне
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (scopeRef.current && !scopeRef.current.contains(e.target as Node)) setScopeOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [scopeOpen]);
 
   const item = (href: string, label: string, Icon: typeof Home) => (
     <Link
@@ -106,7 +125,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/create" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
             Спросить
           </Link>
-          <div className="relative">
+          <div ref={scopeRef} className="relative">
             <button
               onClick={() => setScopeOpen(!scopeOpen)}
               title="Выбрать регион"
@@ -117,12 +136,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
             </button>
             {scopeOpen && (
-              <>
-                <button aria-hidden tabIndex={-1} onClick={() => setScopeOpen(false)} className="fixed inset-0 z-40 cursor-default" />
-                <div className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-                  <ScopePicker value={scope} onChange={setScope} />
-                </div>
-              </>
+              <div className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                <ScopePicker value={scope} onChange={setScope} />
+              </div>
             )}
           </div>
           <BellButton />

@@ -138,7 +138,21 @@ export default function MapPage() {
       try {
         const p = (await api.get(`/geo-places/${focusPlace}`)).data;
         if (!alive) return;
-        map.setCenter([p.lat, p.lng], 15);
+        // если у места есть территория — рисуем её и центрируем по полигону
+        if (p.area && p.area.length >= 3) {
+          const ym = (window as any).ymaps;
+          const poly = new ym.Polygon([[...p.area, p.area[0]]], {}, {
+            fillColor: "#05966966",
+            strokeColor: "#059669",
+            strokeWidth: 3,
+            strokeOpacity: 0.9,
+          });
+          map.geoObjects.add(poly);
+          const bounds = poly.geometry.getBounds();
+          map.setBounds(bounds, { checkZoomRange: true, duration: 250 });
+        } else {
+          map.setCenter([p.lat, p.lng], 15);
+        }
         const at = await api.get("/threads", { params: { place_id: p.id, limit: 1 } });
         if (!alive) return;
         if (at.data?.[0]) setSelected(await fetchThread(at.data[0].id));
@@ -178,7 +192,8 @@ export default function MapPage() {
     setCount(visible.length);
     const zoom = map.getZoom ? map.getZoom() : 11;
     // адаптивная сетка: чем дальше обзор, тем охотнее схлопываем
-    const grid = zoom < 9 ? 256 : zoom < 12 ? 160 : zoom < 14 ? 96 : 64;
+    // сдвинуто вверх: 64px давал висящие рядом пины при городском зуме
+    const grid = zoom < 9 ? 384 : zoom < 12 ? 256 : zoom < 14 ? 160 : 128;
     const clusterer = new ymaps.Clusterer({
       groupByCoordinates: false,
       gridSize: grid,
@@ -194,6 +209,12 @@ export default function MapPage() {
       const target = e.get("target");
       if (!target || typeof target.getGeoObjects !== "function") return;
       const objs: any[] = target.getGeoObjects();
+      // маленький кластер (1-3) на зуме < 17 — зумим к нему, чтобы точки разошлись
+      if (objs.length <= 3 && map.getZoom() < 17) {
+        const c = target.geometry?.getCoordinates?.();
+        if (c) map.setCenter(c, Math.min(17, map.getZoom() + 3), { duration: 250 });
+        return;
+      }
       if (map.getZoom() < 15 && objs.length > 5) return; // иначе пусть зумит
       e.preventDefault();
       setClusterLoading(true);

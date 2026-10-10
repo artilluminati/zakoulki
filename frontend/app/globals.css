@@ -20,13 +20,8 @@ button:disabled {
 }
 
 /* режим территории: прицел вместо grab-руки поверх тайлов Яндекса (кроме полей и кнопок) */
-.minimap-area {
-  cursor: crosshair;
-}
-.minimap-area div:not(:has(input)):not(:has(button)):not(:has(a)),
-.minimap-area span:not(:has(input)):not(:has(button)):not(:has(a)),
-.minimap-area canvas,
-.minimap-area svg {
+.minimap-area,
+.minimap-area *:not(input):not(textarea):not(select):not(button):not(a):not([role="button"]) {
   cursor: crosshair !important;
 }
 .minimap-area input,

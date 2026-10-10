@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- эффекты ниже синхронизируют состояние с сервером/localStorage, это их прямая задача */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
@@ -37,6 +38,17 @@ export default function FeedPage() {
   const [draftThumbs, setDraftThumbs] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const scopeRef = useRef<HTMLDivElement>(null);
+
+  // закрытие поповера региона по клику вне
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (scopeRef.current && !scopeRef.current.contains(e.target as Node)) setScopeOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [scopeOpen]);
 
   const pickFiles = () => fileRef.current?.click();
 
@@ -211,7 +223,7 @@ export default function FeedPage() {
 
       {/* сортировка + фильтры */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
+        <div ref={scopeRef} className="relative">
           <button
             onClick={() => setScopeOpen(!scopeOpen)}
             className="flex max-w-44 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm"
@@ -221,12 +233,9 @@ export default function FeedPage() {
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           </button>
           {scopeOpen && (
-            <>
-              <button aria-hidden tabIndex={-1} onClick={() => setScopeOpen(false)} className="fixed inset-0 z-20 cursor-default" />
-              <div className="absolute left-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-                <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
-              </div>
-            </>
+            <div className="absolute left-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+              <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
+            </div>
           )}
         </div>
         {search && (
