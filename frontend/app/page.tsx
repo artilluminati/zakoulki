@@ -8,7 +8,7 @@ import ThreadCard from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import PasteButton from "@/components/PasteButton";
 import { fetchThreads, createThread, uploadThreadPhoto } from "@/lib/v5";
-import { MessagesSquare, CheckCircle2, ImagePlus } from "lucide-react";
+import { MessagesSquare, CheckCircle2, ImagePlus, X } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -29,7 +29,14 @@ export default function FeedPage() {
   const [filter, setFilter] = useState<"all" | "important" | "offtop">("all");
   const [draft, setDraft] = useState("");
   const [draftFiles, setDraftFiles] = useState<File[]>([]);
+  const [draftThumbs, setDraftThumbs] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    const urls = draftFiles.map((f) => URL.createObjectURL(f));
+    setDraftThumbs(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [draftFiles]);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState(false);
   const [geoPending, setGeoPending] = useState(false);
@@ -143,11 +150,19 @@ export default function FeedPage() {
         >
           <MdEditor value={draft} onChange={setDraft} compact placeholder="О чем хотите спросить? @ — человек, + — место" />
           {draftFiles.length > 0 && (
-            <div className="mt-2 flex gap-1.5 overflow-x-auto">
-              {draftFiles.map((f, i) => (
-                <span key={`${f.name}-${f.size}-${i}`} className="flex shrink-0 items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs">
-                  {f.name.slice(0, 16)}
-                  <button type="button" onClick={() => setDraftFiles(draftFiles.filter((_, j) => j !== i))} aria-label="Убрать фото" className="text-slate-400 hover:text-red-500">✕</button>
+            <div className="mt-2 grid grid-cols-4 gap-1.5">
+              {draftThumbs.map((src, i) => (
+                <span key={`${draftFiles[i]?.name}-${draftFiles[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" className="h-20 w-full object-contain" />
+                  <button
+                    type="button"
+                    onClick={() => setDraftFiles(draftFiles.filter((_, j) => j !== i))}
+                    aria-label="Убрать фото"
+                    className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-0.5 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </span>
               ))}
             </div>
