@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- дебаунс-поиск и чтение сохраненного scope */
 
 import { useEffect, useState } from "react";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { scopeLabel, type Scope } from "@/lib/scope";
 
@@ -28,9 +28,9 @@ export default function ScopePicker({ value, onChange }: {
           api.get("/geo-places/suggest", { params: { level: "region", q: q.trim(), limit: 4 } }),
         ]);
         const list: SuggestItem[] = [
+          ...(regions.data ?? []).map((r: { name: string; count: number }) => ({ ...r, level: "region" as const })),
           ...(cities.data ?? []).map((c: { name: string; count: number }) => ({ ...c, level: "city" as const })),
           ...(districts.data ?? []).map((d: { name: string; count: number }) => ({ ...d, level: "district" as const })),
-          ...(regions.data ?? []).map((r: { name: string; count: number }) => ({ ...r, level: "region" as const })),
         ];
         setItems(list.slice(0, 10));
         setHi(0);
@@ -109,17 +109,21 @@ export default function ScopePicker({ value, onChange }: {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "ArrowDown" && rows.length > 0) {
+          // 0 — строка «показать как есть», дальше подсказки
+          const total = q.trim().length >= 2 ? rows.length + 1 : 0;
+          if (e.key === "ArrowDown" && total > 0) {
             e.preventDefault();
-            setHi((h) => Math.min(h + 1, rows.length - 1));
-          } else if (e.key === "ArrowUp" && rows.length > 0) {
+            setHi((h) => Math.min(h + 1, total - 1));
+          } else if (e.key === "ArrowUp" && total > 0) {
             e.preventDefault();
             if (hi === 0) close();
             else setHi((h) => h - 1);
           } else if (e.key === "Enter") {
             e.preventDefault();
-            if (rows[hi]) rows[hi].run();
-            else if (q.trim().length >= 2) pick(q.trim(), "city");
+            if (total > 0) {
+              if (hi === 0) pick(q.trim(), "region");
+              else if (rows[hi - 1]) rows[hi - 1].run();
+            } else if (q.trim().length >= 2) pick(q.trim(), "region");
           } else if (e.key === "Escape") {
             close();
           }
@@ -129,15 +133,25 @@ export default function ScopePicker({ value, onChange }: {
         className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white"
       />
       {resolving && <div className="text-center text-xs text-slate-400">Определяем…</div>}
-      {rows.length > 0 && (
+      {q.trim().length >= 2 && (
         <div className="overflow-hidden rounded-xl border border-slate-200">
+          <button
+            type="button"
+            onMouseEnter={() => setHi(0)}
+            onClick={() => pick(q.trim(), "region")}
+            className={`flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left ${hi === 0 ? "bg-emerald-50" : "bg-slate-50"}`}
+          >
+            <Search className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="min-w-0 flex-1 truncate text-sm font-bold">Показать «{q.trim().slice(0, 40)}»</span>
+            <span className="shrink-0 text-[11px] text-slate-400">как есть</span>
+          </button>
           {rows.map((r, i) => (
             <button
               key={r.key}
               type="button"
-              onMouseEnter={() => setHi(i)}
+              onMouseEnter={() => setHi(i + 1)}
               onClick={r.run}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left ${i === hi ? "bg-emerald-50" : ""}`}
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left ${i + 1 === hi ? "bg-emerald-50" : ""}`}
             >
               <MapPin className="h-4 w-4 shrink-0 text-slate-300" />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.label}</span>
