@@ -40,6 +40,11 @@ export default function UserPage() {
         </div>
       </div>
       <h2 className="font-extrabold">Вопросы · {threads.length}</h2>
+      {threads.length === 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+          Пока ничего не спрашивал(а)
+        </div>
+      )}
       <div className="space-y-3">{threads.map((t) => <ThreadCard key={t.id} t={t} />)}</div>
     </div>
   );

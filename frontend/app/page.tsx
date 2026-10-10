@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect -- эффекты ниже синхронизируют состояние с сервером/localStorage, это их прямая задача */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
@@ -18,6 +18,8 @@ export default function FeedPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<ThreadV5[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [sort, setSort] = useState<Sort>("new");
   const [filter, setFilter] = useState<"all" | "important" | "offtop">("all");
   const [draft, setDraft] = useState("");
@@ -46,8 +48,13 @@ export default function FeedPage() {
     }
   };
 
+  const PAGE = 20;
+  const itemsRef = useRef<ThreadV5[]>([]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
+
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const data = await fetchThreads({
         search: search || undefined,
@@ -55,14 +62,35 @@ export default function FeedPage() {
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
-        limit: 20,
+        limit: PAGE,
       });
       setItems(data);
-    } catch { setItems([]); }
+      setHasMore(data.length === PAGE);
+    } catch {
+      setItems([]); setLoadError(true);
+    }
     setLoading(false);
   }, [sort, filter, search, geo]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadMore = async () => {
+    const last = itemsRef.current[itemsRef.current.length - 1];
+    if (!last) return;
+    try {
+      const data = await fetchThreads({
+        search: search || undefined,
+        sort: sort === "near" ? "near" : sort,
+        ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
+        has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
+        is_offtop: filter === "offtop" ? true : undefined,
+        limit: PAGE,
+        before_id: last.id,
+      });
+      setItems((prev) => [...prev, ...data]);
+      setHasMore(data.length === PAGE);
+    } catch { /* тихо: старые уже на экране */ }
+  };
 
   const pickSort = (s: Sort) => {
     if (s === "near" && !geo && !geoPending) requestGeo();
@@ -134,6 +162,12 @@ export default function FeedPage() {
 
       {loading ? (
         <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-white shadow-sm" />)}</div>
+      ) : loadError ? (
+        <div className="rounded-3xl border border-red-200 bg-white p-10 text-center">
+          <h2 className="text-lg font-extrabold">Не загрузилось</h2>
+          <p className="mt-1 text-sm text-slate-500">Проверьте соединение и попробуйте снова.</p>
+          <button onClick={() => load()} className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">Повторить</button>
+        </div>
       ) : items.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
           <div className="text-5xl">🏘</div>
@@ -144,7 +178,13 @@ export default function FeedPage() {
       ) : (
         <div className="space-y-3">
           {items.map((t) => <ThreadCard key={t.id} t={t} />)}
-          <div className="py-6 text-center text-sm text-slate-400">Вы все прочитали 🎉</div>
+          {hasMore ? (
+            <button onClick={loadMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">
+              Показать ещё
+            </button>
+          ) : (
+            <div className="py-6 text-center text-sm text-slate-400">Вы все прочитали 🎉</div>
+          )}
         </div>
       )}
     </div>
