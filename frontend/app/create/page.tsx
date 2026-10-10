@@ -34,6 +34,7 @@ export default function CreatePage() {
   const [place, setPlace] = useState<GeoPlaceV5 | null>(null);
   const [pendingGeo, setPendingGeo] = useState<{ latitude: number; longitude: number } | null>(null);
   const [pendingLabel, setPendingLabel] = useState<{ name: string; address?: string | null } | null>(null);
+  const [pendingAddrEdit, setPendingAddrEdit] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
   // территория: вершины полигона (центр считается автоматически)
   const [areaMode, setAreaMode] = useState(false);
@@ -59,8 +60,10 @@ export default function CreatePage() {
     try {
       const r = await reverseGeocode(latitude, longitude);
       setPendingLabel({ name: r.name, address: r.address });
+      setPendingAddrEdit(r.address ?? "");
     } catch {
       setPendingLabel({ name: "Точка на карте", address: null });
+      setPendingAddrEdit("");
     } finally {
       setResolving(false);
     }
@@ -219,7 +222,7 @@ export default function CreatePage() {
         const p = await createGeoPlace({
           name: pendingLabel?.name || "Точка на карте",
           latitude: pendingGeo.latitude, longitude: pendingGeo.longitude,
-          address: pendingLabel?.address || null,
+          address: (pendingAddrEdit?.trim() || pendingLabel?.address) || null,
         });
         placeId = p.id;
       } else if (!placeId && place && place.id > 0 && adjust) {
@@ -405,15 +408,23 @@ export default function CreatePage() {
             <div className="font-bold text-emerald-800">
               {place ? place.name : resolving ? "Определяем адрес…" : (pendingLabel?.name ?? "Точка на карте")}
             </div>
-            <div className="text-xs text-emerald-600">
-              {place
-                ? [place.address, place.district].filter(Boolean).join(" · ")
-                : pendingLabel?.address && !resolving ? pendingLabel.address : "Метку можно перетащить"}
-            </div>
+            {place ? (
+              <div className="text-xs text-emerald-600">{[place.address, place.district].filter(Boolean).join(" · ")}</div>
+            ) : (
+              <input
+                value={pendingAddrEdit ?? ""}
+                onChange={(e) => setPendingAddrEdit(e.target.value)}
+                placeholder="Уточните адрес…"
+                className="mt-1 h-8 w-full rounded-lg border border-emerald-200 bg-white px-2 text-xs outline-none focus:border-emerald-500"
+              />
+            )}
             {place && (
               <div className="text-[11px] text-emerald-600/70">
                 {adjust ? "Точка уточнена вручную" : "Метку на карте можно перетащить для уточнения"}
               </div>
+            )}
+            {!place && (
+              <div className="mt-0.5 text-[11px] text-emerald-600/70">Метку можно перетащить</div>
             )}
           </div>
         )}
