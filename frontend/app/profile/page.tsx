@@ -14,17 +14,30 @@ export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
   const [mine, setMine] = useState<ThreadV5[]>([]);
   const [mineFailed, setMineFailed] = useState(false);
+  const [mineHasMore, setMineHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [saved, setSaved] = useState<ThreadV5[]>([]);
   const [tab, setTab] = useState<"mine" | "saved">("mine");
 
   useEffect(() => {
     if (user) {
-      fetchThreads({ author_id: user.id, limit: 50 }).then(setMine).catch(() => setMineFailed(true));
+      fetchThreads({ author_id: user.id, limit: 20 }).then((d) => { setMine(d); setMineHasMore(d.length === 20); }).catch(() => setMineFailed(true));
       api.get("/threads/notifications/mine").then((r) => setNotifs(r.data ?? [])).catch(() => { /* ignore */ });
       fetchBookmarks().then(setSaved).catch(() => { /* ignore */ });
     }
   }, [user]);
+
+  const loadMoreMine = async () => {
+    if (!user || loadingMore || !mine.length) return;
+    setLoadingMore(true);
+    try {
+      const d = await fetchThreads({ author_id: user.id, limit: 20, before_id: mine[mine.length - 1].id });
+      setMine((prev) => [...prev, ...d]);
+      setMineHasMore(d.length === 20);
+    } catch { /* тихо: старые уже на экране */ }
+    finally { setLoadingMore(false); }
+  };
 
   const logoutSafe = () => {
     if (!window.confirm("Выйти из аккаунта?")) return;
@@ -70,6 +83,11 @@ export default function ProfilePage() {
         <div className="space-y-3">
           {mine.map((t) => <ThreadCard key={t.id} t={t} />)}
           {mine.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400">Пока пусто. <Link href="/create" className="font-bold text-emerald-700">Спросить →</Link></div>}
+          {mineHasMore && mine.length > 0 && (
+            <button onClick={loadMoreMine} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              {loadingMore ? "Загружаем…" : "Показать ещё"}
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

@@ -9,7 +9,7 @@ export async function fetchThreads(params: Record<string, string | number | bool
 }
 
 export async function fetchThread(id: number | string) {
-  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; author_username?: string | null; body_html: string; created_at: string }[] }>(`/threads/${id}`);
+  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; author_username?: string | null; body_md: string; body_html: string; created_at: string }[] }>(`/threads/${id}`);
   return res.data;
 }
 
@@ -35,6 +35,16 @@ export async function fetchBookmarks() {
 
 export async function commentThread(id: number, body_md: string, parent_id?: number | null) {
   const res = await api.post(`/threads/${id}/comments`, { body_md, parent_id });
+  return res.data;
+}
+
+export async function updateThread(id: number, payload: { title?: string | null; body_md?: string }) {
+  const res = await api.patch(`/threads/${id}`, payload);
+  return res.data;
+}
+
+export async function updateComment(commentId: number, body_md: string) {
+  const res = await api.patch(`/threads/comments/${commentId}`, { body_md });
   return res.data;
 }
 

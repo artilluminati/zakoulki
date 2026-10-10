@@ -35,6 +35,7 @@ export interface ThreadCommentV5 {
   parent_id?: number | null;
   author_id: number;
   author_username?: string | null;
+  body_md: string;
   body_html: string;
   created_at: string;
 }

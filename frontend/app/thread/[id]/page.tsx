@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment } from "@/lib/v5";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment } from "@/lib/v5";
 import { ThreadHtml, timeAgo } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import { useAuth } from "@/lib/auth";
@@ -21,6 +21,42 @@ export default function ThreadPage() {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [editCommentId, setEditCommentId] = useState<number | null>(null);
+  const [editCommentBody, setEditCommentBody] = useState("");
+  const canEdit = !!user && !!t && (user.id === t.author_id || user.role === "admin");
+
+  const startEdit = () => {
+    if (!t) return;
+    setEditTitle(t.title ?? "");
+    setEditBody(t.body_md);
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!t || !editBody.trim()) return;
+    try {
+      await updateThread(t.id, { title: editTitle || null, body_md: editBody });
+      toast("Сохранено", "success");
+      setEditing(false);
+      load();
+    } catch {
+      toast("Не сохранилось", "error");
+    }
+  };
+
+  const saveCommentEdit = async (cid: number) => {
+    if (!editCommentBody.trim()) return;
+    try {
+      await updateComment(cid, editCommentBody);
+      setEditCommentId(null);
+      load();
+    } catch {
+      toast("Не сохранилось", "error");
+    }
+  };
 
   const load = useCallback(async () => {
     try { setT(await fetchThread(id)); } catch { setT(null); }
@@ -75,6 +111,25 @@ export default function ThreadPage() {
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       <Link href="/" className="text-sm text-slate-400">← Лента</Link>
       <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        {editing ? (
+          <>
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              maxLength={150}
+              placeholder="Заголовок (необязательно)"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500"
+            />
+            <div className="mt-2">
+              <MdEditor value={editBody} onChange={setEditBody} />
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button onClick={saveEdit} disabled={!editBody.trim()} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Сохранить</button>
+              <button onClick={() => setEditing(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold">Отмена</button>
+            </div>
+          </>
+        ) : (
+          <>
         {t.title && <h1 className="text-xl font-extrabold leading-tight">{t.title}</h1>}
         <div className="mt-1 text-xs text-slate-500">
           #{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}
@@ -115,6 +170,9 @@ export default function ThreadPage() {
         <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500">
           <button onClick={() => likeThread(t.id).then(load).catch(() => toast("Не получилось", "error"))} className="flex items-center gap-1.5 hover:text-slate-800"><Heart className="h-4 w-4" /> {t.likes_count}</button>
           <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
+          {canEdit && !editing && (
+            <button onClick={startEdit} className="font-bold text-emerald-700 hover:underline">Редактировать</button>
+          )}
           <span className="relative ml-auto">
             <button onClick={() => setReportOpen(!reportOpen)} className="flex items-center gap-1 text-slate-400 hover:text-red-500"><Flag className="h-4 w-4" /> Жалоба</button>
             {reportOpen && (
@@ -128,6 +186,8 @@ export default function ThreadPage() {
             )}
           </span>
         </div>
+          </>
+        )}
       </article>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -139,15 +199,33 @@ export default function ThreadPage() {
                 <span className="font-bold text-slate-600">{c.author_username ? `@${c.author_username}` : "кто-то"}</span>
                 <span>· {timeAgo(c.created_at)}</span>
                 {(user && (user.id === c.author_id || user.role === "admin")) && (
-                  <button
-                    onClick={() => removeComment(c.id)}
-                    className="ml-auto hover:text-red-500"
-                  >
-                    Удалить
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { setEditCommentId(c.id); setEditCommentBody(c.body_md); }}
+                      className="ml-auto hover:text-slate-700"
+                    >
+                      Редактировать
+                    </button>
+                    <button
+                      onClick={() => removeComment(c.id)}
+                      className="hover:text-red-500"
+                    >
+                      Удалить
+                    </button>
+                  </>
                 )}
               </div>
-              <div className="mt-0.5"><ThreadHtml html={c.body_html} /></div>
+              {editCommentId === c.id ? (
+                <div className="mt-1.5">
+                  <MdEditor value={editCommentBody} onChange={setEditCommentBody} compact />
+                  <div className="mt-1.5 flex gap-2">
+                    <button onClick={() => saveCommentEdit(c.id)} disabled={!editCommentBody.trim()} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40">Сохранить</button>
+                    <button onClick={() => setEditCommentId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold">Отмена</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-0.5"><ThreadHtml html={c.body_html} /></div>
+              )}
             </div>
           ))}
           {(t.comments ?? []).length === 0 && <p className="text-sm text-slate-400">Пока нет ответов — станьте первым.</p>}

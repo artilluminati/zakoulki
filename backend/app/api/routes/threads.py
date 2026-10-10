@@ -56,6 +56,51 @@ def _thread_out(t: Thread, db: Session) -> dict:
     }
 
 
+def _attach_tags(db: Session, thread_id: int, explicit: list[str], auto: list[str]) -> None:
+    """Пересбор тегов треда: удаляет старые связи, вешает новые, пересчитывает счетчики."""
+    import re as _re
+    old = db.query(ThreadTag).filter(ThreadTag.thread_id == thread_id).all()
+    affected = {tt.tag_id for tt in old}
+    for tt in old:
+        db.delete(tt)
+    db.flush()
+    seen: set[str] = set()
+
+    def attach(name: str, is_auto: bool) -> None:
+        name = name.strip().lower()
+        if not name or name in seen:
+            return
+        if not _re.fullmatch(r"[а-яА-ЯёЁa-zA-Z0-9_]{2,50}", name):
+            return
+        seen.add(name)
+        tag = db.query(Tag).filter(Tag.name == name).first()
+        if not tag:
+            tag = Tag(name=name, slug=name); db.add(tag); db.flush()
+        db.add(ThreadTag(thread_id=thread_id, tag_id=tag.id, auto=is_auto))
+        affected.add(tag.id)
+
+    for name in (explicit or [])[:5]:
+        attach(name, False)
+    for name in (auto or [])[:5]:
+        attach(name, True)
+    for tid in affected:
+        left = db.query(ThreadTag).filter(ThreadTag.tag_id == tid).count()
+        tag = db.get(Tag, tid)
+        if tag:
+            tag.count = left
+
+
+def _resolve_user_ids(db: Session, ids: list[int], names: list[str]) -> list[int]:
+    out = list(ids or [])
+    for uname in names or []:
+        u = db.query(User).filter(User.username == uname).first()
+        if not u:
+            u = db.query(User).filter(User.username.ilike(uname)).first()
+        if u and u.id not in out:
+            out.append(u.id)
+    return out
+
+
 @router.get("/notifications/mine")
 def my_notifications(db: Session = Depends(get_db), user: User = Depends(get_current_user), limit: int = 20):
     """Колокольчик: упоминания меня + ответы в моих тредах (с автором, временем и фрагментом)."""
@@ -167,38 +212,12 @@ def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User 
     t = Thread(author_id=user.id, title=data.title, body_md=data.body_md, body_html=html,
                is_offtop=is_offtop, place_id=data.place_id)
     db.add(t); db.flush()
-    # теги: сначала явные из TagPicker (auto=False), потом из текста (auto=True)
-    import re as _re
-    seen: set[str] = set()
-
-    def attach(name: str, auto: bool) -> None:
-        name = name.strip().lower()
-        if not name or name in seen:
-            return
-        if not _re.fullmatch(r"[а-яА-ЯёЁa-zA-Z0-9_]{2,50}", name):
-            return
-        seen.add(name)
-        tag = db.query(Tag).filter(Tag.name == name).first()
-        if not tag:
-            tag = Tag(name=name, slug=name); db.add(tag); db.flush()
-        db.add(ThreadTag(thread_id=t.id, tag_id=tag.id, auto=auto))
-        tag.count = (tag.count or 0) + 1
-
-    for name in (data.tags or [])[:5]:
-        attach(name, auto=False)
-    for name in entities["tags"][:5]:
-        attach(name, auto=True)
+    _attach_tags(db, t.id, data.tags or [], entities["tags"][:5])
     # упоминания мест из текста
     for pid in entities["place_ids"]:
         db.add(ThreadMention(thread_id=t.id, kind="place", place_id=pid))
-    for uid in entities["user_ids"]:
+    for uid in _resolve_user_ids(db, entities["user_ids"], entities.get("usernames", [])):
         db.add(ThreadMention(thread_id=t.id, kind="user", user_id=uid))
-    for uname in entities.get("usernames", []):
-        u = db.query(User).filter(User.username == uname).first()
-        if not u:
-            u = db.query(User).filter(User.username.ilike(uname)).first()
-        if u and u.id not in entities["user_ids"]:
-            db.add(ThreadMention(thread_id=t.id, kind="user", user_id=u.id))
     if data.category_ids:
         t.categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
     db.commit(); db.refresh(t)
@@ -216,7 +235,7 @@ def get_thread(thread_id: int, db: Session = Depends(get_db)):
     out["comments"] = [{
         "id": c.id, "parent_id": c.parent_id, "author_id": c.author_id,
         "author_username": (db.get(User, c.author_id).username if db.get(User, c.author_id) else None),
-        "body_html": c.body_html, "created_at": c.created_at,
+        "body_md": c.body_md, "body_html": c.body_html, "created_at": c.created_at,
     } for c in comments]
     return out
 
@@ -232,13 +251,71 @@ def add_comment(thread_id: int, data: CommentCreate, db: Session = Depends(get_d
     db.add(c); db.flush()
     for pid in entities["place_ids"]:
         db.add(ThreadMention(comment_id=c.id, kind="place", place_id=pid))
-    for uname in entities.get("usernames", []):
-        u = db.query(User).filter(User.username == uname).first()
-        if not u:
-            u = db.query(User).filter(User.username.ilike(uname)).first()
-        if u:
-            db.add(ThreadMention(comment_id=c.id, kind="user", user_id=u.id))
+    for uid in _resolve_user_ids(db, entities["user_ids"], entities.get("usernames", [])):
+        db.add(ThreadMention(comment_id=c.id, kind="user", user_id=uid))
     t.comments_count += 1
+    db.commit(); db.refresh(c)
+    return {"id": c.id, "body_html": c.body_html}
+
+
+class ThreadUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=150)
+    body_md: str | None = Field(default=None, min_length=1, max_length=5000)
+    tags: list[str] | None = None
+
+
+@router.patch("/{thread_id}")
+def update_thread(thread_id: int, data: ThreadUpdate, db: Session = Depends(get_db),
+                  user: User = Depends(get_current_user)):
+    t = db.get(Thread, thread_id)
+    if not t:
+        raise HTTPException(404, "Тред не найден")
+    if t.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Недостаточно прав")
+    if data.title is not None:
+        t.title = data.title or None
+    if data.body_md is not None:
+        html, entities = render_markdown(data.body_md)
+        t.body_md = data.body_md
+        t.body_html = html
+        db.query(ThreadMention).filter(ThreadMention.thread_id == thread_id).delete()
+        for pid in entities["place_ids"]:
+            db.add(ThreadMention(thread_id=t.id, kind="place", place_id=pid))
+        for uid in _resolve_user_ids(db, entities["user_ids"], entities.get("usernames", [])):
+            db.add(ThreadMention(thread_id=t.id, kind="user", user_id=uid))
+        auto = entities["tags"][:5]
+        explicit = data.tags[:5] if data.tags is not None else [
+            tg.name for tg in db.query(Tag).join(ThreadTag, ThreadTag.tag_id == Tag.id)
+            .filter(ThreadTag.thread_id == thread_id, ThreadTag.auto == False).all()
+        ]
+        _attach_tags(db, t.id, explicit, auto)
+        t.is_offtop = t.place_id is None and not entities["place_ids"]
+        if len(data.body_md) > 280 and t.place_id is None and not entities["place_ids"]:
+            t.is_offtop = False
+    db.commit(); db.refresh(t)
+    return _thread_out(t, db)
+
+
+class CommentUpdate(BaseModel):
+    body_md: str = Field(min_length=1, max_length=2000)
+
+
+@router.patch("/comments/{comment_id}")
+def update_comment(comment_id: int, data: CommentUpdate, db: Session = Depends(get_db),
+                   user: User = Depends(get_current_user)):
+    c = db.get(ThreadComment, comment_id)
+    if not c:
+        raise HTTPException(404, "Комментарий не найден")
+    if c.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Недостаточно прав")
+    html, entities = render_markdown(data.body_md, comments_mode=True)
+    c.body_md = data.body_md
+    c.body_html = html
+    db.query(ThreadMention).filter(ThreadMention.comment_id == comment_id).delete()
+    for pid in entities["place_ids"]:
+        db.add(ThreadMention(comment_id=c.id, kind="place", place_id=pid))
+    for uid in _resolve_user_ids(db, entities["user_ids"], entities.get("usernames", [])):
+        db.add(ThreadMention(comment_id=c.id, kind="user", user_id=uid))
     db.commit(); db.refresh(c)
     return {"id": c.id, "body_html": c.body_html}
 
