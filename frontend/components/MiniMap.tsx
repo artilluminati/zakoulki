@@ -117,11 +117,16 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
     } catch { /* ignore */ }
   }, [vertices, areaMode]);
 
-  const toggleExpand = () => {
-    onExpandedChange(!expanded);
-    setTimeout(() => {
+  // подгоняем карту под размер контейнера при каждом (раз)ворачивании
+  useEffect(() => {
+    const t = setTimeout(() => {
       try { mapRef.current?.container.fitToViewport(); } catch { /* ignore */ }
     }, 60);
+    return () => clearTimeout(t);
+  }, [expanded]);
+
+  const toggleExpand = () => {
+    onExpandedChange(!expanded);
   };
 
   const pickSearch = (p: GeoPlaceV5) => {
