@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, X, ImagePlus } from "lucide-react";
 import MdEditor from "@/components/editor/MdEditor";
+import TagPicker from "@/components/TagPicker";
 import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto } from "@/lib/v5";
-import { api } from "@/lib/api";
 import type { GeoPlaceV5 } from "@/types/v5";
 
 export default function CreatePage() {
@@ -32,8 +32,7 @@ export default function CreatePage() {
   const [found, setFound] = useState<GeoPlaceV5[]>([]);
   const [nearby, setNearby] = useState<{ id: number; body_md: string; place_name?: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
-  const [allCats, setAllCats] = useState<{ id: number; name: string }[]>([]);
-  const [catIds, setCatIds] = useState<number[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,12 +46,8 @@ export default function CreatePage() {
 
   // автосохранение черновика
   useEffect(() => {
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body })); } catch {}
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body })); } catch { /* ignore */ }
   }, [title, body]);
-
-  useEffect(() => {
-    api.get("/categories").then((r) => setAllCats(r.data)).catch(() => {});
-  }, []);
 
   const [geoLocating, setGeoLocating] = useState(false);
 
@@ -87,7 +82,7 @@ export default function CreatePage() {
         const p = await createGeoPlace({ name: "Точка на карте", latitude: pendingGeo.latitude, longitude: pendingGeo.longitude, address: "Моя геолокация" });
         placeId = p.id;
       }
-      const t = await createThread({ title: title || null, body_md: body, place_id: placeId, category_ids: catIds });
+      const t = await createThread({ title: title || null, body_md: body, place_id: placeId, tags });
       for (const f of files) {
         try { await uploadThreadPhoto(t.id, f); } catch {}
       }
@@ -113,21 +108,7 @@ export default function CreatePage() {
 
       <MdEditor value={body} onChange={setBody} placeholder="Опишите вопрос… @ — человек, + — место, # — тема" />
 
-      {/* категории */}
-      {allCats.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {allCats.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setCatIds(catIds.includes(c.id) ? catIds.filter((x) => x !== c.id) : catIds.length < 3 ? [...catIds, c.id] : catIds)}
-              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold ${catIds.includes(c.id) ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-500"}`}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-      )}
+      <TagPicker value={tags} onChange={setTags} />
 
       {/* фото */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">

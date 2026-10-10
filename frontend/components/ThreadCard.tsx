@@ -144,11 +144,11 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
         <ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} />
       </Link>
 
-      {t.categories && t.categories.length > 0 && (
+      {t.tags && t.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {t.categories.map((c) => (
-            <Link key={c.id} href={`/?category=${c.id}`} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 hover:bg-slate-200">
-              {c.name}
+          {t.tags.map((tag) => (
+            <Link key={tag} href={`/tag/${encodeURIComponent(tag)}`} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200">
+              {tag}
             </Link>
           ))}
         </div>

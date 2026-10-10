@@ -13,7 +13,7 @@ export async function fetchThread(id: number | string) {
   return res.data;
 }
 
-export async function createThread(payload: { title?: string | null; body_md: string; place_id?: number | null; category_ids?: number[] }) {
+export async function createThread(payload: { title?: string | null; body_md: string; place_id?: number | null; category_ids?: number[]; tags?: string[] }) {
   const res = await api.post("/threads", payload);
   return res.data;
 }
@@ -50,6 +50,11 @@ export async function reportThread(id: number, reason: string, text?: string, co
 export async function searchGeoPlaces(q: string) {
   const res = await api.get<GeoPlaceV5[]>("/geo-places/search", { params: { q } });
   return res.data;
+}
+
+export async function fetchTags(search?: string) {
+  const res = await api.get("/tags", { params: search ? { search } : {} });
+  return res.data as { name: string; count: number }[];
 }
 
 export async function fetchNearbyThreads(lat: number, lng: number, radius = 0.3) {

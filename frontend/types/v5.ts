@@ -19,6 +19,7 @@ export interface ThreadV5 {
   body_md: string;
   body_html: string;
   categories?: { id: number; name: string; slug: string }[];
+  tags?: string[];
   photos?: { id: number; url: string }[];
   is_offtop: boolean;
   place?: GeoPlaceV5 | null;

@@ -25,6 +25,7 @@ class ThreadCreate(BaseModel):
     title: str | None = Field(default=None, max_length=150)  # Q3: опционально
     place_id: int | None = None
     category_ids: list[int] = []
+    tags: list[str] = Field(default=[], max_length=5, description="явные теги из TagPicker")
 
 
 class CommentCreate(BaseModel):
@@ -36,12 +37,15 @@ def _thread_out(t: Thread, db: Session) -> dict:
     from app.models.thread_photo import ThreadPhoto
     photos = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).all()
     cats = [{"id": c.id, "name": c.name, "slug": c.slug} for c in (t.categories or [])]
+    tag_rows = (db.query(Tag).join(ThreadTag, ThreadTag.tag_id == Tag.id)
+                .filter(ThreadTag.thread_id == t.id).all())
     return {
         "id": t.id, "author_id": t.author_id,
         "author_username": db.get(User, t.author_id).username if db.get(User, t.author_id) else None,
         "title": t.title,
         "body_md": t.body_md, "body_html": t.body_html,
         "categories": cats,
+        "tags": [tg.name for tg in tag_rows],
         "photos": [{"id": p.id, "url": f"/uploads/{p.file_name}"} for p in photos],
         "is_offtop": t.is_offtop,
         "place": {"id": t.place.id, "name": t.place.name, "address": t.place.address,
@@ -161,12 +165,27 @@ def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User 
     t = Thread(author_id=user.id, title=data.title, body_md=data.body_md, body_html=html,
                is_offtop=is_offtop, place_id=data.place_id)
     db.add(t); db.flush()
-    # теги
-    for name in entities["tags"][:5]:
+    # теги: сначала явные из TagPicker (auto=False), потом из текста (auto=True)
+    import re as _re
+    seen: set[str] = set()
+
+    def attach(name: str, auto: bool) -> None:
+        name = name.strip().lower()
+        if not name or name in seen:
+            return
+        if not _re.fullmatch(r"[а-яА-ЯёЁa-zA-Z0-9_]{2,50}", name):
+            return
+        seen.add(name)
         tag = db.query(Tag).filter(Tag.name == name).first()
         if not tag:
             tag = Tag(name=name, slug=name); db.add(tag); db.flush()
-        db.add(ThreadTag(thread_id=t.id, tag_id=tag.id, auto=True))
+        db.add(ThreadTag(thread_id=t.id, tag_id=tag.id, auto=auto))
+        tag.count = (tag.count or 0) + 1
+
+    for name in (data.tags or [])[:5]:
+        attach(name, auto=False)
+    for name in entities["tags"][:5]:
+        attach(name, auto=True)
     # упоминания мест из текста
     for pid in entities["place_ids"]:
         db.add(ThreadMention(thread_id=t.id, kind="place", place_id=pid))

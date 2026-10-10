@@ -7,31 +7,14 @@ import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import { fetchThreads, createThread } from "@/lib/v5";
-import { api } from "@/lib/api";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
-
-function CategoryChip({ id }: { id: string }) {
-  const [name, setName] = useState<string | null>(null);
-  useEffect(() => {
-    api.get("/categories").then((r) => {
-      const c = (r.data as { id: number; name: string }[]).find((x) => x.id === Number(id));
-      setName(c?.name ?? `#${id}`);
-    }).catch(() => setName(`#${id}`));
-  }, [id]);
-  return (
-    <Link href="/" className="flex items-center gap-1 rounded-full border border-emerald-500 bg-emerald-50 px-3 py-1.5 text-[13px] font-bold text-emerald-700">
-      {name ?? "…"} ✕
-    </Link>
-  );
-}
 
 type Sort = "new" | "top" | "near";
 
 export default function FeedPage() {
   const params = useSearchParams();
   const search = params.get("search") ?? "";
-  const categoryParam = params.get("category");
   const { user } = useAuth();
   const [items, setItems] = useState<ThreadV5[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +51,6 @@ export default function FeedPage() {
     try {
       const data = await fetchThreads({
         search: search || undefined,
-        category_id: categoryParam ? Number(categoryParam) : undefined,
         sort: sort === "near" ? "near" : sort,
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
@@ -78,7 +60,7 @@ export default function FeedPage() {
       setItems(data);
     } catch { setItems([]); }
     setLoading(false);
-  }, [sort, filter, search, categoryParam, geo]);
+  }, [sort, filter, search, geo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -136,9 +118,6 @@ export default function FeedPage() {
             </button>
           ))}
         </div>
-        {categoryParam && (
-          <CategoryChip id={categoryParam} />
-        )}
       </div>
 
       {sort === "near" && geoPending && (
