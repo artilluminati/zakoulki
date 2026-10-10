@@ -102,7 +102,7 @@ export async function fetchNearbyThreads(lat: number, lng: number, radius = 0.3)
 
 export async function fetchMapPoints(bbox: { north: number; south: number; east: number; west: number }) {
   const res = await api.get("/geo-places/map-points", { params: bbox });
-  return res.data as { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null }[];
+  return res.data as { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; area?: [number, number][] | null }[];
 }
 
 export async function createGeoPlace(p: { name: string; latitude: number; longitude: number; address?: string | null; district?: string | null; street?: string | null; area?: [number, number][] | null }) {

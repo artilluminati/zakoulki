@@ -10,9 +10,10 @@ import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_BLANK, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import { useToast } from "@/lib/toast";
+import PhotoImg from "@/components/PhotoImg";
 import type { ThreadV5 } from "@/types/v5";
 
-interface MapPt { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; }
+interface MapPt { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; area?: [number, number][] | null; }
 
 const FILTERS = ["Все", "Вопросы", "С фото", "Обсуждают"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -181,6 +182,23 @@ export default function MapPage() {
     });
     for (const p of visible) {
       const isSel = selected?.id === p.id;
+      if (p.area && p.area.length >= 3) {
+        const poly = new ymaps.Polygon([[...p.area, p.area[0]]], { threadId: p.id }, {
+          fillColor: "#05966955",
+          strokeColor: "#059669",
+          strokeWidth: 3,
+          strokeOpacity: 0.9,
+        });
+        poly.events.add("click", async () => {
+          try { setSelected(await fetchThread(p.id)); }
+          catch { toast("Не получилось открыть вопрос", "error"); }
+        });
+        if (isSel) {
+          try { poly.options.set("strokeWidth", 5); } catch { /* ignore */ }
+        }
+        clusterer.add(poly);
+        continue;
+      }
       const href = makePin({
         color: p.is_offtop ? "#64748b" : "#059669",
         glyph: p.is_offtop ? "chat" : "q",
@@ -352,8 +370,7 @@ export default function MapPage() {
                 <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200" />
                 <div className="flex items-start gap-3.5 p-4">
                   {selected.photos?.[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selected.photos[0].url} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
+                    <PhotoImg src={selected.photos[0].preview_url ?? selected.photos[0].url} onClick={() => {}} className="h-20 w-20 shrink-0 rounded-xl" />
                   ) : (
                     <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
                       <MapPin className="h-7 w-7 text-emerald-600" />

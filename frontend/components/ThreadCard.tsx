@@ -94,8 +94,7 @@ export function ThreadHtml({ html, placePreview }: { html: string; placePreview?
             {tip === id && (
               <span className="place-tooltip">
                 {(info?.preview_url || info?.map_preview) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={info?.preview_url ?? info?.map_preview ?? ""} alt="" className="h-24 w-full object-cover" />
+                  <PhotoImg src={(info?.preview_url ?? info?.map_preview) as string} className="h-24 w-full" />
                 ) : (
                   <span className="flex h-16 items-center justify-center bg-slate-100 text-slate-400">
                     <MapPin className="h-6 w-6" />

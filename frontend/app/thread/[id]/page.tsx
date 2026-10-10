@@ -32,7 +32,7 @@ export default function ThreadPage() {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [editPhotos, setEditPhotos] = useState<{ id: number; url: string }[]>([]);
+  const [editPhotos, setEditPhotos] = useState<{ id: number; url: string; preview_url?: string }[]>([]);
   const [editCommentId, setEditCommentId] = useState<number | null>(null);
   const [editCommentBody, setEditCommentBody] = useState("");
   const canEdit = !!user && !!t && (user.id === t.author_id || user.role === "admin");
@@ -174,8 +174,7 @@ export default function ThreadPage() {
               <div className="mt-2 grid grid-cols-3 gap-1.5">
                 {editPhotos.map((p) => (
                   <span key={p.id} className="relative overflow-hidden rounded-xl bg-slate-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.url} alt="" className="h-24 w-full object-contain" />
+                    <PhotoImg src={p.preview_url ?? p.url} fit="contain" className="h-24 w-full" />
                     <button
                       type="button"
                       onClick={async () => {
@@ -271,15 +270,13 @@ export default function ThreadPage() {
         {t.poll && <PollView threadId={t.id} initial={t.poll} canVote={!!user} />}
         {t.photos && t.photos.length > 0 && (
           t.photos.length === 1 ? (
-            <div className="mt-3 overflow-hidden rounded-xl bg-slate-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={t.photos[0].url} alt="" loading="lazy" onClick={() => setLightbox(t.photos![0].url)} className="max-h-[480px] w-full cursor-zoom-in object-contain" />
+            <div className="mt-3 overflow-hidden rounded-xl">
+              <PhotoImg src={t.photos[0].preview_url ?? t.photos[0].url} fit="contain" onClick={() => setLightbox(t.photos![0].url)} className="max-h-[480px] w-full" />
             </div>
           ) : (
             <div className={`mt-3 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
               {t.photos.map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={p.id} src={p.preview_url ?? p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-56 w-full cursor-zoom-in object-cover" />
+                <PhotoImg key={p.id} src={p.preview_url ?? p.url} onClick={() => setLightbox(p.url)} className="h-56 w-full" />
               ))}
             </div>
           )
@@ -293,8 +290,7 @@ export default function ThreadPage() {
         {t.place && (
           <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
             {t.place.map_preview && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={t.place.map_preview} alt="" loading="lazy" className="h-36 w-full object-cover" />
+              <PhotoImg src={t.place.map_preview} className="h-36 w-full" />
             )}
             <div className="flex items-center gap-2 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
               <MapPin className="h-4 w-4" /> {t.place.name}
