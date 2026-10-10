@@ -294,6 +294,9 @@ def my_bookmarks(db: Session = Depends(get_db), user: User = Depends(get_current
     items = db.query(Thread).filter(Thread.id.in_(ids)).all()
     by_id = {t.id: t for t in items}
     return [_thread_out(by_id[i], db) for i in ids if i in by_id]
+
+
+class ReportCreate(BaseModel):
     reason: str = Field(pattern="^(spam|abuse|offtopic|other)$")
     text: str | None = Field(default=None, max_length=500)
     comment_id: int | None = None
