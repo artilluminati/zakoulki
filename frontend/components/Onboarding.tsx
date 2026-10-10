@@ -2,11 +2,14 @@
 /* eslint-disable react-hooks/set-state-in-effect -- чтение флага онбординга из localStorage */
 
 import { useEffect, useState } from "react";
-import { X, MessagesSquare, MapPin, HelpCircle } from "lucide-react";
+import { X, MessagesSquare, MapPin, HelpCircle, Globe2 } from "lucide-react";
+import ScopePicker from "@/components/ScopePicker";
+import { useScope, scopeLabel } from "@/lib/scope";
 
-const KEY = "zakoulki_onboarding_v1";
+const KEY = "zakoulki_onboarding_v2";
 
 const STEPS = [
+  { title: "Откуда вы?", text: "Покажем вопросы вашего города и района. Можно выбрать всю страну или весь мир — меняется в один тап.", Icon: Globe2, location: true },
   { title: "Вопросы города", text: "От ямы во дворе до судьбы парка — спрашивайте о важном, отвечайте другим.", Icon: MessagesSquare },
   { title: "Спросите — ответят", text: "Опишите проблему, прикрепите точку на карте — вопрос увидят те, кому он важен.", Icon: HelpCircle },
   { title: "Все на карте", text: "Каждый вопрос с местом виден на карте. Похожие темы подсвечиваем заранее, чтобы не дублировать.", Icon: MapPin },
@@ -15,6 +18,7 @@ const STEPS = [
 export default function Onboarding() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const { scope, setScope } = useScope();
 
   useEffect(() => {
     try {
@@ -43,6 +47,12 @@ export default function Onboarding() {
         </div>
         <h2 className="mt-3 text-xl font-extrabold">{s.title}</h2>
         <p className="mt-1 text-[15px] text-slate-600">{s.text}</p>
+        {"location" in s && s.location && (
+          <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+            <ScopePicker value={scope} onChange={setScope} />
+            <div className="mt-2 text-center text-xs text-slate-400">Сейчас: {scopeLabel(scope)}</div>
+          </div>
+        )}
         <div className="mt-3 flex gap-1.5">
           {STEPS.map((_, i) => (
             <div key={i} className={`h-1.5 flex-1 rounded-full ${i === step ? "bg-lime-500" : "bg-slate-200"}`} />

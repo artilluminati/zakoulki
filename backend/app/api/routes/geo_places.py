@@ -17,6 +17,9 @@ class GeoPlaceCreate(BaseModel):
     latitude: float
     longitude: float
     area: list[list[float]] | None = Field(default=None, description="полигон [[lat,lng],...], минимум 3 точки")
+    city: str | None = None
+    region: str | None = None
+    country: str | None = None
     yandex_kind: str = "self"
     yandex_id: str | None = None
     address: str | None = None
@@ -39,7 +42,7 @@ def _out(p: GeoPlace) -> dict:
         area = None
     return {"id": p.id, "name": p.name, "address": p.address, "district": p.district,
             "street": p.street, "lat": p.latitude, "lng": p.longitude,
-            "area": area,
+            "area": area, "city": p.city, "region": p.region, "country": p.country,
             "yandex_kind": p.yandex_kind, "preview_url": p.preview_url,
             "map_preview": f"/uploads/{_map_pv}" if has_map else None}
 
@@ -126,13 +129,23 @@ def nearby_threads(lat: float, lng: float, radius: float = Query(0.3, descriptio
 
 @router.get("/map-points")
 def map_points(north: float, south: float, east: float, west: float,
+               district: str | None = None, city: str | None = None,
+               region: str | None = None, country: str | None = None,
                limit: int = Query(200, le=500), db: Session = Depends(get_db)):
     """Легковесные точки для кластеризации на карте."""
     from app.models.thread_photo import ThreadPhoto
     items = (db.query(Thread).join(GeoPlace, Thread.place_id == GeoPlace.id)
              .filter(GeoPlace.latitude.between(south, north))
-             .filter(GeoPlace.longitude.between(west, east))
-             .order_by(Thread.comments_count.desc(), Thread.id.desc()).limit(limit).all())
+             .filter(GeoPlace.longitude.between(west, east)))
+    if district:
+        items = items.filter(GeoPlace.district == district)
+    if city:
+        items = items.filter(GeoPlace.city == city)
+    if region:
+        items = items.filter(GeoPlace.region == region)
+    if country:
+        items = items.filter(GeoPlace.country == country)
+    items = (items.order_by(Thread.comments_count.desc(), Thread.id.desc()).limit(limit).all())
     out = []
     for t in items:
         cover = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).first()
@@ -154,6 +167,28 @@ def map_points(north: float, south: float, east: float, west: float,
                     "cover_url": cover_url,
                     "area": area})
     return out
+
+
+@router.get("/suggest")
+def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"),
+                   q: str = Query("", max_length=100),
+                   parent: str | None = Query(None, description="город для районов / страна для городов"),
+                   limit: int = Query(10, le=30), db: Session = Depends(get_db)):
+    """Иерархия для глобального фильтра: район -> город -> регион -> страна."""
+    from sqlalchemy import func
+    col = {"district": GeoPlace.district, "city": GeoPlace.city,
+           "region": GeoPlace.region, "country": GeoPlace.country}[level]
+    query = db.query(col, func.count(GeoPlace.id)).filter(col.isnot(None))
+    if q:
+        query = query.filter(col.ilike(f"%{q}%"))
+    if parent and level == "district":
+        query = query.filter((GeoPlace.city == parent) | (GeoPlace.region == parent) | (GeoPlace.country == parent))
+    if parent and level == "city":
+        query = query.filter((GeoPlace.region == parent) | (GeoPlace.country == parent))
+    if parent and level == "region":
+        query = query.filter(GeoPlace.country == parent)
+    rows = query.group_by(col).order_by(func.count(GeoPlace.id).desc()).limit(limit).all()
+    return [{"name": name, "count": count} for name, count in rows]
 
 
 @router.get("/{place_id}")

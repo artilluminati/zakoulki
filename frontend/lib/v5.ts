@@ -100,7 +100,7 @@ export async function fetchNearbyThreads(lat: number, lng: number, radius = 0.3)
   return res.data as { id: number; body_md: string; place_name?: string }[];
 }
 
-export async function fetchMapPoints(bbox: { north: number; south: number; east: number; west: number }) {
+export async function fetchMapPoints(bbox: { north: number; south: number; east: number; west: number; district?: string; city?: string; region?: string; country?: string }) {
   const res = await api.get("/geo-places/map-points", { params: bbox });
   return res.data as { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; area?: [number, number][] | null }[];
 }

@@ -12,6 +12,9 @@ import { MessagesSquare, CheckCircle2, ImagePlus, X } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
+import { useScope, scopeLabel } from "@/lib/scope";
+import ScopePicker from "@/components/ScopePicker";
+import { MapPinned, ChevronDown } from "lucide-react";
 
 type Sort = "new" | "top" | "near";
 
@@ -20,6 +23,8 @@ export default function FeedPage() {
   const search = params.get("search") ?? "";
   const { user } = useAuth();
   const toast = useToast();
+  const { scope, setScope } = useScope();
+  const [scopeOpen, setScopeOpen] = useState(false);
   const [items, setItems] = useState<ThreadV5[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -78,6 +83,10 @@ export default function FeedPage() {
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
+        ...(scope.district ? { district: scope.district } : {}),
+        ...(scope.city ? { city: scope.city } : {}),
+        ...(scope.region ? { region: scope.region } : {}),
+        ...(scope.country ? { country: scope.country } : {}),
         limit: PAGE,
       });
       setItems(data);
@@ -86,7 +95,7 @@ export default function FeedPage() {
       setItems([]); setLoadError(true);
     }
     setLoading(false);
-  }, [sort, filter, search, geo]);
+  }, [sort, filter, search, geo, scope]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -101,6 +110,10 @@ export default function FeedPage() {
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
+        ...(scope.district ? { district: scope.district } : {}),
+        ...(scope.city ? { city: scope.city } : {}),
+        ...(scope.region ? { region: scope.region } : {}),
+        ...(scope.country ? { country: scope.country } : {}),
         limit: PAGE,
         before_id: last.id,
       });
@@ -184,7 +197,7 @@ export default function FeedPage() {
                   e.target.value = "";
                 }}
               />
-              <PasteButton small onPaste={(imgs) => { setDraftFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
+              <PasteButton iconOnly onPaste={(imgs) => { setDraftFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
               <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">Расширить</Link>
               <button onClick={post} disabled={(!draft.trim() && draftFiles.length === 0) || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
                 {posting ? "…" : "Опубликовать"}
@@ -200,6 +213,21 @@ export default function FeedPage() {
 
       {/* сортировка + фильтры */}
       <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <button
+            onClick={() => setScopeOpen(!scopeOpen)}
+            className="flex max-w-44 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm"
+          >
+            <MapPinned className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="truncate">{scopeLabel(scope)}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          </button>
+          {scopeOpen && (
+            <div className="absolute left-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+              <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
+            </div>
+          )}
+        </div>
         {search && (
           <Link href="/" className="flex items-center gap-1 rounded-full border border-emerald-500 bg-emerald-50 px-3 py-1.5 text-[13px] font-bold text-emerald-700">
             Поиск: {search} ✕

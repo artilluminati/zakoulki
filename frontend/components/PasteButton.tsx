@@ -4,9 +4,10 @@ import { ClipboardPaste } from "lucide-react";
 
 /** Кнопка «Вставить из буфера»: читает картинки через Clipboard API.
  * На части мобильных браузеров чтение запрещено — тогда подсказываем выбрать файл. */
-export default function PasteButton({ onPaste, small = false }: {
+export default function PasteButton({ onPaste, small = false, iconOnly = false }: {
   onPaste: (files: File[]) => void;
   small?: boolean;
+  iconOnly?: boolean;
 }) {
   const read = async () => {
     try {
@@ -46,12 +47,14 @@ export default function PasteButton({ onPaste, small = false }: {
           el.click();
         }
       }}
-      className={small
-        ? "flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-        : "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700"}
+      className={iconOnly
+        ? "flex items-center rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+        : small
+          ? "flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+          : "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700"}
     >
-      <ClipboardPaste className={small ? "h-4 w-4" : "h-5 w-5"} />
-      {small ? "Из буфера" : "Вставить из буфера"}
+      <ClipboardPaste className={small || iconOnly ? "h-4 w-4" : "h-5 w-5"} />
+      {!iconOnly && (small ? "Из буфера" : "Вставить из буфера")}
     </button>
   );
 }

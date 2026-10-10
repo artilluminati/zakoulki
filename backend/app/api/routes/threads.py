@@ -49,6 +49,7 @@ def _place_out(p) -> dict:
     return {"id": p.id, "name": p.name, "address": p.address,
             "district": p.district, "lat": p.latitude, "lng": p.longitude,
             "preview_url": p.preview_url,
+            "city": p.city, "region": p.region, "country": p.country,
             "area": area,
             "map_preview": f"/uploads/{_map_pv}" if has_map else None}
 
@@ -188,12 +189,26 @@ def list_threads(
     place_id: int | None = Query(None),
     has_geo: bool | None = Query(None),
     is_offtop: bool | None = Query(None),
+    district: str | None = Query(None, description="район"),
+    city: str | None = Query(None, description="город/округ"),
+    region: str | None = Query(None, description="область/регион"),
+    country: str | None = Query(None, description="страна"),
     sort: str = Query("new", pattern="^(new|top|near)$"),
     lat: float | None = None, lng: float | None = None, radius: float | None = Query(None, description="км"),
     before_id: int | None = None, limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
     q = db.query(Thread).options(joinedload(Thread.place)).order_by(Thread.id.desc())
+    if district or city or region or country:
+        q = q.join(GeoPlace, Thread.place_id == GeoPlace.id)
+        if district:
+            q = q.filter(GeoPlace.district == district)
+        if city:
+            q = q.filter(GeoPlace.city == city)
+        if region:
+            q = q.filter(GeoPlace.region == region)
+        if country:
+            q = q.filter(GeoPlace.country == country)
     if before_id:
         q = q.filter(Thread.id < before_id)
     if author_id:

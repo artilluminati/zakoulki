@@ -10,6 +10,7 @@ import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_BLANK, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import { useToast } from "@/lib/toast";
+import { useScope } from "@/lib/scope";
 import PhotoImg from "@/components/PhotoImg";
 import type { ThreadV5 } from "@/types/v5";
 
@@ -28,6 +29,9 @@ export default function MapPage() {
   const params = useSearchParams();
   const router = useRouter();
   const toast = useToast();
+  const { scope } = useScope();
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
   const focusPlace = params.get("place");
   const ref = useRef<HTMLDivElement>(null);
   const reqRef = useRef(0);
@@ -81,7 +85,14 @@ export default function MapPage() {
         const paint = async () => {
           const my = ++reqRef.current;
           const b = map.getBounds();
-          const list = await fetchMapPoints({ south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1] }).catch(() => [] as MapPt[]);
+          const s = scopeRef.current;
+          const list = await fetchMapPoints({
+            south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
+            ...(s.district ? { district: s.district } : {}),
+            ...(s.city ? { city: s.city } : {}),
+            ...(s.region ? { region: s.region } : {}),
+            ...(s.country ? { country: s.country } : {}),
+          }).catch(() => [] as MapPt[]);
           if (!alive || my !== reqRef.current) return;
           setPts(list);
         };
@@ -140,6 +151,26 @@ export default function MapPage() {
     })();
     return () => { alive = false; };
   }, [mapReady, focusPlace, toast]);
+
+  // перерисовка точек при смене региона
+  useEffect(() => {
+    const map = (window as any).__ymap;
+    if (!mapReady || !map) return;
+    let alive = true;
+    (async () => {
+      const b = map.getBounds();
+      const list = await fetchMapPoints({
+        south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
+        ...(scope.district ? { district: scope.district } : {}),
+        ...(scope.city ? { city: scope.city } : {}),
+        ...(scope.region ? { region: scope.region } : {}),
+        ...(scope.country ? { country: scope.country } : {}),
+      }).catch(() => [] as MapPt[]);
+      if (alive) setPts(list);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, scope]);
 
   // перерисовка меток при смене точек/фильтра/выбора
   useEffect(() => {

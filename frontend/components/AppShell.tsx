@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Map as MapIcon, PlusCircle, User, Bell, Search } from "lucide-react";
+import { Home, Map as MapIcon, PlusCircle, User, Bell, Search, MapPinned, ChevronDown } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { timeAgo } from "@/components/ThreadCard";
+import { useScope, scopeLabel } from "@/lib/scope";
+import ScopePicker from "@/components/ScopePicker";
 
 function BellButton() {
   const { user } = useAuth();
@@ -69,6 +71,8 @@ function BellButton() {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { user } = useAuth();
+  const { scope, setScope } = useScope();
+  const [scopeOpen, setScopeOpen] = useState(false);
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
   const item = (href: string, label: string, Icon: typeof Home) => (
@@ -102,6 +106,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/create" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
             Спросить
           </Link>
+          <div className="relative">
+            <button
+              onClick={() => setScopeOpen(!scopeOpen)}
+              title="Выбрать регион"
+              className="flex max-w-44 items-center gap-1 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200"
+            >
+              <MapPinned className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span className="truncate">{scopeLabel(scope)}</span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            </button>
+            {scopeOpen && (
+              <>
+                <button aria-hidden tabIndex={-1} onClick={() => setScopeOpen(false)} className="fixed inset-0 z-40 cursor-default" />
+                <div className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                  <ScopePicker value={scope} onChange={setScope} />
+                </div>
+              </>
+            )}
+          </div>
           <BellButton />
           <Link href={user ? "/profile" : "/login"} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
             <User className="h-5 w-5 text-slate-600" />

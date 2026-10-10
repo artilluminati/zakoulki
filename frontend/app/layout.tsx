@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/lib/toast";
+import { ScopeProvider } from "@/lib/scope";
 import AppShell from "@/components/AppShell";
 import Onboarding from "@/components/Onboarding";
 
@@ -19,8 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans antialiased">
         <AuthProvider>
           <ToastProvider>
-            <AppShell>{children}</AppShell>
-            <Onboarding />
+            <ScopeProvider>
+              <AppShell>{children}</AppShell>
+              <Onboarding />
+            </ScopeProvider>
           </ToastProvider>
         </AuthProvider>
       </body>
