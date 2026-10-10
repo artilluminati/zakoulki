@@ -26,12 +26,12 @@ export default function AboutPage() {
     <div className="mx-auto max-w-2xl space-y-4 px-3 pt-6 md:px-0">
       <div className="rounded-3xl bg-slate-900 p-6 text-white md:p-8">
         <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">
-          Городские вопросы.<br />На карте. Вслух.
+          Спроси город —<br />тебе ответят.
         </h1>
         <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-white/70">
-          «Закоулки» — платформа, где жители задают вопросы о городе: от ямы во дворе
-          до судьбы парка. Каждый вопрос можно привязать к точке на карте,
-          обсудить и довести до ответа.
+          «Закоулки» — место, где жители разбирают городские вопросы: от ямы
+          во дворе до судьбы парка. Привяжите вопрос к точке на карте,
+          обсудите с соседями и доведите до ответа.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Link href="/create" className="rounded-xl bg-lime-400 px-5 py-2.5 text-sm font-extrabold text-slate-900 hover:bg-lime-300">
