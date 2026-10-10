@@ -4,9 +4,12 @@ function svgUri(svg: string) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-const GLYPH_Q = "M20 12c0-3.6 2.6-6 6-6s6 2.4 6 6c0 4.5-4 5.2-4 9h-4c0-3.4 4-4.4 4-7.4 0-1.5-1-2.6-2-2.6s-2 1.1-2 2.6l-4-1.6zM24 30.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z";
-const GLYPH_Q_T = "translate(4.2,3.8) scale(0.8)"; // чуть меньше, чтобы знак помещался в круг
-const GLYPH_CHAT = "M12 11h16v10H18l-4 4v-4h-2V11zm2 2v6h10v-6H14z";
+const GLYPH_CHAT_SVG = (color: string) =>
+  `<rect x="12" y="11" width="20" height="14" rx="4" fill="#fff"/>` +
+  `<path d="M17 24.5l-3.5 6.5 9-6.5z" fill="#fff"/>` +
+  `<rect x="16" y="14.5" width="12" height="2.6" rx="1.3" fill="${color}"/>` +
+  `<rect x="16" y="19" width="8" height="2.6" rx="1.3" fill="${color}"/>`;
+const GLYPH_Q_TEXT = `<text x="22" y="30.5" text-anchor="middle" font-size="23" font-weight="800" font-family="system-ui,-apple-system,sans-serif" fill="#fff">?</text>`;
 
 export interface PinOpts {
   color: string;
@@ -16,11 +19,11 @@ export interface PinOpts {
 }
 
 export function makePin({ color, glyph = "q", photoUrl, selected = false }: PinOpts): string {
-  const path = glyph === "q" ? GLYPH_Q : GLYPH_CHAT;
-  const tf = glyph === "q" ? GLYPH_Q_T : "translate(-4,-4) scale(1)";
   const inner = photoUrl
-    ? `<clipPath id="c"><circle cx="22" cy="22" r="13"/></clipPath><image href="${photoUrl}" xlink:href="${photoUrl}" x="9" y="9" width="26" height="26" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/><circle cx="22" cy="22" r="13" fill="none" stroke="#fff" stroke-width="3"/>`
-    : `<g fill="#fff"><path d="${path}" transform="${tf}"/></g>`;
+    ? `<clipPath id="c"><circle cx="22" cy="22" r="13"/></clipPath><image href="${photoUrl}" x="9" y="9" width="26" height="26" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/><circle cx="22" cy="22" r="13" fill="none" stroke="#fff" stroke-width="3"/>`
+    : glyph === "q"
+      ? GLYPH_Q_TEXT
+      : GLYPH_CHAT_SVG(color);
   const ring = selected ? `<circle cx="22" cy="22" r="20" fill="none" stroke="#a3e635" stroke-width="3"/>` : "";
   return svgUri(
     `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="48" viewBox="0 0 44 48">` +
