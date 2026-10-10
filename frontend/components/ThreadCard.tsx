@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, Flame } from "lucide-react";
@@ -54,7 +54,7 @@ export function ImportantBadge({ t }: { t: { is_important?: boolean; important_r
 }
 
 /** Рендер body_html: заменяем <a class=place> на чип с иконкой + тултип (фото/улица·район). */
-export function ThreadHtml({ html, placePreview }: { html: string; placePreview?: Record<number, { name: string; address?: string | null; district?: string | null; preview_url?: string | null; map_preview?: string | null }> }) {
+export const ThreadHtml = memo(function ThreadHtml({ html, placePreview }: { html: string; placePreview?: Record<number, { name: string; address?: string | null; district?: string | null; preview_url?: string | null; map_preview?: string | null }> }) {
   const [tip, setTip] = useState<number | null>(null);
   const router = useRouter();
 
@@ -114,9 +114,9 @@ export function ThreadHtml({ html, placePreview }: { html: string; placePreview?
       })}
     </div>
   );
-}
+});
 
-export default function ThreadCard({ t }: { t: ThreadV5 }) {
+export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
   const toast = useToast();
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(t.likes_count);
@@ -288,4 +288,4 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
       </div>
     </article>
   );
-}
+});

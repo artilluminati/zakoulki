@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { votePoll } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import type { PollV5 } from "@/types/v5";
 
 /** Опрос отдельным блоком: варианты с процентами, голосование как в ТГ. */
-export default function PollView({ threadId, initial, canVote }: {
+const PollView = memo(function PollView({ threadId, initial, canVote }: {
   threadId: number;
   initial: PollV5;
   canVote: boolean;
@@ -85,4 +85,6 @@ export default function PollView({ threadId, initial, canVote }: {
       </div>
     </div>
   );
-}
+});
+
+export default PollView;

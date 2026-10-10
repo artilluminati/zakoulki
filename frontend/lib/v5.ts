@@ -13,7 +13,7 @@ export async function fetchThread(id: number | string) {
   return res.data;
 }
 
-export async function createThread(payload: { title?: string | null; body_md: string; place_id?: number | null; category_ids?: number[]; tags?: string[]; poll?: { question: string; options: string[]; multiple: boolean } | null }) {
+export async function createThread(payload: { title?: string | null; body_md: string; place_id?: number | null; category_ids?: number[]; tags?: string[]; poll?: { question: string; options: string[]; multiple: boolean } | null; city?: string | null; district?: string | null; region?: string | null; country?: string | null }) {
   const res = await api.post("/threads", payload);
   return res.data;
 }

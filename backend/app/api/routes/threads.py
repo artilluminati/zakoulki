@@ -28,6 +28,10 @@ class ThreadCreate(BaseModel):
     category_ids: list[int] = []
     tags: list[str] = Field(default=[], max_length=5, description="явные теги из TagPicker")
     poll: dict | None = Field(default=None, description="{question, options[], multiple?}")
+    city: str | None = Field(default=None, max_length=200, description="город из scope (для оффтопа)")
+    district: str | None = Field(default=None, max_length=200, description="район из scope (для оффтопа)")
+    region: str | None = Field(default=None, max_length=200)
+    country: str | None = Field(default=None, max_length=100)
 
 
 class CommentCreate(BaseModel):
@@ -74,6 +78,7 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "place": _place_out(t.place) if t.place else None,
         "views": t.views, "likes_count": t.likes_count, "comments_count": t.comments_count,
         "created_at": t.created_at,
+        "city": t.city, "district": t.district, "region": t.region, "country": t.country,
         "poll": _poll_out(db, t.id, user_id),
         "is_important": t.is_important,
         "important_requested": t.important_requested,
@@ -200,15 +205,17 @@ def list_threads(
 ):
     q = db.query(Thread).options(joinedload(Thread.place)).order_by(Thread.id.desc())
     if district or city or region or country:
-        q = q.join(GeoPlace, Thread.place_id == GeoPlace.id)
+        # место треда ИЛИ его собственная привязка (оффтоп)
+        from sqlalchemy import or_ as _loc_or
+        q = q.outerjoin(GeoPlace, Thread.place_id == GeoPlace.id)
         if district:
-            q = q.filter(GeoPlace.district == district)
+            q = q.filter(_loc_or(GeoPlace.district == district, Thread.district == district))
         if city:
-            q = q.filter(GeoPlace.city == city)
+            q = q.filter(_loc_or(GeoPlace.city == city, Thread.city == city))
         if region:
-            q = q.filter(GeoPlace.region == region)
+            q = q.filter(_loc_or(GeoPlace.region == region, Thread.region == region))
         if country:
-            q = q.filter(GeoPlace.country == country)
+            q = q.filter(_loc_or(GeoPlace.country == country, Thread.country == country))
     if before_id:
         q = q.filter(Thread.id < before_id)
     if author_id:
@@ -253,7 +260,8 @@ def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User 
         # длинный без точки — все равно вопрос, не оффтоп
         is_offtop = False
     t = Thread(author_id=user.id, title=data.title, body_md=data.body_md, body_html=html,
-               is_offtop=is_offtop, place_id=data.place_id)
+               is_offtop=is_offtop, place_id=data.place_id,
+               city=data.city, district=data.district, region=data.region, country=data.country)
     db.add(t); db.flush()
     _attach_tags(db, t.id, data.tags or [], entities["tags"][:5])
     # упоминания мест из текста

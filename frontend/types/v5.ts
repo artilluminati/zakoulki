@@ -23,6 +23,10 @@ export interface ThreadV5 {
   body_html: string;
   categories?: { id: number; name: string; slug: string }[];
   tags?: string[];
+  city?: string | null;
+  district?: string | null;
+  region?: string | null;
+  country?: string | null;
   is_important?: boolean;
   important_requested?: boolean;
   important_pinned?: boolean;

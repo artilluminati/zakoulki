@@ -24,6 +24,11 @@ class Thread(Base):
     body_md: Mapped[str] = mapped_column(Text)
     body_html: Mapped[str] = mapped_column(Text, default="")
     is_offtop: Mapped[bool] = mapped_column(Boolean, default=True)
+    # привязка оффтопа к региону (из scope автора; у гео-тредов дублирует место)
+    city: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    district: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    region: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     # важные посты: по умолчанию все оффтоп; автор жмет «Важный пост» -> на рассмотрении;
     # N голосов пользователей -> автоматически важный
     is_important: Mapped[bool] = mapped_column(Boolean, default=False)
