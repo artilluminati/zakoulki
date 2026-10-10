@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { fetchThreads, fetchBookmarks } from "@/lib/v5";
 import { api } from "@/lib/api";
-import ThreadCard, { timeAgo } from "@/components/ThreadCard";
+import ThreadCard, { timeAgo, OfficialBadge } from "@/components/ThreadCard";
 import type { ThreadV5 } from "@/types/v5";
 
 interface Notif { id: string | number; kind: string; author?: string; author_id?: number; thread_id?: number | null; comment_id?: number | null; title?: string | null; snippet?: string; created_at?: string; }
@@ -53,7 +53,10 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-lime-200 text-2xl font-extrabold">{user.username.slice(0, 1).toUpperCase()}</span>
           <div>
-            <div className="text-lg font-extrabold">@{user.username}</div>
+            <div className="flex flex-wrap items-center gap-2 text-lg font-extrabold">
+              <span>@{user.username}</span>
+              {user.badge === "official" && <OfficialBadge />}
+            </div>
             <div className="text-sm text-slate-500">{user.email}</div>
             <div className="text-xs text-slate-400">с нами с {new Date(user.created_at).toLocaleDateString("ru-RU")}</div>
           </div>

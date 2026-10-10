@@ -24,12 +24,28 @@ def admin_users(q: str | None = None, limit: int = Query(50, le=200),
     query = db.query(User).order_by(User.id.desc())
     if q:
         query = query.filter(User.username.ilike(f"%{q}%"))
-    return [{"id": u.id, "username": u.username, "email": u.email, "role": u.role,
+    return [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "badge": u.badge,
              "created_at": u.created_at} for u in query.limit(limit).all()]
 
 
 class RoleUpdate(BaseModel):
     role: str = Field(pattern="^(user|admin)$")
+
+
+class BadgeUpdate(BaseModel):
+    badge: str | None = Field(default=None, pattern="^(official)$")
+
+
+@router.patch("/users/{user_id}/badge")
+def admin_set_badge(user_id: int, data: BadgeUpdate, db: Session = Depends(get_db),
+                    user: User = Depends(get_current_user)):
+    require_admin(user)
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(404, "Пользователь не найден")
+    target.badge = data.badge
+    db.commit()
+    return {"id": target.id, "badge": target.badge}
 
 
 class PasswordReset(BaseModel):

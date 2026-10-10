@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
 import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto } from "@/lib/v5";
-import { ThreadHtml, timeAgo } from "@/components/ThreadCard";
+import { ThreadHtml, timeAgo, OfficialBadge } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -204,8 +204,9 @@ export default function ThreadPage() {
         ) : (
           <>
         {t.title && <h1 className="text-xl font-extrabold leading-tight">{t.title}</h1>}
-        <div className="mt-1 text-xs text-slate-500">
-          #{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+          <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}</span>
+          {t.author_badge === "official" && <OfficialBadge />}
         </div>
         {t.tags && t.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -227,7 +228,7 @@ export default function ThreadPage() {
             <div className={`mt-3 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
               {t.photos.map((p) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-56 w-full cursor-zoom-in object-cover" />
+                <img key={p.id} src={p.preview_url ?? p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-56 w-full cursor-zoom-in object-cover" />
               ))}
             </div>
           )
@@ -277,6 +278,7 @@ export default function ThreadPage() {
             <div key={c.id} id={`comment-${c.id}`} className="rounded-xl bg-slate-50 px-3 py-2">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <span className="font-bold text-slate-600">{c.author_username ? `@${c.author_username}` : "кто-то"}</span>
+                {c.author_badge === "official" && <OfficialBadge />}
                 <span>· {timeAgo(c.created_at)}</span>
                 {(user && (user.id === c.author_id || user.role === "admin")) && (
                   <>
@@ -311,7 +313,7 @@ export default function ThreadPage() {
                       {c.photos.map((p) => (
                         <span key={p.id} className="relative block">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="max-h-72 w-full cursor-zoom-in object-contain" />
+                          <img src={p.preview_url ?? p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="max-h-72 w-full cursor-zoom-in object-contain" />
                           {(user && (user.id === c.author_id || user.role === "admin")) && (
                             <button
                               type="button"

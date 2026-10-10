@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X } from "lucide-react";
+import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X, BadgeCheck } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { likeThread, reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
@@ -24,6 +24,14 @@ function avatarColor(name?: string | null) {
   let h = 0;
   for (const c of name ?? "?") h = (h * 31 + c.charCodeAt(0)) % 360;
   return `hsl(${h} 60% 88%)`;
+}
+
+export function OfficialBadge() {
+  return (
+    <span title="Официальный аккаунт" className="inline-flex items-center gap-0.5 rounded-full bg-sky-100 px-1.5 py-px text-[11px] font-bold text-sky-700">
+      <BadgeCheck className="h-3 w-3" /> Official
+    </span>
+  );
 }
 
 /** Рендер body_html: заменяем <a class=place> на чип с иконкой + тултип (фото/улица·район). */
@@ -148,7 +156,10 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
           {(t.author_username ?? "?").slice(0, 1).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
+            {t.author_badge === "official" && <OfficialBadge />}
+          </span>
           <div className="text-xs text-slate-500">
             {timeAgo(t.created_at)}
             {t.is_offtop ? " · оффтоп" : " · вопрос"}
@@ -208,13 +219,13 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
         t.photos.length === 1 ? (
           <div className="mt-2 overflow-hidden rounded-xl bg-slate-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={t.photos[0].url} alt="" loading="lazy" onClick={() => setLightbox(t.photos![0].url)} className="max-h-96 w-full cursor-zoom-in object-contain" />
+            <img src={t.photos[0].preview_url ?? t.photos[0].url} alt="" loading="lazy" onClick={() => setLightbox(t.photos![0].url)} className="max-h-96 w-full cursor-zoom-in object-contain" />
           </div>
         ) : (
           <div className="relative mt-2 grid grid-cols-2 gap-1.5 overflow-hidden rounded-xl">
             {t.photos.slice(0, 4).map((p) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-40 w-full cursor-zoom-in object-cover" />
+              <img key={p.id} src={p.preview_url ?? p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-40 w-full cursor-zoom-in object-cover" />
             ))}
             {t.photos.length > 4 && (
               <button onClick={() => setLightbox(t.photos![0].url)} className="absolute inset-0 flex items-center justify-center bg-slate-900/50 text-lg font-extrabold text-white">

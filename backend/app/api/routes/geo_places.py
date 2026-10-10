@@ -153,11 +153,17 @@ def map_points(north: float, south: float, east: float, west: float,
     out = []
     for t in items:
         cover = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).first()
+        cover_url = None
+        if cover:
+            import os as _os
+            from app.core.config import settings as _settings
+            pv = f"pv_{cover.file_name}"
+            cover_url = f"/uploads/{pv}" if _os.path.exists(_os.path.join(_settings.UPLOAD_DIR, pv)) else f"/uploads/{cover.file_name}"
         out.append({"id": t.id, "lat": t.place.latitude, "lng": t.place.longitude,
                     "is_offtop": t.is_offtop,
                     "comments": t.comments_count,
                     "has_photo": cover is not None,
-                    "cover_url": f"/uploads/{cover.file_name}" if cover else None})
+                    "cover_url": cover_url})
     return out
 
 

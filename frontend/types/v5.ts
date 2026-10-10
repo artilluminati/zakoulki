@@ -15,12 +15,13 @@ export interface ThreadV5 {
   id: number;
   author_id: number;
   author_username?: string | null;
+  author_badge?: string | null;
   title?: string | null;
   body_md: string;
   body_html: string;
   categories?: { id: number; name: string; slug: string }[];
   tags?: string[];
-  photos?: { id: number; url: string }[];
+  photos?: { id: number; url: string; preview_url?: string }[];
   is_offtop: boolean;
   place?: GeoPlaceV5 | null;
   views: number;
@@ -35,8 +36,9 @@ export interface ThreadCommentV5 {
   parent_id?: number | null;
   author_id: number;
   author_username?: string | null;
+  author_badge?: string | null;
   body_md: string;
   body_html: string;
-  photos?: { id: number; url: string }[];
+  photos?: { id: number; url: string; preview_url?: string }[];
   created_at: string;
 }

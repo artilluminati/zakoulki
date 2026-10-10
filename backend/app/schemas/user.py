@@ -22,4 +22,5 @@ class UserOut(BaseModel):
     email: EmailStr
     avatar: str | None = None
     role: str = "user"
+    badge: str | None = None
     created_at: datetime

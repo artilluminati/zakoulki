@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 
-interface AdminUser { id: number; username: string; email: string; role: string; created_at: string; }
+interface AdminUser { id: number; username: string; email: string; role: string; badge?: string | null; created_at: string; }
 interface Report { id: number; reporter_id: number; reporter?: string; thread_id?: number | null; comment_id?: number | null; reason: string; text?: string | null; status: string; }
 
 const REASONS: Record<string, string> = { spam: "Спам", abuse: "Оскорбления", offtopic: "Не по теме", other: "Другое" };
@@ -64,6 +64,16 @@ export default function AdminPage() {
     }
   };
 
+  const toggleBadge = async (u: AdminUser) => {
+    try {
+      await api.patch(`/admin/users/${u.id}/badge`, { badge: u.badge === "official" ? null : "official" });
+      toast(u.badge === "official" ? "Бейдж снят" : "Аккаунт верифицирован", "success");
+      load();
+    } catch {
+      toast("Не получилось", "error");
+    }
+  };
+
   const resolveReport = async (id: number, status: "reviewed" | "rejected") => {
     try {
       await api.patch(`/admin/reports/${id}`, { status });
@@ -112,6 +122,13 @@ export default function AdminPage() {
             <Link href={`/user/${u.username}`} className="font-bold hover:underline">@{u.username}</Link>
             <span className="hidden truncate text-slate-400 sm:inline">{u.email}</span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${u.role === "admin" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}`}>{u.role}</span>
+            <button
+              onClick={() => toggleBadge(u)}
+              title="Верифицированная организация"
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${u.badge === "official" ? "bg-sky-100 text-sky-700" : "border border-slate-200 text-slate-400"}`}
+            >
+              {u.badge === "official" ? "✓ official" : "official?"}
+            </button>
             <button
               onClick={() => changeRole(u)}
               className="ml-auto rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold hover:bg-slate-50"

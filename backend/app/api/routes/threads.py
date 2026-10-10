@@ -40,14 +40,16 @@ def _thread_out(t: Thread, db: Session) -> dict:
     cats = [{"id": c.id, "name": c.name, "slug": c.slug} for c in (t.categories or [])]
     tag_rows = (db.query(Tag).join(ThreadTag, ThreadTag.tag_id == Tag.id)
                 .filter(ThreadTag.thread_id == t.id).all())
+    author = db.get(User, t.author_id)
     return {
         "id": t.id, "author_id": t.author_id,
-        "author_username": db.get(User, t.author_id).username if db.get(User, t.author_id) else None,
+        "author_username": author.username if author else None,
+        "author_badge": author.badge if author else None,
         "title": t.title,
         "body_md": t.body_md, "body_html": t.body_html,
         "categories": cats,
         "tags": [tg.name for tg in tag_rows],
-        "photos": [{"id": p.id, "url": f"/uploads/{p.file_name}"} for p in photos],
+        "photos": [{"id": p.id, **_photo_urls(p.file_name)} for p in photos],
         "is_offtop": t.is_offtop,
         "place": {"id": t.place.id, "name": t.place.name, "address": t.place.address,
                   "district": t.place.district, "lat": t.place.latitude, "lng": t.place.longitude,
@@ -236,8 +238,9 @@ def get_thread(thread_id: int, db: Session = Depends(get_db)):
     out["comments"] = [{
         "id": c.id, "parent_id": c.parent_id, "author_id": c.author_id,
         "author_username": (db.get(User, c.author_id).username if db.get(User, c.author_id) else None),
+        "author_badge": (db.get(User, c.author_id).badge if db.get(User, c.author_id) else None),
         "body_md": c.body_md, "body_html": c.body_html, "created_at": c.created_at,
-        "photos": [{"id": p.id, "url": f"/uploads/{p.file_name}"}
+        "photos": [{"id": p.id, **_photo_urls(p.file_name)}
                    for p in db.query(ThreadPhoto).filter(ThreadPhoto.comment_id == c.id).all()],
     } for c in comments]
     return out
@@ -409,7 +412,7 @@ def upload_thread_photo(
     if t.author_id != user.id:
         raise HTTPException(403, "Недостаточно прав")
     ph = _save_photo(db, file, thread_id=t.id)
-    return {"id": ph.id, "file_name": ph.file_name, "url": f"/uploads/{ph.file_name}"}
+    return {"id": ph.id, "file_name": ph.file_name, **_photo_urls(ph.file_name)}
 
 
 @router.post("/comments/{comment_id}/photos", status_code=201)
@@ -427,7 +430,7 @@ def upload_comment_photo(
     if c.author_id != user.id:
         raise HTTPException(403, "Недостаточно прав")
     ph = _save_photo(db, file, thread_id=c.thread_id, comment_id=c.id)
-    return {"id": ph.id, "file_name": ph.file_name, "url": f"/uploads/{ph.file_name}"}
+    return {"id": ph.id, "file_name": ph.file_name, **_photo_urls(ph.file_name)}
 
 
 @router.delete("/photos/{photo_id}", status_code=204)
@@ -456,6 +459,16 @@ def delete_photo(photo_id: int, db: Session = Depends(get_db),
     db.commit()
 
 
+def _photo_urls(file_name: str) -> dict:
+    import os as _os
+    pv = f"pv_{file_name}"
+    has_pv = _os.path.exists(os.path.join(settings.UPLOAD_DIR, pv))
+    return {
+        "url": f"/uploads/{file_name}",
+        "preview_url": f"/uploads/{pv}" if has_pv else f"/uploads/{file_name}",
+    }
+
+
 def _save_photo(db: Session, file: UploadFile, thread_id: int, comment_id: int | None = None):
     from app.models.thread_photo import ThreadPhoto
     if file.size and file.size > 10 * 1024 * 1024:
@@ -471,6 +484,14 @@ def _save_photo(db: Session, file: UploadFile, thread_id: int, comment_id: int |
     try:
         with Image.open(file_path) as img:
             width, height = img.size
+            # превью для лент/пинов: длинная сторона max 640
+            pv = img.copy()
+            pv.thumbnail((640, 640))
+            pv_name = f"pv_{file_name}"
+            if (img.format or "").upper() in ("JPEG", "JPG"):
+                pv.convert("RGB").save(os.path.join(settings.UPLOAD_DIR, pv_name), "JPEG", quality=82)
+            else:
+                pv.save(os.path.join(settings.UPLOAD_DIR, pv_name))
     except Exception:
         pass
     ph = ThreadPhoto(thread_id=thread_id, comment_id=comment_id, file_name=file_name, width=width, height=height)
