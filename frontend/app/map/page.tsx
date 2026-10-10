@@ -154,7 +154,7 @@ export default function MapPage() {
     setCount(visible.length);
     const clusterer = new ymaps.Clusterer({
       groupByCoordinates: false,
-      gridSize: 64,
+      gridSize: 128,
       // кружок рисует HTML-layout (не зависит от загрузки картинки),
       // иконка — прозрачная заглушка того же размера
       clusterIcons: [{ href: CLUSTER_BLANK, size: [64, 64], offset: [-32, -32] }],

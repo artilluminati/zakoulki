@@ -49,6 +49,11 @@ export default function CreatePage() {
     setVertices((prev) => (prev.length >= 30 ? prev : [...prev, [latitude, longitude]]));
   };
 
+  // вид карты (центр держится при переключении режимов)
+  const [view, setView] = useState({ lat: 55.755, lng: 37.617, nonce: 0 });
+  const goView = (latitude: number, longitude: number) =>
+    setView((v) => ({ lat: latitude, lng: longitude, nonce: v.nonce + 1 }));
+
   const resolveGeo = async (latitude: number, longitude: number) => {
     setResolving(true);
     try {
@@ -105,6 +110,7 @@ export default function CreatePage() {
     const longitude = Number(ln);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
     setPendingGeo({ latitude, longitude });
+    goView(latitude, longitude);
     const name = params.get("name");
     if (name) {
       setPendingLabel({ name, address: params.get("address") });
@@ -125,6 +131,8 @@ export default function CreatePage() {
         ? await createGeoPlace({ name: p.name, latitude: p.lat, longitude: p.lng, address: p.address, district: p.district, street: p.street })
         : p;
       setPlace(picked);
+      setAdjust(null);
+      goView(picked.lat, picked.lng);
       fetchNearbyThreads(picked.lat, picked.lng).then(setNearby).catch(() => { /* ignore */ });
     } catch {
       setError("Не получилось прикрепить место");
@@ -147,6 +155,9 @@ export default function CreatePage() {
   }, [title, body, tags, place]);
 
   const [geoLocating, setGeoLocating] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
+  // уточнение выбранного из поиска места перетаскиванием (имя сохраняется)
+  const [adjust, setAdjust] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const useGeolocation = async () => {
     setError(null);
@@ -162,6 +173,7 @@ export default function CreatePage() {
         navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
       const { latitude, longitude } = pos.coords;
       setPendingGeo({ latitude, longitude });
+      goView(latitude, longitude);
       resolveGeo(latitude, longitude);
       try { setNearby(await fetchNearbyThreads(latitude, longitude)); } catch { /* ignore */ }
     } catch {
@@ -172,6 +184,12 @@ export default function CreatePage() {
   };
 
   const onPinMove = (latitude: number, longitude: number) => {
+    if (place && !pendingGeo) {
+      // уточнение выбранного места: имя сохраняется, координаты свои
+      setAdjust({ latitude, longitude });
+      fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
+      return;
+    }
     setPendingGeo({ latitude, longitude });
     resolveGeo(latitude, longitude);
     fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
@@ -181,7 +199,7 @@ export default function CreatePage() {
     if ((!body.trim() && files.length === 0) || saving) return;
     setSaving(true); setError(null);
     try {
-      let placeId = place && place.id > 0 ? place.id : null;
+      let placeId = place && place.id > 0 && !adjust ? place.id : null;
       if (!placeId && vertices.length >= 3) {
         const c = centroid(vertices)!;
         const r = await reverseGeocode(c.latitude, c.longitude).catch(() => null);
@@ -197,6 +215,14 @@ export default function CreatePage() {
           name: pendingLabel?.name || "Точка на карте",
           latitude: pendingGeo.latitude, longitude: pendingGeo.longitude,
           address: pendingLabel?.address || null,
+        });
+        placeId = p.id;
+      } else if (!placeId && place && place.id > 0 && adjust) {
+        // точку выбранного места уточнили вручную — своя копия с тем же названием
+        const p = await createGeoPlace({
+          name: place.name,
+          latitude: adjust.latitude, longitude: adjust.longitude,
+          address: place.address, district: place.district, street: place.street,
         });
         placeId = p.id;
       }
@@ -303,88 +329,56 @@ export default function CreatePage() {
         </div>
       )}
 
-      {/* точка / территория */}
+      {/* точка / территория — одна карта, позиция не слетает при переключении */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600" /> Место</span>
           <span className="flex gap-1 text-xs">
             <button
               type="button"
-              onClick={() => { setAreaMode(false); setVertices([]); }}
+              onClick={() => setAreaMode(false)}
               className={`rounded-lg px-2 py-1 font-bold ${!areaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
             >
               Точка
             </button>
             <button
               type="button"
-              onClick={() => { setAreaMode(true); setPlace(null); setPendingGeo(null); setPendingLabel(null); }}
+              onClick={() => { setAreaMode(true); setMapExpanded(true); }}
               className={`rounded-lg px-2 py-1 font-bold ${areaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
             >
               Территория
             </button>
           </span>
           {(place || pendingGeo || vertices.length > 0) && (
-            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); setVertices([]); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
-          )}
-          {!place && !pendingGeo && vertices.length === 0 && !areaMode && (
-            <button onClick={useGeolocation} disabled={geoLocating} className="text-xs font-bold text-emerald-700 disabled:opacity-50">
-              {geoLocating ? "Определяем…" : "Моя геолокация"}
-            </button>
+            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); setVertices([]); setAdjust(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
           )}
         </div>
-        {areaMode ? (
-          <div className="mt-2">
-            <div className="text-xs text-slate-500">
-              Кликайте по карте — точки соединятся в территорию. Нужно минимум 3.
-              {vertices.length > 0 && ` · Точек: ${vertices.length}`}
-            </div>
-            <div className="mt-1.5">
-              <MiniMap
-                key={`area-${pendingGeo ? `${pendingGeo.latitude},${pendingGeo.longitude}` : "msk"}`}
-                lat={pendingGeo?.latitude ?? 55.755} lng={pendingGeo?.longitude ?? 37.617}
-                onMove={() => { /* в режиме территории метка не двигается */ }}
-                areaMode vertices={vertices} onVertex={onMapVertex}
-                startExpanded
-              />
-            </div>
+        {areaMode && (
+          <div className="mt-2 text-xs text-slate-500">
+            Кликайте по карте — точки соединятся в территорию. Нужно минимум 3.
             {vertices.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setVertices([])}
-                className="mt-1.5 text-xs font-semibold text-slate-400 hover:text-red-500"
-              >
-                Начать заново
-              </button>
+              <>
+                {` · Точек: ${vertices.length} `}
+                <button type="button" onClick={() => setVertices([])} className="font-semibold text-slate-400 hover:text-red-500">
+                  заново
+                </button>
+              </>
             )}
           </div>
-        ) : place ? (
-          <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
-            <div className="font-bold text-emerald-800">{place.name}</div>
-            <div className="text-xs text-emerald-600">{[place.address, place.district].filter(Boolean).join(" · ")}</div>
-          </div>
-        ) : pendingGeo ? (
-          <div className="mt-2 overflow-hidden rounded-xl bg-emerald-50">
-            <div className="px-3 pt-2.5">
-              <div className="font-bold text-emerald-800">
-                {resolving ? "Определяем адрес…" : (pendingLabel?.name ?? "Точка на карте")}
-              </div>
-              {pendingLabel?.address && !resolving && (
-                <div className="truncate text-xs text-emerald-600">{pendingLabel.address}</div>
-              )}
-              <div className="pb-1 text-[11px] text-emerald-600/70">Метку можно перетащить</div>
-            </div>
-            <div className="p-1.5">
-              <MiniMap key="point" lat={pendingGeo.latitude} lng={pendingGeo.longitude} onMove={onPinMove} />
-            </div>
-          </div>
-        ) : (
+        )}
+        {!areaMode && !place && !pendingGeo && (
           <>
-            <input
-              value={addr}
-              onChange={(e) => setAddr(e.target.value)}
-              placeholder="Найти адрес или организацию…"
-              className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
-            />
+            <div className="mt-2 flex gap-2">
+              <input
+                value={addr}
+                onChange={(e) => setAddr(e.target.value)}
+                placeholder="Найти адрес или организацию…"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
+              />
+              <button onClick={useGeolocation} disabled={geoLocating} className="shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold text-emerald-700 disabled:opacity-50">
+                {geoLocating ? "…" : "Я здесь"}
+              </button>
+            </div>
             {found.map((p) => (
               <button key={`${p.id}-${p.name}`} disabled={picking} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 disabled:opacity-50">
                 <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
@@ -393,6 +387,39 @@ export default function CreatePage() {
             ))}
           </>
         )}
+        {(place || pendingGeo) && !areaMode && (
+          <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
+            <div className="font-bold text-emerald-800">
+              {place ? place.name : resolving ? "Определяем адрес…" : (pendingLabel?.name ?? "Точка на карте")}
+            </div>
+            <div className="text-xs text-emerald-600">
+              {place
+                ? [place.address, place.district].filter(Boolean).join(" · ")
+                : pendingLabel?.address && !resolving ? pendingLabel.address : "Метку можно перетащить"}
+            </div>
+            {place && (
+              <div className="text-[11px] text-emerald-600/70">
+                {adjust ? "Точка уточнена вручную" : "Метку на карте можно перетащить для уточнения"}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="mt-2">
+          <MiniMap
+            center={view}
+            pin={pendingGeo
+              ? { lat: pendingGeo.latitude, lng: pendingGeo.longitude }
+              : adjust
+                ? { lat: adjust.latitude, lng: adjust.longitude }
+                : place ? { lat: place.lat, lng: place.lng } : null}
+            onMove={onPinMove}
+            areaMode={areaMode}
+            vertices={vertices}
+            onVertex={onMapVertex}
+            expanded={mapExpanded}
+            onExpandedChange={setMapExpanded}
+          />
+        </div>
         {nearby.length > 0 && (
           <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5">
             <div className="text-xs font-bold text-amber-800">Рядом уже обсуждают ({nearby.length}) — гляньте, чтобы не дублировать:</div>

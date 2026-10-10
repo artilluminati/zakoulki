@@ -2,18 +2,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- JS API Яндекс.Карт без типов */
 
 import { useEffect, useRef, useState } from "react";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2, X, Search } from "lucide-react";
 import { loadYandex } from "@/lib/yandex";
 import { makePin, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
+import { searchGeoPlaces } from "@/lib/v5";
+import type { GeoPlaceV5 } from "@/types/v5";
 
-/** Мини-карта: точка (перетаскиваемая метка) или территория (клики = вершины). */
-export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices = [], onVertex, startExpanded = false }: {
-  lat: number; lng: number;
+export interface MapCenter { lat: number; lng: number; nonce: number; }
+
+/** Мини-карта: одна инстанция на оба режима (позиция не слетает).
+ * center — явные запросы центрирования (nonce меняется), pin — точка. */
+export default function MiniMap({ center, pin, onMove, areaMode = false, vertices = [], onVertex, expanded, onExpandedChange }: {
+  center: MapCenter;
+  pin: { lat: number; lng: number } | null;
   onMove: (lat: number, lng: number) => void;
   areaMode?: boolean;
   vertices?: [number, number][];
   onVertex?: (lat: number, lng: number) => void;
-  startExpanded?: boolean;
+  expanded: boolean;
+  onExpandedChange: (v: boolean) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -21,7 +28,10 @@ export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices =
   const polyRef = useRef<any>(null);
   const onMoveRef = useRef(onMove);
   const onVertexRef = useRef(onVertex);
-  const [expanded, setExpanded] = useState(startExpanded);
+  useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
+  useEffect(() => { onVertexRef.current = onVertex; }, [onVertex]);
+  const [q, setQ] = useState("");
+  const [found, setFound] = useState<GeoPlaceV5[]>([]);
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
   useEffect(() => { onVertexRef.current = onVertex; }, [onVertex]);
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
@@ -33,12 +43,13 @@ export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices =
       try {
         const ymaps = await loadYandex(key);
         if (!alive || !ref.current) return;
-        const map = new ymaps.Map(ref.current, { center: [lat, lng], zoom: 16, controls: ["zoomControl"] });
-        const mark = new ymaps.Placemark([lat, lng], {}, {
+        const map = new ymaps.Map(ref.current, { center: [center.lat, center.lng], zoom: 16, controls: ["zoomControl"] });
+        const mark = new ymaps.Placemark([center.lat, center.lng], {}, {
           iconLayout: "default#image",
           iconImageHref: makePin({ color: "#059669", glyph: "q" }),
           iconImageSize: [...PIN_SIZE], iconImageOffset: [...PIN_OFFSET],
           draggable: true,
+          visible: !!pin,
         });
         mark.events.add("dragend", () => {
           const c = mark.geometry.getCoordinates();
@@ -57,13 +68,19 @@ export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  // двигаем метку вслед за внешними изменениями координат
+  // явное центрирование + позиция пина
   useEffect(() => {
     try {
-      markRef.current?.geometry.setCoordinates([lat, lng]);
-      mapRef.current?.setCenter([lat, lng]);
+      if (pin) {
+        markRef.current?.geometry.setCoordinates([pin.lat, pin.lng]);
+        markRef.current?.options.set("visible", true);
+      } else {
+        markRef.current?.options.set("visible", false);
+      }
+      mapRef.current?.setCenter([center.lat, center.lng]);
     } catch { /* ignore */ }
-  }, [lat, lng]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center.nonce]);
 
   // перерисовка полигона территории
   useEffect(() => {
@@ -101,26 +118,27 @@ export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices =
   }, [vertices, areaMode]);
 
   const toggleExpand = () => {
-    setExpanded((v: boolean) => !v);
+    onExpandedChange(!expanded);
     setTimeout(() => {
       try { mapRef.current?.container.fitToViewport(); } catch { /* ignore */ }
     }, 60);
   };
 
-  const mapBox = (
-    <div className="relative h-full w-full">
-      <div ref={ref} className="absolute inset-0 overflow-hidden bg-slate-100" />
-      <button
-        type="button"
-        onClick={toggleExpand}
-        aria-label={expanded ? "Свернуть карту" : "Развернуть карту"}
-        title={expanded ? "Свернуть карту" : "Развернуть карту"}
-        className="absolute right-2 top-2 z-10 rounded-full bg-white/95 p-2 text-slate-600 shadow-md hover:bg-white"
-      >
-        {expanded ? <X className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-      </button>
-    </div>
-  );
+  const pickSearch = (p: GeoPlaceV5) => {
+    setQ("");
+    setFound([]);
+    onMoveRef.current(p.lat, p.lng);
+    try { mapRef.current?.setCenter([p.lat, p.lng], 16); } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    if (q.trim().length < 3) return;
+    const t = setTimeout(async () => {
+      try { setFound(await searchGeoPlaces(q.trim())); } catch { setFound([]); }
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- дебаунс-поиск по вводу
+  }, [q]);
 
   return (
     <div
@@ -134,6 +152,34 @@ export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices =
         onClick={expanded ? (e) => e.stopPropagation() : undefined}
       >
         <div ref={ref} className="absolute inset-0 overflow-hidden bg-slate-100" />
+        {expanded && (
+          <div className="absolute left-2 right-12 top-2 z-10">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-lg">
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+              <input
+                value={q}
+                onChange={(e) => { setQ(e.target.value); if (e.target.value.trim().length < 3) setFound([]); }}
+                placeholder="Найти место…"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+              />
+            </div>
+            {found.length > 0 && (
+              <div className="mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
+                {found.map((p) => (
+                  <button
+                    key={`${p.id}-${p.name}`}
+                    type="button"
+                    onClick={() => pickSearch(p)}
+                    className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  >
+                    <span className="font-bold">{p.name}</span>
+                    {p.address && <span className="block truncate text-xs text-slate-500">{p.address}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); toggleExpand(); }}
