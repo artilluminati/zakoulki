@@ -307,6 +307,22 @@ export default function ThreadPage() {
           {user?.role === "admin" && (
             <button onClick={adminDelete} className="font-bold text-red-600 hover:underline">Удалить</button>
           )}
+          {user?.role === "admin" && (
+            <button
+              onClick={async () => {
+                try {
+                  const r = await api.patch(`/admin/threads/${t.id}/important`, { pinned: !t.important_pinned });
+                  setT({ ...t, is_important: r.data.is_important, important_pinned: r.data.important_pinned });
+                  toast(r.data.is_important ? "Пост помечен важным" : "Важность снята", "success");
+                } catch {
+                  toast("Не получилось", "error");
+                }
+              }}
+              className="font-bold text-amber-700 hover:underline"
+            >
+              {t.important_pinned ? "Снять важность" : "Сделать важным"}
+            </button>
+          )}
           <span className="relative ml-auto">
             <button onClick={() => setReportOpen(!reportOpen)} className="flex items-center gap-1 text-slate-400 hover:text-red-500"><Flag className="h-4 w-4" /> Жалоба</button>
             {reportOpen && (

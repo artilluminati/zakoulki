@@ -60,6 +60,7 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "poll": _poll_out(db, t.id, user_id),
         "is_important": t.is_important,
         "important_requested": t.important_requested,
+        "important_pinned": t.important_pinned,
         "important_votes": t.important_votes,
         "important_voted": _important_voted(db, t.id, user_id),
     }
@@ -463,7 +464,7 @@ def vote_important(thread_id: int, db: Session = Depends(get_db),
         t.is_important = True
         t.is_offtop = False
     else:
-        t.is_important = False
+        t.is_important = t.important_pinned
     db.commit()
     return _thread_out(t, db, user.id)
 

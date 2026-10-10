@@ -23,6 +23,7 @@ export interface ThreadV5 {
   tags?: string[];
   is_important?: boolean;
   important_requested?: boolean;
+  important_pinned?: boolean;
   important_votes?: number;
   important_voted?: boolean;
   photos?: { id: number; url: string; preview_url?: string }[];

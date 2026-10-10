@@ -27,6 +27,7 @@ class Thread(Base):
     # важные посты: по умолчанию все оффтоп; автор жмет «Важный пост» -> на рассмотрении;
     # N голосов пользователей -> автоматически важный
     is_important: Mapped[bool] = mapped_column(Boolean, default=False)
+    important_pinned: Mapped[bool] = mapped_column(Boolean, default=False)  # принудительно от админа, голоса не снимают
     important_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     important_votes: Mapped[int] = mapped_column(Integer, default=0)
     place_id: Mapped[int | None] = mapped_column(ForeignKey("geo_places.id"), nullable=True)
