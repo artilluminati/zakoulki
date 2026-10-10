@@ -52,6 +52,18 @@ export default function AdminPage() {
     }
   };
 
+  const resetPassword = async (u: AdminUser) => {
+    const pw = window.prompt(`Новый пароль для @${u.username} (мин. 6 символов):`);
+    if (!pw) return;
+    if (pw.length < 6) { toast("Пароль короче 6 символов", "error"); return; }
+    try {
+      await api.patch(`/admin/users/${u.id}/password`, { password: pw });
+      toast(`Пароль @${u.username} обновлён — передайте его пользователю`, "success");
+    } catch {
+      toast("Не получилось", "error");
+    }
+  };
+
   const resolveReport = async (id: number, status: "reviewed" | "rejected") => {
     try {
       await api.patch(`/admin/reports/${id}`, { status });
@@ -105,6 +117,12 @@ export default function AdminPage() {
               className="ml-auto rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold hover:bg-slate-50"
             >
               {u.role === "admin" ? "снять админа" : "сделать админом"}
+            </button>
+            <button
+              onClick={() => resetPassword(u)}
+              className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold hover:bg-slate-50"
+            >
+              сбросить пароль
             </button>
           </div>
         ))}

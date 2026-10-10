@@ -32,6 +32,10 @@ class RoleUpdate(BaseModel):
     role: str = Field(pattern="^(user|admin)$")
 
 
+class PasswordReset(BaseModel):
+    password: str = Field(min_length=6, max_length=100)
+
+
 @router.patch("/users/{user_id}")
 def admin_set_role(user_id: int, data: RoleUpdate, db: Session = Depends(get_db),
                    user: User = Depends(get_current_user)):
@@ -48,6 +52,19 @@ def admin_set_role(user_id: int, data: RoleUpdate, db: Session = Depends(get_db)
     target.role = data.role
     db.commit()
     return {"id": target.id, "role": target.role}
+
+
+@router.patch("/users/{user_id}/password")
+def admin_reset_password(user_id: int, data: PasswordReset, db: Session = Depends(get_db),
+                         user: User = Depends(get_current_user)):
+    from app.core.security import hash_password
+    require_admin(user)
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(404, "Пользователь не найден")
+    target.password_hash = hash_password(data.password)
+    db.commit()
+    return {"id": target.id}
 
 
 @router.get("/reports")
