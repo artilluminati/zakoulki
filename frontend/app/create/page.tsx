@@ -8,6 +8,8 @@ import MdEditor from "@/components/editor/MdEditor";
 import TagPicker from "@/components/TagPicker";
 import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
+import { useAuth } from "@/lib/auth";
+import Link from "next/link";
 import type { GeoPlaceV5 } from "@/types/v5";
 
 function cleanSnippet(raw: string): string {
@@ -21,6 +23,7 @@ function cleanSnippet(raw: string): string {
 export default function CreatePage() {
   const router = useRouter();
   const toast = useToast();
+  const { user, loading: authLoading } = useAuth();
   const DRAFT_KEY = "zakoulki_draft_v1";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -136,8 +139,23 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
+    <div
+      className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6"
+      onPaste={(e) => {
+        const imgs = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+        if (imgs.length > 0) {
+          e.preventDefault();
+          setFiles((prev) => [...prev, ...imgs]);
+          toast(`Фото добавлено: ${imgs.length}`, "success");
+        }
+      }}
+    >
       <h1 className="text-xl font-extrabold">Новый вопрос</h1>
+      {!authLoading && !user && (
+        <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
+          Войдите, чтобы задать вопрос →
+        </Link>
+      )}
 
       <input
         value={title}
@@ -157,7 +175,10 @@ export default function CreatePage() {
           <ImagePlus className="h-5 w-5" /> Добавить фото{files.length > 0 ? ` (${files.length})` : ""}
           <input
             type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])}
+            onChange={(e) => {
+              setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+              e.target.value = "";
+            }}
           />
         </label>
         {files.length > 0 && (
