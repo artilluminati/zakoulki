@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X, BadgeCheck } from "lucide-react";
+import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, Flame } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { likeThread, reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
@@ -32,6 +32,24 @@ export function OfficialBadge() {
       <BadgeCheck className="h-3 w-3" /> Official
     </span>
   );
+}
+
+export function ImportantBadge({ t }: { t: { is_important?: boolean; important_requested?: boolean; important_votes?: number } }) {
+  if (t.is_important) {
+    return (
+      <span title="Признан важным жителями" className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+        <Flame className="h-3 w-3" /> Важный
+      </span>
+    );
+  }
+  if (t.important_requested) {
+    return (
+      <span title="На рассмотрении: жители решают, важный ли это вопрос" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">
+        На рассмотрении · {t.important_votes ?? 0}/3
+      </span>
+    );
+  }
+  return null;
 }
 
 /** Рендер body_html: заменяем <a class=place> на чип с иконкой + тултип (фото/улица·район). */
@@ -159,6 +177,7 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
           <span className="flex flex-wrap items-center gap-1.5">
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
             {t.author_badge === "official" && <OfficialBadge />}
+            <ImportantBadge t={t} />
           </span>
           <div className="text-xs text-slate-500">
             {timeAgo(t.created_at)}
@@ -213,6 +232,11 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
             </Link>
           ))}
         </div>
+      )}
+      {t.poll && (
+        <Link href={`/thread/${t.id}`} className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-slate-800">
+          <BarChart3 className="h-4 w-4 text-emerald-600" /> Опрос: {t.poll.question} · голосов: {t.poll.total}
+        </Link>
       )}
 
       {t.photos && t.photos.length > 0 && (

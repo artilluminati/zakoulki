@@ -240,7 +240,7 @@ export default function MdEditor({
           {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
         </button>
         <div className="ml-auto flex shrink-0 items-center px-1 text-[11px] text-slate-400">
-          возможен markdown
+          поддерживается markdown
         </div>
       </div>
       <div className="px-3 py-2">

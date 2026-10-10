@@ -13,7 +13,7 @@ export async function fetchThread(id: number | string) {
   return res.data;
 }
 
-export async function createThread(payload: { title?: string | null; body_md: string; place_id?: number | null; category_ids?: number[]; tags?: string[] }) {
+export async function createThread(payload: { title?: string | null; body_md: string; place_id?: number | null; category_ids?: number[]; tags?: string[]; poll?: { question: string; options: string[]; multiple: boolean } | null }) {
   const res = await api.post("/threads", payload);
   return res.data;
 }
@@ -63,6 +63,21 @@ export async function uploadCommentPhoto(commentId: number, file: File) {
 
 export async function deletePhoto(photoId: number) {
   await api.delete(`/threads/photos/${photoId}`);
+}
+
+export async function votePoll(threadId: number, optionIds: number[]) {
+  const res = await api.post(`/threads/${threadId}/vote`, { option_ids: optionIds });
+  return res.data;
+}
+
+export async function requestImportant(threadId: number) {
+  const res = await api.post(`/threads/${threadId}/request-important`);
+  return res.data;
+}
+
+export async function voteImportant(threadId: number) {
+  const res = await api.post(`/threads/${threadId}/vote-important`);
+  return res.data;
 }
 
 export async function reportThread(id: number, reason: string, text?: string, comment_id?: number) {

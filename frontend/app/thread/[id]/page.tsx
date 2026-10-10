@@ -5,9 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto } from "@/lib/v5";
-import { ThreadHtml, timeAgo, OfficialBadge } from "@/components/ThreadCard";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestImportant, voteImportant } from "@/lib/v5";
+import { ThreadHtml, timeAgo, OfficialBadge, ImportantBadge } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
+import PasteButton from "@/components/PasteButton";
+import PollView from "@/components/PollView";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 
@@ -135,6 +138,17 @@ export default function ThreadPage() {
     catch { toast("Не отправилось", "error"); }
   };
 
+  const adminDelete = async () => {
+    if (!t || !window.confirm(`Удалить тред #${t.id} вместе со всем содержимым?`)) return;
+    try {
+      await api.delete(`/admin/threads/${t.id}`);
+      toast("Тред удалён", "success");
+      router.push("/");
+    } catch {
+      toast("Не получилось", "error");
+    }
+  };
+
   if (loading) return <div className="mx-auto max-w-2xl space-y-3 px-3 pt-6"><div className="h-48 animate-pulse rounded-2xl bg-white" /><div className="h-24 animate-pulse rounded-2xl bg-white" /></div>;
   if (!t) return <div className="mx-auto max-w-2xl px-3 pt-10 text-center">Тред не найден. <Link href="/" className="underline">В ленту</Link></div>;
 
@@ -207,7 +221,41 @@ export default function ThreadPage() {
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
           <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}</span>
           {t.author_badge === "official" && <OfficialBadge />}
+          <ImportantBadge t={t} />
         </div>
+        {!t.is_important && user && (
+          <div className="mt-2">
+            {!t.important_requested ? (
+              (user.id === t.author_id || user.role === "admin") && (
+                <button
+                  onClick={async () => {
+                    try { const u = await requestImportant(t.id); setT({ ...t, ...u }); toast("Выдвинуто — жители решат голосами", "success"); }
+                    catch { toast("Не получилось", "error"); }
+                  }}
+                  className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-[13px] font-bold text-amber-800 hover:bg-amber-100"
+                >
+                  Сделать важным
+                </button>
+              )
+            ) : (
+              <button
+                onClick={async () => {
+                  try {
+                    const u = await voteImportant(t.id);
+                    setT({ ...t, ...u });
+                    toast(u.important_voted ? "Голос учтён" : "Голос снят", "success");
+                  } catch (e) {
+                    const status = (e as { response?: { status?: number } })?.response?.status;
+                    toast(status === 401 ? "Войдите, чтобы голосовать" : "Не получилось", "error");
+                  }
+                }}
+                className={`rounded-xl border px-3 py-1.5 text-[13px] font-bold ${t.important_voted ? "border-amber-400 bg-amber-100 text-amber-900" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+              >
+                {t.important_voted ? "✓ Это важно" : "Это важно"} · {t.important_votes ?? 0}/3
+              </button>
+            )}
+          </div>
+        )}
         {t.tags && t.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {t.tags.map((tag) => (
@@ -218,6 +266,7 @@ export default function ThreadPage() {
           </div>
         )}
         <div className="mt-3"><ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} /></div>
+        {t.poll && <PollView threadId={t.id} initial={t.poll} canVote={!!user} />}
         {t.photos && t.photos.length > 0 && (
           t.photos.length === 1 ? (
             <div className="mt-3 overflow-hidden rounded-xl bg-slate-100">
@@ -253,6 +302,9 @@ export default function ThreadPage() {
           <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
           {canEdit && !editing && (
             <button onClick={startEdit} className="font-bold text-emerald-700 hover:underline">Редактировать</button>
+          )}
+          {user?.role === "admin" && (
+            <button onClick={adminDelete} className="font-bold text-red-600 hover:underline">Удалить</button>
           )}
           <span className="relative ml-auto">
             <button onClick={() => setReportOpen(!reportOpen)} className="flex items-center gap-1 text-slate-400 hover:text-red-500"><Flag className="h-4 w-4" /> Жалоба</button>
@@ -360,8 +412,8 @@ export default function ThreadPage() {
               </div>
             )}
             <div className="mt-2 flex gap-2">
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" title="Прикрепить фото (можно вставить из буфера Ctrl+V)">
-                <ImagePlus className="h-4 w-4" /> Фото
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" title="Выбрать файл">
+                <ImagePlus className="h-4 w-4" />
                 <input
                   type="file" accept="image/*" multiple className="hidden"
                   onChange={(e) => {
@@ -370,6 +422,7 @@ export default function ThreadPage() {
                   }}
                 />
               </label>
+              <PasteButton small onPaste={(imgs) => { setReplyFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
               <button onClick={send} disabled={(!reply.trim() && replyFiles.length === 0) || sending} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
                 {sending ? "Отправляем…" : "Ответить"}
               </button>

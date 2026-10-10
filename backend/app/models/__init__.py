@@ -7,10 +7,13 @@ from app.models.thread_comment import ThreadComment
 from app.models.thread_extra import Tag, ThreadTag, ThreadMention, ThreadLike
 from app.models.thread_photo import ThreadPhoto
 from app.models.thread_bookmark import ThreadBookmark
+from app.models.poll import Poll, PollOption, PollVote
+from app.models.important_vote import ImportantVote
 from app.models.report import Report
 
 __all__ = [
     "User", "City", "Category",
     "GeoPlace", "Thread", "thread_categories", "ThreadComment",
-    "Tag", "ThreadTag", "ThreadMention", "ThreadLike", "ThreadPhoto", "ThreadBookmark", "Report",
+    "Tag", "ThreadTag", "ThreadMention", "ThreadLike", "ThreadPhoto", "ThreadBookmark",
+    "Poll", "PollOption", "PollVote", "ImportantVote", "Report",
 ]

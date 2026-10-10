@@ -84,7 +84,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-svh flex-col">
       {/* desktop top bar */}
       <header className="sticky top-0 z-40 hidden border-b border-slate-200/70 bg-white/85 backdrop-blur md:block">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
@@ -109,7 +109,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-6xl gap-6 px-0 md:px-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 gap-6 px-0 md:px-4">
         {/* desktop sidebar */}
         <aside className="sticky top-[72px] hidden h-fit w-60 shrink-0 flex-col gap-1 pt-6 md:flex">
           {item("/", "Главная", Home)}

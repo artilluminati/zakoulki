@@ -24,12 +24,17 @@ class Thread(Base):
     body_md: Mapped[str] = mapped_column(Text)
     body_html: Mapped[str] = mapped_column(Text, default="")
     is_offtop: Mapped[bool] = mapped_column(Boolean, default=True)
+    # важные посты: по умолчанию все оффтоп; автор жмет «Важный пост» -> на рассмотрении;
+    # N голосов пользователей -> автоматически важный
+    is_important: Mapped[bool] = mapped_column(Boolean, default=False)
+    important_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    important_votes: Mapped[int] = mapped_column(Integer, default=0)
     place_id: Mapped[int | None] = mapped_column(ForeignKey("geo_places.id"), nullable=True)
     views: Mapped[int] = mapped_column(Integer, default=0)
     likes_count: Mapped[int] = mapped_column(Integer, default=0)
     comments_count: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     author = relationship("User", back_populates="threads")
     place = relationship("GeoPlace")

@@ -21,7 +21,12 @@ export interface ThreadV5 {
   body_html: string;
   categories?: { id: number; name: string; slug: string }[];
   tags?: string[];
+  is_important?: boolean;
+  important_requested?: boolean;
+  important_votes?: number;
+  important_voted?: boolean;
   photos?: { id: number; url: string; preview_url?: string }[];
+  poll?: PollV5 | null;
   is_offtop: boolean;
   place?: GeoPlaceV5 | null;
   views: number;
@@ -41,4 +46,13 @@ export interface ThreadCommentV5 {
   body_html: string;
   photos?: { id: number; url: string; preview_url?: string }[];
   created_at: string;
+}
+
+export interface PollV5 {
+  id: number;
+  question: string;
+  multiple: boolean;
+  total: number;
+  voted: number[];
+  options: { id: number; text: string; votes: number }[];
 }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
+import PasteButton from "@/components/PasteButton";
 import { fetchThreads, createThread, uploadThreadPhoto } from "@/lib/v5";
 import { MessagesSquare, CheckCircle2, ImagePlus } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
@@ -164,6 +165,7 @@ export default function FeedPage() {
                   }}
                 />
               </label>
+              <PasteButton small onPaste={(imgs) => { setDraftFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
               <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">Расширить</Link>
               <button onClick={post} disabled={(!draft.trim() && draftFiles.length === 0) || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
                 {posting ? "…" : "Опубликовать"}

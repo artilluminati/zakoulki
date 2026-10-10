@@ -7,6 +7,8 @@ import { MapPin, X, ImagePlus } from "lucide-react";
 import MdEditor from "@/components/editor/MdEditor";
 import TagPicker from "@/components/TagPicker";
 import MiniMap from "@/components/MiniMap";
+import PasteButton from "@/components/PasteButton";
+import PollBuilder, { type PollDraft } from "@/components/PollBuilder";
 import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
@@ -65,6 +67,7 @@ export default function CreatePage() {
   const [nearby, setNearby] = useState<{ id: number; body_md: string; place_name?: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [thumbs, setThumbs] = useState<string[]>([]);
+  const [poll, setPoll] = useState<PollDraft | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   // превью выбранных фото, revoke при изменении/размонтировании
@@ -151,7 +154,12 @@ export default function CreatePage() {
         });
         placeId = p.id;
       }
-      const t = await createThread({ title: title || null, body_md: body, place_id: placeId, tags });
+      const t = await createThread({
+        title: title || null, body_md: body, place_id: placeId, tags,
+        poll: poll && poll.question.trim() && poll.options.filter((o) => o.trim()).length >= 2
+          ? { question: poll.question.trim(), options: poll.options.map((o) => o.trim()).filter(Boolean), multiple: poll.multiple }
+          : null,
+      });
       let failedPhotos = 0;
       for (const f of files) {
         try { await uploadThreadPhoto(t.id, f); } catch { failedPhotos += 1; }
@@ -203,18 +211,23 @@ export default function CreatePage() {
 
       <TagPicker value={tags} onChange={setTags} />
 
+      <PollBuilder value={poll} onChange={setPoll} />
+
       {/* фото */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700">
-          <ImagePlus className="h-5 w-5" /> Добавить фото{files.length > 0 ? ` (${files.length})` : ""}
-          <input
-            type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => {
-              setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-1.5">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700">
+            <ImagePlus className="h-5 w-5" /> Выбрать{files.length > 0 ? ` (${files.length})` : ""}
+            <input
+              type="file" accept="image/*" multiple className="hidden"
+              onChange={(e) => {
+                setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <PasteButton onPaste={(imgs) => { setFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
+        </div>
         {files.length > 0 && (
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {thumbs.map((src, i) => (

@@ -6,7 +6,7 @@ import uuid
 from PIL import Image
 
 from app.db.session import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
 from app.models.user import User
 from app.models.thread import Thread
@@ -27,6 +27,7 @@ class ThreadCreate(BaseModel):
     place_id: int | None = None
     category_ids: list[int] = []
     tags: list[str] = Field(default=[], max_length=5, description="явные теги из TagPicker")
+    poll: dict | None = Field(default=None, description="{question, options[], multiple?}")
 
 
 class CommentCreate(BaseModel):
@@ -34,7 +35,7 @@ class CommentCreate(BaseModel):
     parent_id: int | None = None
 
 
-def _thread_out(t: Thread, db: Session) -> dict:
+def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
     from app.models.thread_photo import ThreadPhoto
     photos = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id, ThreadPhoto.comment_id.is_(None)).all()
     cats = [{"id": c.id, "name": c.name, "slug": c.slug} for c in (t.categories or [])]
@@ -56,6 +57,11 @@ def _thread_out(t: Thread, db: Session) -> dict:
                   "preview_url": t.place.preview_url} if t.place else None,
         "views": t.views, "likes_count": t.likes_count, "comments_count": t.comments_count,
         "created_at": t.created_at,
+        "poll": _poll_out(db, t.id, user_id),
+        "is_important": t.is_important,
+        "important_requested": t.important_requested,
+        "important_votes": t.important_votes,
+        "important_voted": _important_voted(db, t.id, user_id),
     }
 
 
@@ -185,7 +191,9 @@ def list_threads(
         from app.models.thread import thread_categories
         q = q.join(thread_categories, thread_categories.c.thread_id == Thread.id).filter(thread_categories.c.category_id == category_id)
     if has_geo is True:
-        q = q.filter(Thread.place_id.isnot(None))
+        # «Важное»: признанные важными + вопросы с точкой
+        from sqlalchemy import or_ as _or
+        q = q.filter(_or_(Thread.is_important == True, Thread.place_id.isnot(None)))  # noqa: E712
     if has_geo is False:
         q = q.filter(Thread.place_id.is_(None))
     if is_offtop is not None:
@@ -223,17 +231,55 @@ def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User 
         db.add(ThreadMention(thread_id=t.id, kind="user", user_id=uid))
     if data.category_ids:
         t.categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
+    if data.poll:
+        from app.models.poll import Poll, PollOption
+        q = str(data.poll.get("question", ""))[:300].strip()
+        opts = [str(o)[:150].strip() for o in (data.poll.get("options") or [])][:10]
+        opts = [o for o in opts if o]
+        if q and len(opts) >= 2:
+            poll = Poll(thread_id=t.id, question=q, multiple=bool(data.poll.get("multiple", False)))
+            db.add(poll); db.flush()
+            for i, text in enumerate(opts):
+                db.add(PollOption(poll_id=poll.id, position=i, text=text))
     db.commit(); db.refresh(t)
     return _thread_out(t, db)
 
 
+IMPORTANT_THRESHOLD = 3
+
+
+def _important_voted(db: Session, thread_id: int, user_id: int | None) -> bool:
+    if not user_id:
+        return False
+    from app.models.important_vote import ImportantVote
+    return db.get(ImportantVote, {"user_id": user_id, "thread_id": thread_id}) is not None
+
+
+def _poll_out(db: Session, thread_id: int, user_id: int | None) -> dict | None:
+    from app.models.poll import Poll, PollOption, PollVote
+    poll = db.query(Poll).filter(Poll.thread_id == thread_id).first()
+    if not poll:
+        return None
+    voted: list[int] = []
+    if user_id:
+        voted = [v.option_id for v in db.query(PollVote).join(PollOption, PollVote.option_id == PollOption.id)
+                 .filter(PollOption.poll_id == poll.id, PollVote.user_id == user_id).all()]
+    return {
+        "id": poll.id, "question": poll.question, "multiple": poll.multiple,
+        "total": sum(o.votes for o in poll.options),
+        "voted": voted,
+        "options": [{"id": o.id, "text": o.text, "votes": o.votes} for o in poll.options],
+    }
+
+
 @router.get("/{thread_id}")
-def get_thread(thread_id: int, db: Session = Depends(get_db)):
+def get_thread(thread_id: int, db: Session = Depends(get_db),
+               user: User | None = Depends(get_optional_user)):
     t = db.query(Thread).options(joinedload(Thread.place)).filter(Thread.id == thread_id).first()
     if not t:
         raise HTTPException(404, "Тред не найден")
     t.views += 1; db.commit()
-    out = _thread_out(t, db)
+    out = _thread_out(t, db, user.id if user else None)
     comments = db.query(ThreadComment).filter(ThreadComment.thread_id == thread_id).order_by(ThreadComment.id).all()
     out["comments"] = [{
         "id": c.id, "parent_id": c.parent_id, "author_id": c.author_id,
@@ -340,6 +386,34 @@ def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = 
     db.commit()
 
 
+@router.post("/{thread_id}/vote")
+def vote_poll(thread_id: int, data: dict, db: Session = Depends(get_db),
+              user: User = Depends(get_current_user)):
+    """Голосование в опросе треда. {option_ids: [...]}. Один голос на вариант, повторный — снимает."""
+    from app.models.poll import Poll, PollOption, PollVote
+    poll = db.query(Poll).filter(Poll.thread_id == thread_id).first()
+    if not poll:
+        raise HTTPException(404, "Опроса нет")
+    want = [int(x) for x in (data.get("option_ids") or []) if str(x).isdigit()]
+    if not poll.multiple:
+        want = want[:1]
+    valid = {o.id for o in poll.options}
+    want = [oid for oid in want if oid in valid]
+    mine = {v.option_id for v in db.query(PollVote).join(PollOption, PollVote.option_id == PollOption.id)
+            .filter(PollOption.poll_id == poll.id, PollVote.user_id == user.id).all()}
+    for oid in want:
+        if oid in mine:
+            db.query(PollVote).filter(PollVote.user_id == user.id, PollVote.option_id == oid).delete()
+            db.query(PollOption).filter(PollOption.id == oid).update({PollOption.votes: PollOption.votes - 1})
+        else:
+            db.add(PollVote(user_id=user.id, option_id=oid))
+            db.query(PollOption).filter(PollOption.id == oid).update({PollOption.votes: PollOption.votes + 1})
+    # защита счетчиков от ухода в минус
+    db.query(PollOption).filter(PollOption.poll_id == poll.id, PollOption.votes < 0).update({PollOption.votes: 0})
+    db.commit()
+    return _poll_out(db, thread_id, user.id)
+
+
 @router.post("/{thread_id}/like")
 def like_thread(thread_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     t = db.get(Thread, thread_id)
@@ -352,6 +426,46 @@ def like_thread(thread_id: int, db: Session = Depends(get_db), user: User = Depe
     db.add(ThreadLike(user_id=user.id, thread_id=thread_id))
     t.likes_count += 1; db.commit()
     return {"liked": True}
+
+
+@router.post("/{thread_id}/request-important", status_code=201)
+def request_important(thread_id: int, db: Session = Depends(get_db),
+                      user: User = Depends(get_current_user)):
+    """Автор выдвигает пост в важные -> статус «на рассмотрении»."""
+    t = db.get(Thread, thread_id)
+    if not t:
+        raise HTTPException(404, "Тред не найден")
+    if t.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Только автор")
+    t.important_requested = True
+    db.commit()
+    return _thread_out(t, db, user.id)
+
+
+@router.post("/{thread_id}/vote-important")
+def vote_important(thread_id: int, db: Session = Depends(get_db),
+                   user: User = Depends(get_current_user)):
+    """Голос «это важно» (переключается). N голосов -> автоматически важный."""
+    from app.models.important_vote import ImportantVote
+    t = db.get(Thread, thread_id)
+    if not t:
+        raise HTTPException(404, "Тред не найден")
+    if not t.important_requested and not t.is_important:
+        raise HTTPException(400, "Пост не выдвинут в важные")
+    ex = db.get(ImportantVote, {"user_id": user.id, "thread_id": thread_id})
+    if ex:
+        db.delete(ex)
+        t.important_votes = max(0, t.important_votes - 1)
+    else:
+        db.add(ImportantVote(user_id=user.id, thread_id=thread_id))
+        t.important_votes += 1
+    if t.important_votes >= IMPORTANT_THRESHOLD:
+        t.is_important = True
+        t.is_offtop = False
+    else:
+        t.is_important = False
+    db.commit()
+    return _thread_out(t, db, user.id)
 
 
 @router.post("/{thread_id}/bookmark")
