@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, ImagePlus } from "lucide-react";
 import MdEditor from "@/components/editor/MdEditor";
 import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto } from "@/lib/v5";
 import { api } from "@/lib/api";
@@ -132,7 +132,7 @@ export default function CreatePage() {
       {/* фото */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700">
-          📷 Добавить фото{files.length > 0 ? ` (${files.length})` : ""}
+          <ImagePlus className="h-5 w-5" /> Добавить фото{files.length > 0 ? ` (${files.length})` : ""}
           <input
             type="file" accept="image/*" multiple className="hidden"
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}

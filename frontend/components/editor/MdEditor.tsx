@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Bold, Italic, Quote, List, Link2, AtSign, MapPin, Hash } from "lucide-react";
 import PlaceSuggest from "./PlaceSuggest";
 import UserSuggest from "./UserSuggest";
 import { renderPreview } from "@/lib/mdPreview";
@@ -36,18 +37,18 @@ export default function MdEditor({
   return (
     <div className="relative overflow-visible rounded-xl border border-slate-200 bg-white">
       <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50 px-2 py-1.5 [&>button]:shrink-0">
-        <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="shrink-0 rounded px-2 py-1 text-sm font-bold hover:bg-slate-200">B</button>
-        <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="shrink-0 rounded px-2 py-1 text-sm italic hover:bg-slate-200">I</button>
+        <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="rounded p-2 hover:bg-slate-200"><Bold className="h-4 w-4" /></button>
+        <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="rounded p-2 hover:bg-slate-200"><Italic className="h-4 w-4" /></button>
         {!compact && (
           <>
-            <button type="button" onClick={() => wrap("> ")} className="rounded px-2 py-1 hover:bg-slate-200">❝</button>
-            <button type="button" onClick={() => wrap("- ")} className="rounded px-2 py-1 hover:bg-slate-200">•</button>
-            <button type="button" title="Ссылка (Ctrl+K)" onClick={() => wrap("[", "](https://)")} className="rounded px-2 py-1 hover:bg-slate-200">🔗</button>
+            <button type="button" title="Цитата" onClick={() => wrap("> ")} className="rounded p-2 hover:bg-slate-200"><Quote className="h-4 w-4" /></button>
+            <button type="button" title="Список" onClick={() => wrap("- ")} className="rounded p-2 hover:bg-slate-200"><List className="h-4 w-4" /></button>
+            <button type="button" title="Ссылка (Ctrl+K)" onClick={() => wrap("[", "](https://)")} className="rounded p-2 hover:bg-slate-200"><Link2 className="h-4 w-4" /></button>
           </>
         )}
-        <button type="button" title="Человек" onClick={() => ref.current && (ref.current.setRangeText("@", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">@</button>
-        <button type="button" title="Место" onClick={() => ref.current && (ref.current.setRangeText("+", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">📍</button>
-        <button type="button" title="Тег" onClick={() => ref.current && (ref.current.setRangeText("#", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded px-2 py-1 hover:bg-slate-200">#</button>
+        <button type="button" title="Упомянуть человека" onClick={() => ref.current && (ref.current.setRangeText("@", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded p-2 hover:bg-slate-200"><AtSign className="h-4 w-4" /></button>
+        <button type="button" title="Прикрепить место" onClick={() => ref.current && (ref.current.setRangeText("+", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded p-2 hover:bg-slate-200"><MapPin className="h-4 w-4" /></button>
+        <button type="button" title="Тег" onClick={() => ref.current && (ref.current.setRangeText("#", ref.current.selectionStart, ref.current.selectionEnd, "end"), onChange(ref.current.value), ref.current.focus())} className="rounded p-2 hover:bg-slate-200"><Hash className="h-4 w-4" /></button>
         <div className="ml-auto flex shrink-0 rounded-lg bg-slate-200/70 p-0.5 text-xs">
           <button type="button" onClick={() => setTab("write")} className={`rounded-md px-2 py-1 ${tab === "write" ? "bg-white shadow" : ""}`}>Писать</button>
           <button type="button" onClick={() => setTab("preview")} className={`rounded-md px-2 py-1 ${tab === "preview" ? "bg-white shadow" : ""}`}>Просмотр</button>
@@ -112,9 +113,6 @@ export default function MdEditor({
           dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
         />
       )}
-      <div className="border-t border-slate-100 px-3 py-1 text-xs text-slate-400">
-        **жирный** *курсив* [текст](ссылка) · `@` человек · `+` место · `#` тег
-      </div>
     </div>
   );
 }
