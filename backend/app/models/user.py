@@ -15,8 +15,9 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String)
     avatar: Mapped[str | None] = mapped_column(String, nullable=True)
     role: Mapped[str] = mapped_column(String(20), default="user")  # user|admin
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    badge: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)  # None|official — верифицированная организация
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     places = relationship("GeoPlace", back_populates="author")
     threads = relationship("Thread", back_populates="author")
