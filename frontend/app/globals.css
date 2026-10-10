@@ -19,8 +19,14 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* режим территории: прицел вместо grab-руки поверх тайлов Яндекса */
-.minimap-area, .minimap-area * {
+/* режим территории: прицел вместо grab-руки поверх тайлов Яндекса (кроме полей и кнопок) */
+.minimap-area {
+  cursor: crosshair;
+}
+.minimap-area div:not(:has(input)):not(:has(button)):not(:has(a)),
+.minimap-area span:not(:has(input)):not(:has(button)):not(:has(a)),
+.minimap-area canvas,
+.minimap-area svg {
   cursor: crosshair !important;
 }
 
