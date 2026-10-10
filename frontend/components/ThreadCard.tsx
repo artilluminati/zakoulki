@@ -129,7 +129,7 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
   const closeMenu = () => { setMenu(false); setReportMode(false); };
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-center gap-2.5">
         <span className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-slate-700" style={{ background: avatarColor(t.author_username) }}>
           {(t.author_username ?? "?").slice(0, 1).toUpperCase()}

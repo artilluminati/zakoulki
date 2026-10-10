@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import { fetchThreads, createThread } from "@/lib/v5";
+import { MessagesSquare, CheckCircle2 } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -186,20 +187,24 @@ export default function FeedPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
-          <div className="text-5xl">🏘</div>
-          <h2 className="mt-2 text-lg font-extrabold">Пока тихо</h2>
-          <p className="text-sm text-slate-500">Станьте первым — спросите город.</p>
-          <Link href="/create" className="mt-3 inline-block rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">Создать вопрос</Link>
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-100">
+            <MessagesSquare className="h-7 w-7 text-lime-700" />
+          </span>
+          <h2 className="mt-3 text-lg font-extrabold">Пока тихо</h2>
+          <p className="mt-1 text-sm text-slate-500">Станьте первым — спросите город.</p>
+          <Link href="/create" className="mt-3 inline-block rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition active:scale-95">Создать вопрос</Link>
         </div>
       ) : (
         <div className="space-y-3">
           {items.map((t) => <ThreadCard key={t.id} t={t} />)}
           {hasMore ? (
-            <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+            <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50">
               {loadingMore ? "Загружаем…" : "Показать ещё"}
             </button>
           ) : (
-            <div className="py-6 text-center text-sm text-slate-400">Вы все прочитали 🎉</div>
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-slate-400">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Вы все прочитали
+            </div>
           )}
         </div>
       )}
