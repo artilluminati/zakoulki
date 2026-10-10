@@ -9,6 +9,7 @@ export interface GeoPlaceV5 {
   lng: number;
   yandex_kind: string;
   preview_url?: string | null;
+  map_preview?: string | null;
 }
 
 export interface ThreadV5 {

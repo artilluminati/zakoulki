@@ -53,7 +53,7 @@ export function ImportantBadge({ t }: { t: { is_important?: boolean; important_r
 }
 
 /** Рендер body_html: заменяем <a class=place> на чип с иконкой + тултип (фото/улица·район). */
-export function ThreadHtml({ html, placePreview }: { html: string; placePreview?: Record<number, { name: string; address?: string | null; district?: string | null; preview_url?: string | null }> }) {
+export function ThreadHtml({ html, placePreview }: { html: string; placePreview?: Record<number, { name: string; address?: string | null; district?: string | null; preview_url?: string | null; map_preview?: string | null }> }) {
   const [tip, setTip] = useState<number | null>(null);
   const router = useRouter();
 
@@ -92,9 +92,9 @@ export function ThreadHtml({ html, placePreview }: { html: string; placePreview?
             </button>
             {tip === id && (
               <span className="place-tooltip">
-                {info?.preview_url ? (
+                {(info?.preview_url || info?.map_preview) ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={info.preview_url} alt="" className="h-24 w-full object-cover" />
+                  <img src={info?.preview_url ?? info?.map_preview ?? ""} alt="" className="h-24 w-full object-cover" />
                 ) : (
                   <span className="flex h-16 items-center justify-center bg-slate-100 text-slate-400">
                     <MapPin className="h-6 w-6" />

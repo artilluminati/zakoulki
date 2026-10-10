@@ -291,6 +291,10 @@ export default function ThreadPage() {
         )}
         {t.place && (
           <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
+            {t.place.map_preview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={t.place.map_preview} alt="" loading="lazy" className="h-36 w-full object-cover" />
+            )}
             <div className="flex items-center gap-2 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
               <MapPin className="h-4 w-4" /> {t.place.name}
             </div>

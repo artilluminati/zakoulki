@@ -35,6 +35,18 @@ class CommentCreate(BaseModel):
     parent_id: int | None = None
 
 
+def _place_out(p) -> dict:
+    import os as _os
+    from app.core.config import settings as _settings
+    from app.services.mapshot import preview_name as _pv
+    _map_pv = _pv(p.id)
+    has_map = _os.path.exists(_os.path.join(_settings.UPLOAD_DIR, _map_pv))
+    return {"id": p.id, "name": p.name, "address": p.address,
+            "district": p.district, "lat": p.latitude, "lng": p.longitude,
+            "preview_url": p.preview_url,
+            "map_preview": f"/uploads/{_map_pv}" if has_map else None}
+
+
 def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
     from app.models.thread_photo import ThreadPhoto
     photos = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id, ThreadPhoto.comment_id.is_(None)).all()
@@ -52,9 +64,7 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "tags": [tg.name for tg in tag_rows],
         "photos": [{"id": p.id, **_photo_urls(p.file_name)} for p in photos],
         "is_offtop": t.is_offtop,
-        "place": {"id": t.place.id, "name": t.place.name, "address": t.place.address,
-                  "district": t.place.district, "lat": t.place.latitude, "lng": t.place.longitude,
-                  "preview_url": t.place.preview_url} if t.place else None,
+        "place": _place_out(t.place) if t.place else None,
         "views": t.views, "likes_count": t.likes_count, "comments_count": t.comments_count,
         "created_at": t.created_at,
         "poll": _poll_out(db, t.id, user_id),

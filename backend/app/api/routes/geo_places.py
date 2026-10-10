@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -25,9 +25,15 @@ class GeoPlaceCreate(BaseModel):
 
 
 def _out(p: GeoPlace) -> dict:
+    import os as _os
+    from app.core.config import settings as _settings
+    from app.services.mapshot import preview_name as _pv
+    _map_pv = _pv(p.id)
+    has_map = _os.path.exists(_os.path.join(_settings.UPLOAD_DIR, _map_pv))
     return {"id": p.id, "name": p.name, "address": p.address, "district": p.district,
             "street": p.street, "lat": p.latitude, "lng": p.longitude,
-            "yandex_kind": p.yandex_kind, "preview_url": p.preview_url}
+            "yandex_kind": p.yandex_kind, "preview_url": p.preview_url,
+            "map_preview": f"/uploads/{_map_pv}" if has_map else None}
 
 
 @router.get("/search")
@@ -60,9 +66,16 @@ def search_places(q: str = Query(min_length=2), lat: float | None = None, lng: f
 
 
 @router.post("", status_code=201)
-def create_place(data: GeoPlaceCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_place(data: GeoPlaceCreate, background: BackgroundTasks, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     p = GeoPlace(**data.model_dump(), created_by=user.id)
     db.add(p); db.commit(); db.refresh(p)
+    # превью карты — фоном, чтобы не тормозить ответ
+    from app.services.mapshot import render_preview, preview_name
+    from app.core.config import settings as _settings
+    import os as _os
+    pid, plat, plng = p.id, p.latitude, p.longitude
+    updir = _settings.UPLOAD_DIR
+    background.add_task(render_preview, plat, plng, _os.path.join(updir, preview_name(pid)))
     return _out(p)
 
 
