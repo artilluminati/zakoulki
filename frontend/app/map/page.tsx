@@ -176,9 +176,12 @@ export default function MapPage() {
       : pts
     ).filter((p) => passFilter(p, filter));
     setCount(visible.length);
+    const zoom = map.getZoom ? map.getZoom() : 11;
+    // адаптивная сетка: чем дальше обзор, тем охотнее схлопываем
+    const grid = zoom < 9 ? 256 : zoom < 12 ? 160 : zoom < 14 ? 96 : 64;
     const clusterer = new ymaps.Clusterer({
       groupByCoordinates: false,
-      gridSize: 128,
+      gridSize: grid,
       // кружок рисует HTML-layout (не зависит от загрузки картинки),
       // иконка — прозрачная заглушка того же размера
       clusterIcons: [{ href: CLUSTER_BLANK, size: [64, 64], offset: [-32, -32] }],

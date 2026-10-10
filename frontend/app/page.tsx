@@ -221,9 +221,12 @@ export default function FeedPage() {
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           </button>
           {scopeOpen && (
-            <div className="absolute left-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-              <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
-            </div>
+            <>
+              <button aria-hidden tabIndex={-1} onClick={() => setScopeOpen(false)} className="fixed inset-0 z-20 cursor-default" />
+              <div className="absolute left-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
+              </div>
+            </>
           )}
         </div>
         {search && (

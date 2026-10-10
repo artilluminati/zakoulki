@@ -182,6 +182,9 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
           <div className="text-xs text-slate-500">
             {timeAgo(t.created_at)}
             {t.is_offtop ? " · оффтоп" : " · вопрос"}
+            {!t.place && (t.district || t.city) && (
+              <span> · {[t.district, t.city].filter(Boolean).join(", ")}</span>
+            )}
           </div>
         </div>
         <div className="relative">

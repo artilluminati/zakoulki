@@ -46,12 +46,17 @@ export default function ScopePicker({ value, onChange }: {
     try {
       const res = await api.get("/geo-places/resolve", { params: { name } });
       const r = res.data;
-      onChange({
-        ...(r.country ? { country: r.country } : {}),
-        ...(r.region ? { region: r.region } : {}),
-        ...(r.city ? { city: r.city } : {}),
-        ...(level === "district" && r.district ? { district: r.district } : {}),
-      });
+      if (!r.city && !r.region && !r.district) {
+        // такого нет в базе — свободный фильтр: сработает где встретится
+        onChange({ any: [name], anyLabel: name });
+      } else {
+        onChange({
+          ...(r.country ? { country: r.country } : {}),
+          ...(r.region ? { region: r.region } : {}),
+          ...(r.city ? { city: r.city } : {}),
+          ...(level === "district" && r.district ? { district: r.district } : {}),
+        });
+      }
     } catch { /* ignore */ }
     finally { setResolving(false); }
     close();
