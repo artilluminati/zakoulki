@@ -33,13 +33,21 @@ POST /api/auth/register, POST /api/auth/login, GET /api/auth/me
 GET /api/threads?search=&tag=&author_id=&has_geo=&sort=new|top&before_id=&limit=
 POST /api/threads {title?, body_md, place_id?, category_ids[]}
 GET /api/threads/{id}  POST /api/threads/{id}/comments  POST /api/threads/{id}/like
-POST /api/threads/{id}/photos (multipart, до 5, 10МБ)
+POST /api/threads/{id}/photos (multipart, 10МБ)
+POST /api/threads/comments/{cid}/photos — фото ответов
+DELETE /api/threads/photos/{pid} — удалить своё фото
+PATCH /api/threads/{id} {title?, body_md?} — править свой тред
+PATCH /api/threads/comments/{cid} {body_md} — править свой ответ
+DELETE /api/threads/comments/{cid}
 POST /api/threads/{id}/report {reason, text?}
 GET /api/threads/notifications/mine
 GET /api/geo-places/search?q=  POST /api/geo-places
+GET /api/geo-places/reverse?lat=&lng= — адрес по координатам (Nominatim)
 GET /api/geo-places/nearby?lat=&lng=&radius=  GET /api/geo-places/map-points?north=&south=&east=&west=
-GET /api/users/by-username/{username}
-GET /api/admin/users  PATCH /api/admin/users/{id} {role}  GET /api/admin/reports  DELETE /api/admin/threads/{id}
+GET /api/users/by-username/{username}  GET /api/users/search?q=
+GET /api/tags  GET /api/citydata/stats  GET /api/citydata/sources
+GET /api/admin/users  PATCH /api/admin/users/{id} {role}  PATCH /api/admin/users/{id}/badge {badge}  PATCH /api/admin/users/{id}/password {password}
+GET /api/admin/reports  PATCH /api/admin/reports/{id} {status}  DELETE /api/admin/threads/{id}
 GET /api/cities  GET /api/categories (справочники, наследие v1)
 ```
 
@@ -48,4 +56,14 @@ GET /api/cities  GET /api/categories (справочники, наследие v
 ## Экраны
 
 `/` лента · `/map` карта с кластерами · `/create` · `/thread/[id]` · `/tag/[tag]` ·
-`/user/[username]` · `/profile` · `/admin` · `/login` `/register`
+`/user/[username]` · `/profile` · `/admin` · `/login` `/register` ·
+`/about` (миссия, цифры, ведомствам) · `/data` (реестр источников данных)
+
+## Публичный доступ (serveo-туннель, URL стабилен — не трогать без команды)
+
+```bash
+systemctl --user status zakoulki-tunnel.service  # :3001 -> наружу
+```
+
+Текущий URL — уточнить у владельца (serveo меняет поддомен при переподключении,
+стабильность — через резерв имени в console.serveo.net).

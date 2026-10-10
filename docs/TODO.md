@@ -46,4 +46,4 @@
 - [x] 23. Бэк: абстракция providers (services/citydata.py: nominatim live, yandex key, mos.ru stub) + GET /citydata/sources.
 - [x] 24. Фронт: футер + страница /about (миссия, цифры, ведомствам, источники) + /data (статусы интеграций).
 - [x] 25. Бейджи official в карточках/профиле/админке.
-- [ ] 26. Доки: обновить STARTUP-v5 + TODO, финальный проход, коммит.
+- [x] 26. Доки: обновить STARTUP-v5 + TODO, финальный проход, коммит.
