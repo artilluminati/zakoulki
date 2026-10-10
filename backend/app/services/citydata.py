@@ -1,0 +1,95 @@
+"""Городские данные: единый реестр провайдеров.
+
+- nominatim: OpenStreetMap, бесплатно, без ключа (геокодинг + реверс).
+- yandex_geocoder: HTTP Геокодер Яндекса, нужен YANDEX_GEOCODER_KEY.
+- mosru_opendata: портал открытых данных data.mos.ru — STUB: нужен ключ и согласование
+  набора данных (например, дорожные работы, благоустройство). Интерфейс готов,
+  реализация — после получения доступа.
+"""
+import urllib.parse
+import urllib.request
+import json as _json
+
+from app.core.config import settings
+
+UA = {"User-Agent": "zakoulki-app/1.0"}
+
+
+def nominatim_search(q: str, limit: int = 5) -> list[dict]:
+    params = urllib.parse.urlencode({
+        "q": q, "format": "json", "limit": limit,
+        "accept-language": "ru", "countrycodes": "ru",
+    })
+    req = urllib.request.Request(f"https://nominatim.openstreetmap.org/search?{params}", headers=UA)
+    with urllib.request.urlopen(req, timeout=5) as r:
+        data = _json.load(r)
+    out = []
+    for item in data:
+        addr = item.get("address", {})
+        out.append({
+            "name": item.get("display_name", q).split(",")[0],
+            "address": item.get("display_name"),
+            "district": addr.get("city") or addr.get("town") or addr.get("borough"),
+            "street": addr.get("road"),
+            "lat": float(item.get("lat", 0)), "lng": float(item.get("lon", 0)),
+        })
+    return out
+
+
+def nominatim_reverse(lat: float, lng: float) -> dict | None:
+    params = urllib.parse.urlencode({"lat": lat, "lon": lng, "format": "json", "accept-language": "ru"})
+    req = urllib.request.Request(f"https://nominatim.openstreetmap.org/reverse?{params}", headers=UA)
+    with urllib.request.urlopen(req, timeout=5) as r:
+        data = _json.load(r)
+    addr = data.get("address", {})
+    disp = data.get("display_name", "")
+    return {
+        "name": addr.get("road", addr.get("suburb", addr.get("city", disp.split(",")[0] if disp else "Точка на карте"))),
+        "address": disp or None,
+        "district": addr.get("city") or addr.get("town") or addr.get("borough"),
+        "street": addr.get("road"),
+        "lat": lat, "lng": lng,
+    }
+
+
+def yandex_search(q: str, limit: int = 5) -> list[dict]:
+    key = settings.YANDEX_GEOCODER_KEY
+    if not key:
+        return []
+    params = urllib.parse.urlencode({"apikey": key, "geocode": q, "format": "json", "results": limit, "lang": "ru_RU"})
+    with urllib.request.urlopen(f"https://geocode-maps.yandex.ru/v1/?{params}", timeout=5) as r:
+        data = _json.load(r)
+    out = []
+    for f in data.get("response", {}).get("GeoObjectCollection", {}).get("featureMember", []):
+        g = f.get("GeoObject", {})
+        pos = g.get("Point", {}).get("pos", "").split()
+        if len(pos) != 2:
+            continue
+        meta = g.get("metaDataProperty", {}).get("GeocoderMetaData", {})
+        out.append({
+            "name": g.get("name", q),
+            "address": meta.get("text"),
+            "district": None, "street": None,
+            "lat": float(pos[1]), "lng": float(pos[0]),
+        })
+    return out
+
+
+def mosru_datasets() -> list[dict]:
+    """STUB: витрина открытых данных data.mos.ru. Требует ключ и выбор наборов."""
+    return []
+
+
+PROVIDERS = [
+    {"id": "own", "name": "Своя база", "kind": "places", "status": "live",
+     "desc": "Места и организации, добавленные пользователями"},
+    {"id": "nominatim", "name": "OpenStreetMap Nominatim", "kind": "geocoder", "status": "live",
+     "desc": "Адреса и реверс-геокодинг, бесплатно, без ключа"},
+    {"id": "yandex_geocoder", "name": "Яндекс Геокодер", "kind": "geocoder",
+     "status": "live" if settings.YANDEX_GEOCODER_KEY else "needs_key",
+     "desc": "Адресный поиск по России"},
+    {"id": "yandex_maps", "name": "Яндекс.Карты", "kind": "map", "status": "live",
+     "desc": "Картографическая подложка"},
+    {"id": "mosru_opendata", "name": "data.mos.ru", "kind": "datasets", "status": "planned",
+     "desc": "Городские наборы данных (работы, благоустройство) — требуется доступ"},
+]

@@ -123,6 +123,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <main className="min-w-0 flex-1 pb-24 md:pb-12">{children}</main>
       </div>
 
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-4 text-[13px] text-slate-500">
+          <span className="flex items-center gap-1.5 font-extrabold text-slate-700">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-lime-400 text-xs text-slate-900">З</span>
+            Закоулки
+          </span>
+          <Link href="/about" className="hover:text-slate-800">О проекте</Link>
+          <Link href="/data" className="hover:text-slate-800">Источники данных</Link>
+          <Link href="/map" className="hover:text-slate-800">Карта</Link>
+          <span className="ml-auto">Сделано на открытых данных · OSM, Яндекс.Карты</span>
+        </div>
+      </footer>
+
       {/* mobile bottom tabs */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
         <div className="grid grid-cols-4">

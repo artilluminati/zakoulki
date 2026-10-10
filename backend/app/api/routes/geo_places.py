@@ -34,33 +34,15 @@ def _out(p: GeoPlace) -> dict:
 def search_places(q: str = Query(min_length=2), lat: float | None = None, lng: float | None = None,
                   db: Session = Depends(get_db)):
     """Своя база + бесплатный HTTP Геокодер (адреса). Организаций у Яндекса бесплатно нет."""
+    from app.services import citydata as _cd
     items = db.query(GeoPlace).filter(
         (GeoPlace.name.ilike(f"%{q}%")) | (GeoPlace.address.ilike(f"%{q}%")) | (GeoPlace.street.ilike(f"%{q}%"))
     ).limit(10).all()
     out = [_out(p) for p in items]
-    key = settings.YANDEX_GEOCODER_KEY
-    if key and len(out) < 10:
+    if len(out) < 10:
         try:
-            import urllib.parse
-            import urllib.request
-            import json as _json
-            params = urllib.parse.urlencode({"apikey": key, "geocode": q, "format": "json", "results": 5, "lang": "ru_RU"})
-            with urllib.request.urlopen(f"https://geocode-maps.yandex.ru/v1/?{params}", timeout=5) as r:
-                data = _json.load(r)
-            for f in data.get("response", {}).get("GeoObjectCollection", {}).get("featureMember", []):
-                g = f.get("GeoObject", {})
-                pos = g.get("Point", {}).get("pos", "").split()
-                if len(pos) != 2:
-                    continue
-                meta = g.get("metaDataProperty", {}).get("GeocoderMetaData", {})
-                out.append({
-                    "id": 0, "name": g.get("name", q),
-                    "address": meta.get("text"),
-                    "district": None,
-                    "street": None,
-                    "lat": float(pos[1]), "lng": float(pos[0]),
-                    "yandex_kind": "address", "preview_url": None,
-                })
+            for g in _cd.yandex_search(q, limit=5):
+                out.append({"id": 0, **g, "yandex_kind": "address", "preview_url": None})
                 if len(out) >= 10:
                     break
         except Exception:
@@ -68,26 +50,8 @@ def search_places(q: str = Query(min_length=2), lat: float | None = None, lng: f
     # Nominatim (OpenStreetMap) — бесплатный геокодер без ключа, 1 req/s
     if len(out) < 10:
         try:
-            import urllib.parse
-            import urllib.request
-            import json as _json
-            params = urllib.parse.urlencode({"q": q, "format": "json", "limit": 5, "accept-language": "ru", "countrycodes": "ru"})
-            req = urllib.request.Request(
-                f"https://nominatim.openstreetmap.org/search?{params}",
-                headers={"User-Agent": "zakoulki-app/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=5) as r:
-                data = _json.load(r)
-            for item in data:
-                addr = item.get("address", {})
-                out.append({
-                    "id": 0, "name": item.get("display_name", q).split(",")[0],
-                    "address": item.get("display_name"),
-                    "district": addr.get("city") or addr.get("town") or addr.get("district"),
-                    "street": addr.get("road"),
-                    "lat": float(item.get("lat", 0)), "lng": float(item.get("lon", 0)),
-                    "yandex_kind": "address", "preview_url": None,
-                })
+            for g in _cd.nominatim_search(q, limit=5):
+                out.append({"id": 0, **g, "yandex_kind": "address", "preview_url": None})
                 if len(out) >= 10:
                     break
         except Exception:
@@ -105,28 +69,14 @@ def create_place(data: GeoPlaceCreate, db: Session = Depends(get_db), user: User
 @router.get("/reverse")
 def reverse_geocode(lat: float, lng: float):
     """Координаты -> человеческий адрес (Nominatim, бесплатно). Для превью геолокации."""
+    from app.services import citydata as _cd
     try:
-        import urllib.parse
-        import urllib.request
-        import json as _json
-        params = urllib.parse.urlencode({"lat": lat, "lon": lng, "format": "json", "accept-language": "ru"})
-        req = urllib.request.Request(
-            f"https://nominatim.openstreetmap.org/reverse?{params}",
-            headers={"User-Agent": "zakoulki-app/1.0"},
-        )
-        with urllib.request.urlopen(req, timeout=5) as r:
-            data = _json.load(r)
-        addr = data.get("address", {})
-        disp = data.get("display_name", "")
-        return {
-            "name": addr.get("road", addr.get("suburb", addr.get("city", disp.split(",")[0] if disp else "Точка на карте"))),
-            "address": disp or None,
-            "district": addr.get("city") or addr.get("town") or addr.get("borough"),
-            "street": addr.get("road"),
-            "lat": lat, "lng": lng,
-        }
+        r = _cd.nominatim_reverse(lat, lng)
+        if r:
+            return r
     except Exception:
-        return {"name": "Точка на карте", "address": None, "district": None, "street": None, "lat": lat, "lng": lng}
+        pass
+    return {"name": "Точка на карте", "address": None, "district": None, "street": None, "lat": lat, "lng": lng}
 
 
 @router.get("/nearby")
