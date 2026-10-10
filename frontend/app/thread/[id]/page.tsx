@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Heart, Eye, Flag } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment } from "@/lib/v5";
+import { MapPin, Heart, Eye, Flag, ImagePlus } from "lucide-react";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto } from "@/lib/v5";
 import { ThreadHtml, timeAgo } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,7 @@ export default function ThreadPage() {
   const toast = useToast();
   const [t, setT] = useState<Awaited<ReturnType<typeof fetchThread>> | null>(null);
   const [reply, setReply] = useState("");
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -81,8 +82,12 @@ export default function ThreadPage() {
     if (!reply.trim() || sending) return;
     setSending(true);
     try {
-      await commentThread(Number(id), reply);
+      const c = await commentThread(Number(id), reply);
+      for (const f of replyFiles) {
+        try { await uploadCommentPhoto(c.id, f); } catch { /* ignore */ }
+      }
       setReply("");
+      setReplyFiles([]);
       toast("Ответ опубликован", "success");
       load();
     } catch (e: unknown) {
@@ -151,12 +156,19 @@ export default function ThreadPage() {
         )}
         <div className="mt-3"><ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} /></div>
         {t.photos && t.photos.length > 0 && (
-          <div className={`mt-3 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-            {t.photos.map((p) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-56 w-full cursor-zoom-in object-cover" />
-            ))}
-          </div>
+          t.photos.length === 1 ? (
+            <div className="mt-3 overflow-hidden rounded-xl bg-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={t.photos[0].url} alt="" loading="lazy" onClick={() => setLightbox(t.photos![0].url)} className="max-h-[480px] w-full cursor-zoom-in object-contain" />
+            </div>
+          ) : (
+            <div className={`mt-3 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+              {t.photos.map((p) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-56 w-full cursor-zoom-in object-cover" />
+              ))}
+            </div>
+          )
         )}
         {lightbox && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4" onClick={() => setLightbox(null)}>
@@ -230,7 +242,17 @@ export default function ThreadPage() {
                   </div>
                 </div>
               ) : (
-                <div className="mt-0.5"><ThreadHtml html={c.body_html} /></div>
+                <>
+                  <div className="mt-0.5"><ThreadHtml html={c.body_html} /></div>
+                  {c.photos && c.photos.length > 0 && (
+                    <div className="mt-1.5 overflow-hidden rounded-xl bg-slate-100">
+                      {c.photos.map((p) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="max-h-72 w-full cursor-zoom-in object-contain" />
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}
@@ -239,9 +261,31 @@ export default function ThreadPage() {
         {user ? (
           <div className="mt-3">
             <MdEditor value={reply} onChange={setReply} compact placeholder="Написать ответ… @ + #" />
-            <button onClick={send} disabled={!reply.trim() || sending} className="mt-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
-              {sending ? "Отправляем…" : "Ответить"}
-            </button>
+            {replyFiles.length > 0 && (
+              <div className="mt-2 flex gap-1.5 overflow-x-auto">
+                {replyFiles.map((f, i) => (
+                  <span key={`${f.name}-${f.size}-${i}`} className="flex shrink-0 items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs">
+                    {f.name.slice(0, 16)}
+                    <button type="button" onClick={() => setReplyFiles(replyFiles.filter((_, j) => j !== i))} aria-label="Убрать фото" className="text-slate-400 hover:text-red-500">✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 flex gap-2">
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                <ImagePlus className="h-4 w-4" /> Фото
+                <input
+                  type="file" accept="image/*" multiple className="hidden"
+                  onChange={(e) => {
+                    setReplyFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <button onClick={send} disabled={!reply.trim() || sending} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
+                {sending ? "Отправляем…" : "Ответить"}
+              </button>
+            </div>
           </div>
         ) : (
           <Link href="/login" className="mt-3 block rounded-xl bg-slate-100 p-3 text-center text-sm">Войдите, чтобы ответить →</Link>

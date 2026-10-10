@@ -205,17 +205,24 @@ export default function ThreadCard({ t }: { t: ThreadV5 }) {
       )}
 
       {t.photos && t.photos.length > 0 && (
-        <div className={`relative mt-2 grid gap-1.5 overflow-hidden rounded-xl ${t.photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-          {t.photos.slice(0, 4).map((p) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-40 w-full cursor-zoom-in object-cover" />
-          ))}
-          {t.photos.length > 4 && (
-            <button onClick={() => setLightbox(t.photos![0].url)} className="absolute inset-0 flex items-center justify-center bg-slate-900/50 text-lg font-extrabold text-white">
-              +{t.photos.length - 4}
-            </button>
-          )}
-        </div>
+        t.photos.length === 1 ? (
+          <div className="mt-2 overflow-hidden rounded-xl bg-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={t.photos[0].url} alt="" loading="lazy" onClick={() => setLightbox(t.photos![0].url)} className="max-h-96 w-full cursor-zoom-in object-contain" />
+          </div>
+        ) : (
+          <div className="relative mt-2 grid grid-cols-2 gap-1.5 overflow-hidden rounded-xl">
+            {t.photos.slice(0, 4).map((p) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={p.id} src={p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="h-40 w-full cursor-zoom-in object-cover" />
+            ))}
+            {t.photos.length > 4 && (
+              <button onClick={() => setLightbox(t.photos![0].url)} className="absolute inset-0 flex items-center justify-center bg-slate-900/50 text-lg font-extrabold text-white">
+                +{t.photos.length - 4}
+              </button>
+            )}
+          </div>
+        )
       )}
       {lightbox && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4" onClick={() => setLightbox(null)}>

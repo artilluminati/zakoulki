@@ -9,7 +9,7 @@ export async function fetchThreads(params: Record<string, string | number | bool
 }
 
 export async function fetchThread(id: number | string) {
-  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; author_username?: string | null; body_md: string; body_html: string; created_at: string }[] }>(`/threads/${id}`);
+  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; author_username?: string | null; body_md: string; body_html: string; photos?: { id: number; url: string }[]; created_at: string }[] }>(`/threads/${id}`);
   return res.data;
 }
 
@@ -50,6 +50,15 @@ export async function updateComment(commentId: number, body_md: string) {
 
 export async function deleteComment(commentId: number) {
   await api.delete(`/threads/comments/${commentId}`);
+}
+
+export async function uploadCommentPhoto(commentId: number, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await api.post(`/threads/comments/${commentId}/photos`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data as { id: number; url: string };
 }
 
 export async function reportThread(id: number, reason: string, text?: string, comment_id?: number) {

@@ -12,6 +12,7 @@ from app.models.user import User
 from app.models.thread import Thread
 from app.models.thread_comment import ThreadComment
 from app.models.thread_extra import Tag, ThreadTag, ThreadMention, ThreadLike
+from app.models.thread_photo import ThreadPhoto
 from app.models.report import Report
 from app.models.geo_place import GeoPlace
 from app.models.category import Category
@@ -35,7 +36,7 @@ class CommentCreate(BaseModel):
 
 def _thread_out(t: Thread, db: Session) -> dict:
     from app.models.thread_photo import ThreadPhoto
-    photos = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).all()
+    photos = db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id, ThreadPhoto.comment_id.is_(None)).all()
     cats = [{"id": c.id, "name": c.name, "slug": c.slug} for c in (t.categories or [])]
     tag_rows = (db.query(Tag).join(ThreadTag, ThreadTag.tag_id == Tag.id)
                 .filter(ThreadTag.thread_id == t.id).all())
@@ -236,6 +237,8 @@ def get_thread(thread_id: int, db: Session = Depends(get_db)):
         "id": c.id, "parent_id": c.parent_id, "author_id": c.author_id,
         "author_username": (db.get(User, c.author_id).username if db.get(User, c.author_id) else None),
         "body_md": c.body_md, "body_html": c.body_html, "created_at": c.created_at,
+        "photos": [{"id": p.id, "url": f"/uploads/{p.file_name}"}
+                   for p in db.query(ThreadPhoto).filter(ThreadPhoto.comment_id == c.id).all()],
     } for c in comments]
     return out
 
@@ -405,6 +408,30 @@ def upload_thread_photo(
         raise HTTPException(404, "Тред не найден")
     if t.author_id != user.id:
         raise HTTPException(403, "Недостаточно прав")
+    ph = _save_photo(db, file, thread_id=t.id)
+    return {"id": ph.id, "file_name": ph.file_name, "url": f"/uploads/{ph.file_name}"}
+
+
+@router.post("/comments/{comment_id}/photos", status_code=201)
+def upload_comment_photo(
+    comment_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Фото ответа."""
+    from app.models.thread_photo import ThreadPhoto
+    c = db.get(ThreadComment, comment_id)
+    if not c:
+        raise HTTPException(404, "Комментарий не найден")
+    if c.author_id != user.id:
+        raise HTTPException(403, "Недостаточно прав")
+    ph = _save_photo(db, file, thread_id=c.thread_id, comment_id=c.id)
+    return {"id": ph.id, "file_name": ph.file_name, "url": f"/uploads/{ph.file_name}"}
+
+
+def _save_photo(db: Session, file: UploadFile, thread_id: int, comment_id: int | None = None):
+    from app.models.thread_photo import ThreadPhoto
     if file.size and file.size > 10 * 1024 * 1024:
         raise HTTPException(400, "Файл слишком большой")
 
@@ -420,6 +447,6 @@ def upload_thread_photo(
             width, height = img.size
     except Exception:
         pass
-    ph = ThreadPhoto(thread_id=thread_id, file_name=file_name, width=width, height=height)
+    ph = ThreadPhoto(thread_id=thread_id, comment_id=comment_id, file_name=file_name, width=width, height=height)
     db.add(ph); db.commit(); db.refresh(ph)
-    return {"id": ph.id, "file_name": ph.file_name, "url": f"/uploads/{ph.file_name}"}
+    return ph
