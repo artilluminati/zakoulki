@@ -135,6 +135,11 @@ export async function reverseGeocode(lat: number, lng: number) {
   return res.data as { name: string; address?: string | null; district?: string | null; street?: string | null; lat: number; lng: number };
 }
 
+export async function fetchSimilarPlaces(name: string, lat?: number, lng?: number) {
+  const res = await api.get<GeoPlaceV5[]>("/geo-places/similar", { params: { name, ...(lat !== undefined ? { lat, lng } : {}) } });
+  return res.data;
+}
+
 export async function uploadThreadPhoto(threadId: number, file: File) {
   const form = new FormData();
   form.append("file", file);

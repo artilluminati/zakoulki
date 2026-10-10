@@ -174,6 +174,25 @@ def map_points(north: float, south: float, east: float, west: float,
     return out
 
 
+@router.get("/similar")
+def similar_places(name: str = Query(min_length=2, max_length=255),
+                   lat: float | None = None, lng: float | None = None,
+                   radius: float = Query(0.5, description="км для близких"),
+                   limit: int = Query(5, le=10), db: Session = Depends(get_db)):
+    """Похожие места против дублей: то же название ИЛИ точка в радиусе."""
+    from sqlalchemy import or_ as _or
+    words = [w for w in name.split() if len(w) >= 4]
+    conds = [GeoPlace.name.ilike(f"%{w}%") for w in words[:3]]
+    if lat is not None and lng is not None:
+        delta = radius / 111.0
+        conds.append(GeoPlace.latitude.between(lat - delta, lat + delta)
+                     & GeoPlace.longitude.between(lng - delta, lng + delta))
+    if not conds:
+        return []
+    items = db.query(GeoPlace).filter(_or(*conds)).limit(limit).all()
+    return [_out(p) for p in items]
+
+
 @router.get("/suggest")
 def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"),
                    q: str = Query("", max_length=100),

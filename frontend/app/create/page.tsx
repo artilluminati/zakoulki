@@ -9,7 +9,7 @@ import TagPicker from "@/components/TagPicker";
 import MiniMap from "@/components/MiniMap";
 import PasteButton from "@/components/PasteButton";
 import PollBuilder, { type PollDraft } from "@/components/PollBuilder";
-import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode } from "@/lib/v5";
+import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode, fetchSimilarPlaces } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import { useScope } from "@/lib/scope";
@@ -96,6 +96,7 @@ export default function CreatePage() {
   }, []);
   const [addr, setAddr] = useState("");
   const [found, setFound] = useState<GeoPlaceV5[]>([]);
+  const [similar, setSimilar] = useState<GeoPlaceV5[]>([]);
   const [nearby, setNearby] = useState<{ id: number; body_md: string; place_name?: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [thumbs, setThumbs] = useState<string[]>([]);
@@ -158,6 +159,20 @@ export default function CreatePage() {
     }, 300);
     return () => clearTimeout(t);
   }, [addr]);
+
+  // похожие места против дублей: есть координаты новой точки + название
+  useEffect(() => {
+    const name = pendingLabel?.name || (addr.trim().length >= 3 ? addr.trim() : "");
+    if (!pendingGeo || name.length < 3) { setSimilar([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const list = await fetchSimilarPlaces(name, pendingGeo.latitude, pendingGeo.longitude);
+        setSimilar(list.filter((p) => p.id !== place?.id).slice(0, 3));
+      } catch { setSimilar([]); }
+    }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingGeo, pendingLabel, addr, place]);
 
   // автосохранение черновика
   useEffect(() => {
@@ -449,6 +464,26 @@ export default function CreatePage() {
             onExpandedChange={setMapExpanded}
           />
         </div>
+        {similar.length > 0 && !place && (
+          <div className="mt-2 rounded-xl border border-sky-200 bg-sky-50 p-2.5">
+            <div className="text-xs font-bold text-sky-800">Похожие места уже есть — может, это оно?</div>
+            {similar.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                disabled={picking}
+                onClick={() => pickFound(p)}
+                className="mt-1 flex w-full items-center gap-2 rounded-xl bg-white/70 px-2 py-1.5 text-left hover:bg-white disabled:opacity-50"
+              >
+                <MapPin className="h-4 w-4 shrink-0 text-sky-600" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold">{p.name}</span>
+                  <span className="block truncate text-xs text-slate-500">{[p.address, p.district].filter(Boolean).join(" · ")}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
         {nearby.length > 0 && (
           <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5">
             <div className="text-xs font-bold text-amber-800">Рядом уже обсуждают ({nearby.length}) — гляньте, чтобы не дублировать:</div>
