@@ -12,13 +12,14 @@ export interface MapCenter { lat: number; lng: number; nonce: number; }
 
 /** Мини-карта: одна инстанция на оба режима (позиция не слетает).
  * center — явные запросы центрирования (nonce меняется), pin — точка. */
-export default function MiniMap({ center, pin, onMove, areaMode = false, vertices = [], onVertex, expanded, onExpandedChange }: {
+export default function MiniMap({ center, pin, onMove, areaMode = false, vertices = [], onVertex, onRemoveVertex, expanded, onExpandedChange }: {
   center: MapCenter;
   pin: { lat: number; lng: number } | null;
   onMove: (lat: number, lng: number) => void;
   areaMode?: boolean;
   vertices?: [number, number][];
   onVertex?: (lat: number, lng: number) => void;
+  onRemoveVertex?: (index: number) => void;
   expanded: boolean;
   onExpandedChange: (v: boolean) => void;
 }) {
@@ -28,8 +29,12 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
   const polyRef = useRef<any>(null);
   const onMoveRef = useRef(onMove);
   const onVertexRef = useRef(onVertex);
+  const onRemoveRef = useRef(onRemoveVertex);
+  const verticesRef = useRef(vertices);
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
   useEffect(() => { onVertexRef.current = onVertex; }, [onVertex]);
+  useEffect(() => { onRemoveRef.current = onRemoveVertex; }, [onRemoveVertex]);
+  useEffect(() => { verticesRef.current = vertices; }, [vertices]);
   const [q, setQ] = useState("");
   const [found, setFound] = useState<GeoPlaceV5[]>([]);
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
@@ -58,6 +63,26 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
         map.geoObjects.add(mark);
         map.events.add("click", (e: any) => {
           const c = e.get("coords");
+          // повторный клик рядом с вершиной (до 24px) — удалить её
+          if (onRemoveRef.current && verticesRef.current.length > 0) {
+            try {
+              const proj = map.options.get("projection");
+              const zoom = map.getZoom();
+              const toPage = (ll: number[]) => map.converter.globalToPage(proj.toGlobalPixels(ll, zoom));
+              const p = toPage(c);
+              let best = -1;
+              let bestD = 24;
+              verticesRef.current.forEach(([la, ln], i) => {
+                const q = toPage([la, ln]);
+                const dist = Math.hypot(p[0] - q[0], p[1] - q[1]);
+                if (dist < bestD) { bestD = dist; best = i; }
+              });
+              if (best >= 0) {
+                onRemoveRef.current(best);
+                return;
+              }
+            } catch { /* ignore */ }
+          }
           if (onVertexRef.current) onVertexRef.current(c[0], c[1]);
         });
         mapRef.current = map;
@@ -107,16 +132,16 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
       const fresh: any[] = [];
       if (areaMode) {
         const ymaps = (window as any).ymaps;
-        for (const [la, ln] of vertices) {
+        vertices.forEach(([la, ln], i) => {
           const d = new ymaps.Placemark([la, ln], {}, {
             iconLayout: "default#image",
-            iconImageHref: makeDot("#059669"),
+            iconImageHref: makeDot("#059669", String(i + 1)),
             iconImageSize: [...DOT_SIZE],
             iconImageOffset: [...DOT_OFFSET],
           });
           map.geoObjects.add(d);
           fresh.push(d);
-        }
+        });
       }
       (map as any).__dots = fresh;
     } catch { /* ignore */ }

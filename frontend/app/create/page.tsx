@@ -81,6 +81,11 @@ export default function CreatePage() {
         if (d.body) setBody(d.body);
         if (Array.isArray(d.tags)) setTags(d.tags.slice(0, 5));
         if (d.place && typeof d.place.id === "number" && d.place.id > 0) setPlace(d.place);
+        if (Array.isArray(d.vertices)) {
+          const vs = (d.vertices as unknown[]).filter((v): v is [number, number] =>
+            Array.isArray(v) && v.length >= 2 && Number.isFinite(+v[0]) && Number.isFinite(+v[1]));
+          if (vs.length > 0) setVertices(vs.map((v) => [Number(v[0]), Number(v[1])] as [number, number]).slice(0, 30));
+        }
       }
     } catch { /* ignore */ }
   }, []);
@@ -151,8 +156,8 @@ export default function CreatePage() {
 
   // автосохранение черновика
   useEffect(() => {
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body, tags, place })); } catch { /* ignore */ }
-  }, [title, body, tags, place]);
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body, tags, place, vertices })); } catch { /* ignore */ }
+  }, [title, body, tags, place, vertices]);
 
   const [geoLocating, setGeoLocating] = useState(false);
   const [mapExpanded, setMapExpanded] = useState(false);
@@ -355,10 +360,18 @@ export default function CreatePage() {
         </div>
         {areaMode && (
           <div className="mt-2 text-xs text-slate-500">
-            Кликайте по карте — точки соединятся в территорию. Нужно минимум 3.
+            Кликайте по карте — точки соединятся в территорию. Повторный клик по точке убирает её.
+            {vertices.length > 0 ? ` · Точек: ${vertices.length}` : ""}
+            {vertices.length > 0 && vertices.length < 3 && (
+              <span className="font-bold text-amber-600"> · нужно минимум 3</span>
+            )}
             {vertices.length > 0 && (
               <>
-                {` · Точек: ${vertices.length} `}
+                {" · "}
+                <button type="button" onClick={() => setVertices((p) => p.slice(0, -1))} className="font-semibold text-slate-500 hover:text-slate-800">
+                  отменить последнюю
+                </button>
+                {" · "}
                 <button type="button" onClick={() => setVertices([])} className="font-semibold text-slate-400 hover:text-red-500">
                   заново
                 </button>
@@ -416,6 +429,7 @@ export default function CreatePage() {
             areaMode={areaMode}
             vertices={vertices}
             onVertex={onMapVertex}
+            onRemoveVertex={(i) => setVertices((prev) => prev.filter((_, j) => j !== i))}
             expanded={mapExpanded}
             onExpandedChange={setMapExpanded}
           />
