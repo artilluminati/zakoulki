@@ -29,8 +29,11 @@ def nominatim_search(q: str, limit: int = 5) -> list[dict]:
         out.append({
             "name": item.get("display_name", q).split(",")[0],
             "address": item.get("display_name"),
-            "district": addr.get("city") or addr.get("town") or addr.get("borough"),
+            "district": addr.get("suburb") or addr.get("district") or addr.get("borough"),
             "street": addr.get("road"),
+            "city": addr.get("city") or addr.get("town") or addr.get("village") or addr.get("municipality"),
+            "region": addr.get("state"),
+            "country": addr.get("country"),
             "lat": float(item.get("lat", 0)), "lng": float(item.get("lon", 0)),
         })
     return out
@@ -43,11 +46,15 @@ def nominatim_reverse(lat: float, lng: float) -> dict | None:
         data = _json.load(r)
     addr = data.get("address", {})
     disp = data.get("display_name", "")
+    city = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("municipality")
     return {
-        "name": addr.get("road", addr.get("suburb", addr.get("city", disp.split(",")[0] if disp else "Точка на карте"))),
+        "name": addr.get("road", addr.get("suburb", city or (disp.split(",")[0] if disp else "Точка на карте"))),
         "address": disp or None,
-        "district": addr.get("city") or addr.get("town") or addr.get("borough"),
+        "district": addr.get("suburb") or addr.get("district") or addr.get("borough"),
         "street": addr.get("road"),
+        "city": city,
+        "region": addr.get("state"),
+        "country": addr.get("country"),
         "lat": lat, "lng": lng,
     }
 

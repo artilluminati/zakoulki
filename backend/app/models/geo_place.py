@@ -18,6 +18,10 @@ class GeoPlace(Base):
     address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     district: Mapped[str | None] = mapped_column(String(200), nullable=True)
     street: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # иерархия для глобального фильтра: район → город/округ → регион → страна (с индексами под масштаб)
+    city: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    region: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
     # территория: полигон [[lat, lng], ...] минимум 3 точки (JSON). Центр — в lat/lng.

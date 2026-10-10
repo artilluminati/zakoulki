@@ -93,10 +93,10 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  // явное центрирование + позиция пина
+  // явное центрирование + позиция пина (в режиме территории главной метки нет)
   useEffect(() => {
     try {
-      if (pin) {
+      if (pin && !areaMode) {
         markRef.current?.geometry.setCoordinates([pin.lat, pin.lng]);
         markRef.current?.options.set("visible", true);
       } else {
@@ -105,7 +105,7 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
       mapRef.current?.setCenter([center.lat, center.lng]);
     } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center.nonce]);
+  }, [center.nonce, areaMode]);
 
   // перерисовка полигона территории
   useEffect(() => {
@@ -138,6 +138,7 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
             iconImageHref: makeDot("#059669", String(i + 1)),
             iconImageSize: [...DOT_SIZE],
             iconImageOffset: [...DOT_OFFSET],
+            cursor: "pointer",
           });
           map.geoObjects.add(d);
           fresh.push(d);
