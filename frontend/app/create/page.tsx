@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- эффекты ниже синхронизируют состояние с сервером/localStorage */
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, X, ImagePlus } from "lucide-react";
 import MdEditor from "@/components/editor/MdEditor";
 import TagPicker from "@/components/TagPicker";
@@ -25,6 +25,7 @@ function cleanSnippet(raw: string): string {
 
 export default function CreatePage() {
   const router = useRouter();
+  const params = useSearchParams();
   const toast = useToast();
   const { user, loading: authLoading } = useAuth();
   const DRAFT_KEY = "zakoulki_draft_v1";
@@ -34,6 +35,25 @@ export default function CreatePage() {
   const [pendingGeo, setPendingGeo] = useState<{ latitude: number; longitude: number } | null>(null);
   const [pendingLabel, setPendingLabel] = useState<{ name: string; address?: string | null } | null>(null);
   const [resolving, setResolving] = useState(false);
+
+  // точка с карты (?lat=&lng=[&name=][&address=]): сразу видна, без повторного геокодинга
+  useEffect(() => {
+    const la = params.get("lat");
+    const ln = params.get("lng");
+    if (!la || !ln) return;
+    const latitude = Number(la);
+    const longitude = Number(ln);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    setPendingGeo({ latitude, longitude });
+    const name = params.get("name");
+    if (name) {
+      setPendingLabel({ name, address: params.get("address") });
+    } else {
+      resolveGeo(latitude, longitude);
+    }
+    fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resolveGeo = async (latitude: number, longitude: number) => {
     setResolving(true);

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
-import { fetchMapPoints, fetchThread } from "@/lib/v5";
+import { fetchMapPoints, fetchThread, reverseGeocode } from "@/lib/v5";
 import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_BLANK, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
@@ -39,6 +39,10 @@ export default function MapPage() {
   const [selected, setSelected] = useState<ThreadV5 | null>(null);
   const [clusterList, setClusterList] = useState<ThreadV5[] | null>(null);
   const [clusterLoading, setClusterLoading] = useState(false);
+  // режим прицела: точка берется из центра экрана, видно адрес до перехода
+  const [pickMode, setPickMode] = useState(false);
+  const [pickAddr, setPickAddr] = useState<{ name: string; address?: string | null } | null>(null);
+  const [pickLocating, setPickLocating] = useState(false);
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
 
   // грузим точки при движении карты
@@ -72,6 +76,33 @@ export default function MapPage() {
     })();
     return () => { alive = false; try { map?.destroy(); } catch { /* ignore */ } };
   }, [key, toast]);
+
+  // адрес под прицелом (дебаунс 600мс после остановки карты)
+  useEffect(() => {
+    const map = (window as any).__ymap;
+    if (!mapReady || !map || !pickMode) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const update = async () => {
+      const c = map.getCenter();
+      try {
+        const r = await reverseGeocode(c[0], c[1]);
+        if (alive) setPickAddr({ name: r.name, address: r.address });
+      } catch { /* ignore */ }
+    };
+    update();
+    const onMove = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(update, 600);
+    };
+    map.events.add("boundschange", onMove);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+      try { map.events.remove("boundschange", onMove); } catch { /* ignore */ }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, pickMode]);
 
   // фокус на месте из ?place= — отдельным эффектом, чтобы работал и при смене параметра
   useEffect(() => {
@@ -200,14 +231,64 @@ export default function MapPage() {
               {count} на экране
             </div>
 
-            {!selected && !clusterList && (
-              <Link
-                href="/create"
+            {!selected && !clusterList && !pickMode && (
+              <button
+                type="button"
+                onClick={() => { setSelected(null); setClusterList(null); setPickAddr(null); setPickMode(true); }}
                 className="absolute bottom-24 right-3 z-10 flex items-center gap-1.5 rounded-full bg-lime-400 py-3 pl-4 pr-5 text-[15px] font-extrabold text-slate-900 shadow-xl transition hover:bg-lime-300 active:scale-95 md:bottom-6 md:right-4"
               >
                 <Plus className="h-5 w-5" strokeWidth={3} />
                 Спросить здесь
-              </Link>
+              </button>
+            )}
+
+            {pickMode && (
+              <>
+                {/* прицел по центру экрана */}
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                  <span className="relative flex h-16 w-16 items-center justify-center">
+                    <span className="absolute inset-0 animate-ping rounded-full bg-lime-400/30" />
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-lime-400 shadow-xl">
+                      <MapPin className="h-6 w-6" />
+                    </span>
+                  </span>
+                </div>
+                <div className="absolute inset-x-3 bottom-20 z-20 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px]">
+                  <div className="text-[13px] text-slate-400">Точка вопроса — двигайте карту</div>
+                  <div className="mt-0.5 truncate text-[15px] font-extrabold">
+                    {pickAddr?.name ?? "Определяем адрес…"}
+                  </div>
+                  {pickAddr?.address && (
+                    <div className="truncate text-xs text-slate-500">{pickAddr.address}</div>
+                  )}
+                  <div className="mt-2.5 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPickMode(false)}
+                      className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-600"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const map = (window as any).__ymap;
+                        const c = map ? map.getCenter() : null;
+                        if (!c) return;
+                        const q = new URLSearchParams({
+                          lat: String(c[0]), lng: String(c[1]),
+                          ...(pickAddr?.name ? { name: pickAddr.name } : {}),
+                          ...(pickAddr?.address ? { address: pickAddr.address } : {}),
+                        });
+                        router.push(`/create?${q.toString()}`);
+                      }}
+                      className="flex-1 rounded-xl bg-lime-400 py-2.5 text-sm font-extrabold text-slate-900 hover:bg-lime-300"
+                    >
+                      Спросить здесь
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
             {clusterList !== null && !selected && (
