@@ -35,11 +35,15 @@ export const PIN_OFFTOP = () => makePin({ color: "#64748b", glyph: "chat" });
 export const PIN_SELECTED = () => makePin({ color: "#059669", glyph: "q", selected: true });
 
 export const CLUSTER_ICON = svgUri(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">` +
-    `<circle cx="28" cy="28" r="24" fill="#0f172a" stroke="#a3e635" stroke-width="3"/>` +
-    `<circle cx="28" cy="28" r="24" fill="none" stroke="rgba(163,230,53,.35)" stroke-width="7"/>` +
+  `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">` +
+    `<ellipse cx="32" cy="60" rx="14" ry="3" fill="rgba(2,6,23,.25)"/>` +
+    `<circle cx="32" cy="30" r="26" fill="#0f172a" stroke="#a3e635" stroke-width="4"/>` +
+    `<circle cx="32" cy="30" r="26" fill="none" stroke="rgba(163,230,53,.30)" stroke-width="8"/>` +
     `</svg>`
 );
+
+export const CLUSTER_SIZE: [number, number] = [64, 64];
+export const CLUSTER_OFFSET: [number, number] = [-32, -32];
 
 export const PIN_SIZE: [number, number] = [44, 48];
 export const PIN_OFFSET: [number, number] = [-22, -44];

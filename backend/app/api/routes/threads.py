@@ -193,6 +193,12 @@ def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User 
         db.add(ThreadMention(thread_id=t.id, kind="place", place_id=pid))
     for uid in entities["user_ids"]:
         db.add(ThreadMention(thread_id=t.id, kind="user", user_id=uid))
+    for uname in entities.get("usernames", []):
+        u = db.query(User).filter(User.username == uname).first()
+        if not u:
+            u = db.query(User).filter(User.username.ilike(uname)).first()
+        if u and u.id not in entities["user_ids"]:
+            db.add(ThreadMention(thread_id=t.id, kind="user", user_id=u.id))
     if data.category_ids:
         t.categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
     db.commit(); db.refresh(t)
@@ -223,6 +229,12 @@ def add_comment(thread_id: int, data: CommentCreate, db: Session = Depends(get_d
     db.add(c); db.flush()
     for pid in entities["place_ids"]:
         db.add(ThreadMention(comment_id=c.id, kind="place", place_id=pid))
+    for uname in entities.get("usernames", []):
+        u = db.query(User).filter(User.username == uname).first()
+        if not u:
+            u = db.query(User).filter(User.username.ilike(uname)).first()
+        if u:
+            db.add(ThreadMention(comment_id=c.id, kind="user", user_id=u.id))
     t.comments_count += 1
     db.commit(); db.refresh(c)
     return {"id": c.id, "body_html": c.body_html}

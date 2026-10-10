@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
 import { fetchMapPoints, fetchThread } from "@/lib/v5";
 import { api, apiOrigin } from "@/lib/api";
-import { makePin, CLUSTER_ICON, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
+import { makePin, CLUSTER_ICON, CLUSTER_SIZE, CLUSTER_OFFSET, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import { useToast } from "@/lib/toast";
 import type { ThreadV5 } from "@/types/v5";
 
@@ -48,6 +48,8 @@ export default function MapPage() {
   const [filter, setFilter] = useState<Filter>("Все");
   const [pts, setPts] = useState<MapPt[]>([]);
   const [selected, setSelected] = useState<ThreadV5 | null>(null);
+  const [clusterList, setClusterList] = useState<ThreadV5[] | null>(null);
+  const [clusterLoading, setClusterLoading] = useState(false);
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
 
   // грузим точки при движении карты
@@ -116,10 +118,28 @@ export default function MapPage() {
     setCount(visible.length);
     const clusterer = new ymaps.Clusterer({
       groupByCoordinates: false,
-      clusterIcons: [{ href: CLUSTER_ICON, size: [56, 56], offset: [-28, -28] }],
+      clusterIcons: [{ href: CLUSTER_ICON, size: [...CLUSTER_SIZE], offset: [...CLUSTER_OFFSET] }],
       clusterIconContentLayout: ymaps.templateLayoutFactory.createClass(
-        '<div style="color:#a3e635;font-weight:800;font-size:16px;line-height:56px;width:56px;text-align:center;">{{ properties.geoObjects.length }}</div>'
+        '<div style="color:#a3e635;font-weight:800;font-size:18px;line-height:64px;width:64px;text-align:center;">{{ properties.geoObjects.length }}</div>'
       ),
+    });
+    // тап по кластеру на крупном зуме — список тредов, а не бесконечный зум
+    clusterer.events.add("click", async (e: any) => {
+      const target = e.get("target");
+      if (!target || typeof target.getGeoObjects !== "function") return;
+      const objs: any[] = target.getGeoObjects();
+      if (map.getZoom() < 15 && objs.length > 5) return; // иначе пусть зумит
+      e.preventDefault();
+      setClusterLoading(true);
+      setClusterList([]);
+      try {
+        // id точки = id треда (см. map-points)
+        const ids = objs.map((o) => o.properties?.get?.("threadId")).filter(Boolean);
+        const threads = await Promise.all(ids.slice(0, 10).map((id) => fetchThread(id).catch(() => null)));
+        setClusterList(threads.filter(Boolean) as ThreadV5[]);
+      } finally {
+        setClusterLoading(false);
+      }
     });
     for (const p of visible) {
       const isSel = selected?.id === p.id;
@@ -129,7 +149,7 @@ export default function MapPage() {
         photoUrl: p.has_photo && p.cover_url ? apiOrigin + p.cover_url : null,
         selected: isSel,
       });
-      const m = new ymaps.Placemark([p.lat, p.lng], { balloonContentBody: " " }, {
+      const m = new ymaps.Placemark([p.lat, p.lng], { threadId: p.id }, {
         iconLayout: "default#image", iconImageHref: href,
         iconImageSize: PIN_SIZE, iconImageOffset: PIN_OFFSET,
         hideIconOnBalloonOpen: false,
@@ -188,7 +208,7 @@ export default function MapPage() {
               {count} на экране
             </div>
 
-            {!selected && (
+            {!selected && !clusterList && (
               <Link
                 href="/create"
                 className="absolute bottom-24 right-3 z-10 flex items-center gap-1.5 rounded-full bg-lime-400 py-3 pl-4 pr-5 text-[15px] font-extrabold text-slate-900 shadow-xl transition hover:bg-lime-300 active:scale-95 md:bottom-6 md:right-4"
@@ -196,6 +216,38 @@ export default function MapPage() {
                 <Plus className="h-5 w-5" strokeWidth={3} />
                 Спросить здесь
               </Link>
+            )}
+
+            {clusterList !== null && !selected && (
+              <div className="absolute inset-x-3 bottom-20 z-20 max-h-[45%] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px]">
+                <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-3.5 py-2.5">
+                  <span className="text-sm font-extrabold">
+                    {clusterLoading ? "Загружаем…" : `Здесь обсуждают · ${clusterList.length}`}
+                  </span>
+                  <button onClick={() => setClusterList(null)} aria-label="Закрыть" className="rounded-full p-1 text-slate-400 hover:bg-slate-100">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                {clusterList.map((ct) => (
+                  <button
+                    key={ct.id}
+                    onClick={() => { setSelected(ct); setClusterList(null); }}
+                    className="flex w-full items-center gap-2.5 border-b border-slate-50 px-3.5 py-2.5 text-left last:border-0 hover:bg-slate-50"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[13px] font-extrabold text-emerald-700">
+                      {(ct.author_username ?? "?").slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold">{ct.title || ct.body_md.slice(0, 60)}</span>
+                      <span className="flex items-center gap-2 text-xs text-slate-500">
+                        <span className="truncate">{ct.author_username}</span>
+                        <span className="flex shrink-0 items-center gap-0.5"><MessageCircle className="h-3 w-3" />{ct.comments_count}</span>
+                        <span className="flex shrink-0 items-center gap-0.5"><Heart className="h-3 w-3" />{ct.likes_count}</span>
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
 
             {selected && (

@@ -14,7 +14,8 @@ except ImportError:
 
 ALLOWED_TAGS = ["p", "br", "strong", "em", "code", "pre", "blockquote", "ul", "ol", "li", "a", "h1", "h2", "h3"]
 ALLOWED_ATTRS = {"a": ["href", "class", "data-place-id", "data-user-id", "data-tag"]}
-USER_RE = re.compile(r"@\[(\d+):([^\]]+)\]")
+USER_RE = re.compile(r"@\[(\d+):([^\]]+)\]")  # legacy, для старых записей
+PLAIN_USER_RE = re.compile(r"(?<![\wа-яА-ЯёЁ@\[])@([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
 PLACE_RE = re.compile(r"\+\[(\d+):([^\]]+)\]")
 TAG_RE = re.compile(r"(?<![\wа-яА-ЯёЁ])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
 
@@ -29,8 +30,11 @@ AUTO_TAGS = {
 
 
 def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict]:
-    """Возвращает (html_safe, entities={user_ids, place_ids, tags})."""
+    """Возвращает (html_safe, entities={user_ids, usernames, place_ids, tags})."""
     user_ids = [int(m.group(1)) for m in USER_RE.finditer(raw_md)]
+    # сначала вырезаем legacy-упоминания, чтобы не цеплять ники внутри них
+    without_legacy = USER_RE.sub("@\\2", raw_md)
+    usernames = [m.group(1) for m in PLAIN_USER_RE.finditer(without_legacy)]
     place_ids = [int(m.group(1)) for m in PLACE_RE.finditer(raw_md)]
     tags = [m.group(1).lower() for m in TAG_RE.finditer(raw_md)]
 
@@ -48,7 +52,7 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
     if not HAS_LIBS:
         # без либ — escape + параграфы, чтобы не падать
         import html as _h
-        return f"<p>{_h.escape(text)}</p>", {"user_ids": user_ids, "place_ids": place_ids, "tags": tags}
+        return f"<p>{_h.escape(text)}</p>", {"user_ids": user_ids, "usernames": usernames, "place_ids": place_ids, "tags": tags}
 
     html = md_lib.markdown(text, extensions=[])
     # place:123 ссылки -> чипы мест
@@ -73,4 +77,4 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
         # в комментах режем заголовки
         html = re.sub(r"</?h[1-3]>", "", html)
     safe = bleach.clean(html, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
-    return safe, {"user_ids": user_ids, "place_ids": place_ids, "tags": tags}
+    return safe, {"user_ids": user_ids, "usernames": usernames, "place_ids": place_ids, "tags": tags}
