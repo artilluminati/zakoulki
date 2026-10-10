@@ -50,6 +50,7 @@ export default function CreatePage() {
   const [nearby, setNearby] = useState<{ id: number; body_md: string; place_name?: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [thumbs, setThumbs] = useState<string[]>([]);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   // превью выбранных фото, revoke при изменении/размонтировании
   useEffect(() => {
@@ -184,9 +185,9 @@ export default function CreatePage() {
         {files.length > 0 && (
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {thumbs.map((src, i) => (
-              <span key={`${files[i]?.name}-${files[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl">
+              <span key={`${files[i]?.name}-${files[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" className="h-24 w-full object-cover" />
+                <img src={src} alt="" onClick={() => setLightbox(src)} className="h-24 w-full cursor-zoom-in object-contain" />
                 <button
                   type="button"
                   onClick={() => setFiles(files.filter((_, j) => j !== i))}
@@ -200,6 +201,15 @@ export default function CreatePage() {
           </div>
         )}
       </div>
+      {lightbox && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4" onClick={() => setLightbox(null)}>
+          <button aria-label="Закрыть" className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white">
+            <X className="h-5 w-5" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
+        </div>
+      )}
 
       {/* точка */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
