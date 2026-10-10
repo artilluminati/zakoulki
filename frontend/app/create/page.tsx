@@ -49,23 +49,7 @@ export default function CreatePage() {
   };
 
   // точка с карты (?lat=&lng=[&name=][&address=]): сразу видна, без повторного геокодинга
-  useEffect(() => {
-    const la = params.get("lat");
-    const ln = params.get("lng");
-    if (!la || !ln) return;
-    const latitude = Number(la);
-    const longitude = Number(ln);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-    setPendingGeo({ latitude, longitude });
-    const name = params.get("name");
-    if (name) {
-      setPendingLabel({ name, address: params.get("address") });
-    } else {
-      resolveGeo(latitude, longitude);
-    }
-    fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // (сам эффект ниже, после всех useState — см. перед pickFound)
   const [tags, setTags] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
 
@@ -98,6 +82,25 @@ export default function CreatePage() {
   }, [files]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // точка с карты (?lat=&lng=[&name=][&address=]): сразу видна, без повторного геокодинга
+  useEffect(() => {
+    const la = params.get("lat");
+    const ln = params.get("lng");
+    if (!la || !ln) return;
+    const latitude = Number(la);
+    const longitude = Number(ln);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    setPendingGeo({ latitude, longitude });
+    const name = params.get("name");
+    if (name) {
+      setPendingLabel({ name, address: params.get("address") });
+    } else {
+      resolveGeo(latitude, longitude);
+    }
+    fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // выбор места из поиска: результат геокодера (id 0) сначала закрепляем в своей базе
   const pickFound = async (p: GeoPlaceV5) => {

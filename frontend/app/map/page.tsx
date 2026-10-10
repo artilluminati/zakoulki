@@ -42,7 +42,24 @@ export default function MapPage() {
   // режим прицела: точка берется из центра экрана, видно адрес до перехода
   const [pickMode, setPickMode] = useState(false);
   const [pickAddr, setPickAddr] = useState<{ name: string; address?: string | null } | null>(null);
-  const [pickLocating, setPickLocating] = useState(false);
+  // свайп вниз по шиту = закрыть (мобайл)
+  const swipeY = useRef<number | null>(null);
+  const [sheetDy, setSheetDy] = useState(0);
+  const swipeHandlers = (onClose: () => void) => ({
+    // eslint-disable-next-line react-hooks/refs -- ref читается только в touch-событиях, не в рендере
+    onTouchStart: (e: React.TouchEvent) => { swipeY.current = e.touches[0].clientY; },
+    onTouchMove: (e: React.TouchEvent) => {
+      if (swipeY.current === null) return;
+      const d = e.touches[0].clientY - swipeY.current;
+      if (d > 0) setSheetDy(Math.min(d, 160));
+    },
+    onTouchEnd: () => {
+      if (sheetDy > 80) onClose();
+      setSheetDy(0);
+      swipeY.current = null;
+    },
+  });
+  const sheetStyle = sheetDy > 0 ? { transform: `translateY(${sheetDy}px)` } : undefined;
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
 
   // грузим точки при движении карты
@@ -101,7 +118,6 @@ export default function MapPage() {
       if (timer) clearTimeout(timer);
       try { map.events.remove("boundschange", onMove); } catch { /* ignore */ }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, pickMode]);
 
   // фокус на месте из ?place= — отдельным эффектом, чтобы работал и при смене параметра
@@ -122,8 +138,7 @@ export default function MapPage() {
       }
     })();
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, focusPlace]);
+  }, [mapReady, focusPlace, toast]);
 
   // перерисовка меток при смене точек/фильтра/выбора
   useEffect(() => {
@@ -292,7 +307,12 @@ export default function MapPage() {
             )}
 
             {clusterList !== null && !selected && (
-              <div className="absolute inset-x-3 bottom-20 z-20 max-h-[45%] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px]">
+              <div
+                {...swipeHandlers(() => setClusterList(null))}
+                style={sheetStyle}
+                className="absolute inset-x-3 bottom-20 z-20 max-h-[45%] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px]"
+              >
+                <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200" />
                 <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-3.5 py-2.5">
                   <span className="text-sm font-extrabold">
                     {clusterLoading ? "Загружаем…" : `Здесь обсуждают · ${clusterList.length}`}
@@ -324,18 +344,23 @@ export default function MapPage() {
             )}
 
             {selected && (
-              <div className="absolute inset-x-3 bottom-20 z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px]">
-                <div className="flex items-start gap-3 p-3.5">
+              <div
+                {...swipeHandlers(() => setSelected(null))}
+                style={sheetStyle}
+                className="absolute inset-x-3 bottom-20 z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[400px]"
+              >
+                <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200" />
+                <div className="flex items-start gap-3.5 p-4">
                   {selected.photos?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selected.photos[0].url} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+                    <img src={selected.photos[0].url} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
                   ) : (
-                    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
-                      <MapPin className="h-6 w-6 text-emerald-600" />
+                    <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+                      <MapPin className="h-7 w-7 text-emerald-600" />
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
-                    {selected.title && <div className="truncate text-[15px] font-extrabold">{selected.title}</div>}
+                    {selected.title && <div className="truncate text-base font-extrabold">{selected.title}</div>}
                     <div className="truncate text-[13px] text-slate-500">@{selected.author_username}</div>
                     <div className="flex items-center gap-3 truncate text-[13px] text-slate-500">
                       <span className="truncate">{selected.place?.name ?? "Без точки"}</span>
