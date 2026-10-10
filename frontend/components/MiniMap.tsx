@@ -1,17 +1,19 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any -- JS API Яндекс.Карт без типов */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Maximize2, X } from "lucide-react";
 import { loadYandex } from "@/lib/yandex";
 import { makePin, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 
 /** Мини-карта: точка (перетаскиваемая метка) или территория (клики = вершины). */
-export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices = [], onVertex }: {
+export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices = [], onVertex, startExpanded = false }: {
   lat: number; lng: number;
   onMove: (lat: number, lng: number) => void;
   areaMode?: boolean;
   vertices?: [number, number][];
   onVertex?: (lat: number, lng: number) => void;
+  startExpanded?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -19,6 +21,7 @@ export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices =
   const polyRef = useRef<any>(null);
   const onMoveRef = useRef(onMove);
   const onVertexRef = useRef(onVertex);
+  const [expanded, setExpanded] = useState(startExpanded);
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
   useEffect(() => { onVertexRef.current = onVertex; }, [onVertex]);
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
@@ -97,5 +100,50 @@ export default function MiniMap({ lat, lng, onMove, areaMode = false, vertices =
     } catch { /* ignore */ }
   }, [vertices, areaMode]);
 
-  return <div ref={ref} className="h-44 w-full overflow-hidden rounded-xl bg-slate-100" />;
+  const toggleExpand = () => {
+    setExpanded((v: boolean) => !v);
+    setTimeout(() => {
+      try { mapRef.current?.container.fitToViewport(); } catch { /* ignore */ }
+    }, 60);
+  };
+
+  const mapBox = (
+    <div className="relative h-full w-full">
+      <div ref={ref} className="absolute inset-0 overflow-hidden bg-slate-100" />
+      <button
+        type="button"
+        onClick={toggleExpand}
+        aria-label={expanded ? "Свернуть карту" : "Развернуть карту"}
+        title={expanded ? "Свернуть карту" : "Развернуть карту"}
+        className="absolute right-2 top-2 z-10 rounded-full bg-white/95 p-2 text-slate-600 shadow-md hover:bg-white"
+      >
+        {expanded ? <X className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+
+  return (
+    <div
+      className={expanded ? "fixed inset-0 z-[90] bg-slate-900/60 p-3 md:p-6" : "h-44 w-full"}
+      onClick={expanded ? toggleExpand : undefined}
+    >
+      <div
+        className={expanded
+          ? "relative mx-auto h-full max-w-3xl overflow-hidden rounded-2xl"
+          : "relative h-full w-full overflow-hidden rounded-xl"}
+        onClick={expanded ? (e) => e.stopPropagation() : undefined}
+      >
+        <div ref={ref} className="absolute inset-0 overflow-hidden bg-slate-100" />
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); toggleExpand(); }}
+          aria-label={expanded ? "Свернуть карту" : "Развернуть карту"}
+          title={expanded ? "Свернуть карту" : "Развернуть карту"}
+          className="absolute right-2 top-2 z-10 rounded-full bg-white/95 p-2 text-slate-600 shadow-md hover:bg-white"
+        >
+          {expanded ? <X className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
 }

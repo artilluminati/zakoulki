@@ -340,9 +340,11 @@ export default function CreatePage() {
             </div>
             <div className="mt-1.5">
               <MiniMap
+                key={`area-${pendingGeo ? `${pendingGeo.latitude},${pendingGeo.longitude}` : "msk"}`}
                 lat={pendingGeo?.latitude ?? 55.755} lng={pendingGeo?.longitude ?? 37.617}
                 onMove={() => { /* в режиме территории метка не двигается */ }}
                 areaMode vertices={vertices} onVertex={onMapVertex}
+                startExpanded
               />
             </div>
             {vertices.length > 0 && (
@@ -372,7 +374,7 @@ export default function CreatePage() {
               <div className="pb-1 text-[11px] text-emerald-600/70">Метку можно перетащить</div>
             </div>
             <div className="p-1.5">
-              <MiniMap lat={pendingGeo.latitude} lng={pendingGeo.longitude} onMove={onPinMove} />
+              <MiniMap key="point" lat={pendingGeo.latitude} lng={pendingGeo.longitude} onMove={onPinMove} />
             </div>
           </div>
         ) : (

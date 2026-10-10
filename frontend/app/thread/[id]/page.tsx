@@ -9,6 +9,7 @@ import { fetchThread, commentThread, likeThread, reportThread, deleteComment, up
 import { ThreadHtml, timeAgo, OfficialBadge, ImportantBadge } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import PasteButton from "@/components/PasteButton";
+import PhotoImg from "@/components/PhotoImg";
 import PollView from "@/components/PollView";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -382,26 +383,9 @@ export default function ThreadPage() {
                 <>
                   <div className="mt-0.5"><ThreadHtml html={c.body_html} /></div>
                   {c.photos && c.photos.length > 0 && (
-                    <div className="mt-1.5 grid gap-1.5 overflow-hidden rounded-xl bg-slate-100 sm:grid-cols-2">
+                    <div className="mt-1.5 grid gap-1.5 overflow-hidden rounded-xl sm:grid-cols-2">
                       {c.photos.map((p) => (
-                        <span key={p.id} className="relative block">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.preview_url ?? p.url} alt="" loading="lazy" onClick={() => setLightbox(p.url)} className="max-h-72 w-full cursor-zoom-in object-contain" />
-                          {(user && (user.id === c.author_id || user.role === "admin")) && (
-                            <button
-                              type="button"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try { await deletePhoto(p.id); load(); }
-                                catch { toast("Не удалилось", "error"); }
-                              }}
-                              aria-label="Убрать фото"
-                              className="absolute right-1.5 top-1.5 rounded-full bg-slate-900/70 p-1 text-white"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </span>
+                        <PhotoImg key={p.id} src={p.preview_url ?? p.url} fit="contain" onClick={() => setLightbox(p.url)} className="max-h-72 w-full" />
                       ))}
                     </div>
                   )}
