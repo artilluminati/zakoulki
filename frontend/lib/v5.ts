@@ -105,7 +105,7 @@ export async function fetchMapPoints(bbox: { north: number; south: number; east:
   return res.data as { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null }[];
 }
 
-export async function createGeoPlace(p: { name: string; latitude: number; longitude: number; address?: string | null; district?: string | null; street?: string | null }) {
+export async function createGeoPlace(p: { name: string; latitude: number; longitude: number; address?: string | null; district?: string | null; street?: string | null; area?: [number, number][] | null }) {
   const res = await api.post("/geo-places", { ...p, yandex_kind: "self" });
   return res.data as GeoPlaceV5;
 }

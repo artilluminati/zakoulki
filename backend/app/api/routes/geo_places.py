@@ -16,6 +16,7 @@ class GeoPlaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     latitude: float
     longitude: float
+    area: list[list[float]] | None = Field(default=None, description="полигон [[lat,lng],...], минимум 3 точки")
     yandex_kind: str = "self"
     yandex_id: str | None = None
     address: str | None = None
@@ -30,8 +31,15 @@ def _out(p: GeoPlace) -> dict:
     from app.services.mapshot import preview_name as _pv
     _map_pv = _pv(p.id)
     has_map = _os.path.exists(_os.path.join(_settings.UPLOAD_DIR, _map_pv))
+    import json as _json2
+    area = None
+    try:
+        area = _json2.loads(p.area_json) if p.area_json else None
+    except Exception:
+        area = None
     return {"id": p.id, "name": p.name, "address": p.address, "district": p.district,
             "street": p.street, "lat": p.latitude, "lng": p.longitude,
+            "area": area,
             "yandex_kind": p.yandex_kind, "preview_url": p.preview_url,
             "map_preview": f"/uploads/{_map_pv}" if has_map else None}
 
@@ -67,15 +75,27 @@ def search_places(q: str = Query(min_length=2), lat: float | None = None, lng: f
 
 @router.post("", status_code=201)
 def create_place(data: GeoPlaceCreate, background: BackgroundTasks, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    p = GeoPlace(**data.model_dump(), created_by=user.id)
+    import json as _json
+    area = None
+    if data.area:
+        pts = [[float(p[0]), float(p[1])] for p in data.area if len(p) >= 2]
+        if len(pts) >= 3:
+            area = _json.dumps(pts)
+    payload = data.model_dump(exclude={"area"})
+    p = GeoPlace(**payload, area_json=area, created_by=user.id)
     db.add(p); db.commit(); db.refresh(p)
     # превью карты — фоном, чтобы не тормозить ответ
     from app.services.mapshot import render_preview, preview_name
     from app.core.config import settings as _settings
     import os as _os
+    import json as _json3
     pid, plat, plng = p.id, p.latitude, p.longitude
+    try:
+        parea = _json3.loads(area) if area else None
+    except Exception:
+        parea = None
     updir = _settings.UPLOAD_DIR
-    background.add_task(render_preview, plat, plng, _os.path.join(updir, preview_name(pid)))
+    background.add_task(render_preview, plat, plng, _os.path.join(updir, preview_name(pid)), parea)
     return _out(p)
 
 
@@ -122,11 +142,17 @@ def map_points(north: float, south: float, east: float, west: float,
             from app.core.config import settings as _settings
             pv = f"pv_{cover.file_name}"
             cover_url = f"/uploads/{pv}" if _os.path.exists(_os.path.join(_settings.UPLOAD_DIR, pv)) else f"/uploads/{cover.file_name}"
+        import json as _json
+        try:
+            area = _json.loads(t.place.area_json) if t.place.area_json else None
+        except Exception:
+            area = None
         out.append({"id": t.id, "lat": t.place.latitude, "lng": t.place.longitude,
                     "is_offtop": t.is_offtop,
                     "comments": t.comments_count,
                     "has_photo": cover is not None,
-                    "cover_url": cover_url})
+                    "cover_url": cover_url,
+                    "area": area})
     return out
 
 

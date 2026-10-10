@@ -35,6 +35,19 @@ export default function CreatePage() {
   const [pendingGeo, setPendingGeo] = useState<{ latitude: number; longitude: number } | null>(null);
   const [pendingLabel, setPendingLabel] = useState<{ name: string; address?: string | null } | null>(null);
   const [resolving, setResolving] = useState(false);
+  // территория: вершины полигона (центр считается автоматически)
+  const [areaMode, setAreaMode] = useState(false);
+  const [vertices, setVertices] = useState<[number, number][]>([]);
+
+  const centroid = (vs: [number, number][]) =>
+    vs.length
+      ? { latitude: vs.reduce((s, v) => s + v[0], 0) / vs.length, longitude: vs.reduce((s, v) => s + v[1], 0) / vs.length }
+      : null;
+
+  const onMapVertex = (latitude: number, longitude: number) => {
+    if (!areaMode) return;
+    setVertices((prev) => (prev.length >= 30 ? prev : [...prev, [latitude, longitude]]));
+  };
 
   const resolveGeo = async (latitude: number, longitude: number) => {
     setResolving(true);
@@ -169,7 +182,17 @@ export default function CreatePage() {
     setSaving(true); setError(null);
     try {
       let placeId = place && place.id > 0 ? place.id : null;
-      if (!placeId && pendingGeo) {
+      if (!placeId && vertices.length >= 3) {
+        const c = centroid(vertices)!;
+        const r = await reverseGeocode(c.latitude, c.longitude).catch(() => null);
+        const p = await createGeoPlace({
+          name: r?.name || "Территория",
+          latitude: c.latitude, longitude: c.longitude,
+          address: r?.address || null, district: r?.district || null, street: r?.street || null,
+          area: vertices,
+        });
+        placeId = p.id;
+      } else if (!placeId && pendingGeo) {
         const p = await createGeoPlace({
           name: pendingLabel?.name || "Точка на карте",
           latitude: pendingGeo.latitude, longitude: pendingGeo.longitude,
@@ -280,19 +303,59 @@ export default function CreatePage() {
         </div>
       )}
 
-      {/* точка */}
+      {/* точка / территория */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600" /> Место</span>
-          {place || pendingGeo ? (
-            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
-          ) : (
+          <span className="flex gap-1 text-xs">
+            <button
+              type="button"
+              onClick={() => { setAreaMode(false); setVertices([]); }}
+              className={`rounded-lg px-2 py-1 font-bold ${!areaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+            >
+              Точка
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAreaMode(true); setPlace(null); setPendingGeo(null); setPendingLabel(null); }}
+              className={`rounded-lg px-2 py-1 font-bold ${areaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+            >
+              Территория
+            </button>
+          </span>
+          {(place || pendingGeo || vertices.length > 0) && (
+            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); setVertices([]); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
+          )}
+          {!place && !pendingGeo && vertices.length === 0 && !areaMode && (
             <button onClick={useGeolocation} disabled={geoLocating} className="text-xs font-bold text-emerald-700 disabled:opacity-50">
               {geoLocating ? "Определяем…" : "Моя геолокация"}
             </button>
           )}
         </div>
-        {place ? (
+        {areaMode ? (
+          <div className="mt-2">
+            <div className="text-xs text-slate-500">
+              Кликайте по карте — точки соединятся в территорию. Нужно минимум 3.
+              {vertices.length > 0 && ` · Точек: ${vertices.length}`}
+            </div>
+            <div className="mt-1.5">
+              <MiniMap
+                lat={pendingGeo?.latitude ?? 55.755} lng={pendingGeo?.longitude ?? 37.617}
+                onMove={() => { /* в режиме территории метка не двигается */ }}
+                areaMode vertices={vertices} onVertex={onMapVertex}
+              />
+            </div>
+            {vertices.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setVertices([])}
+                className="mt-1.5 text-xs font-semibold text-slate-400 hover:text-red-500"
+              >
+                Начать заново
+              </button>
+            )}
+          </div>
+        ) : place ? (
           <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
             <div className="font-bold text-emerald-800">{place.name}</div>
             <div className="text-xs text-emerald-600">{[place.address, place.district].filter(Boolean).join(" · ")}</div>

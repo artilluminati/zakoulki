@@ -222,7 +222,7 @@ export default function MapPage() {
                 <input
                   placeholder="Адрес, место, вопрос…"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") router.push(`/?search=${encodeURIComponent((e.target as HTMLInputElement).value)}`);
+                    if (e.key === "Enter") router.push(`/search?q=${encodeURIComponent((e.target as HTMLInputElement).value)}`);
                   }}
                   className="w-full bg-transparent text-[15px] outline-none placeholder:text-slate-400"
                 />

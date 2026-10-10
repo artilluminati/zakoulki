@@ -20,6 +20,8 @@ class GeoPlace(Base):
     street: Mapped[str | None] = mapped_column(String(200), nullable=True)
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
+    # территория: полигон [[lat, lng], ...] минимум 3 точки (JSON). Центр — в lat/lng.
+    area_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     preview_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))

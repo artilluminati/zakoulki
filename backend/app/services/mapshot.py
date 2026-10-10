@@ -30,8 +30,9 @@ def _fetch_tile(x: int, y: int, z: int, timeout: int = 4):
     return Image.open(io.BytesIO(data)).convert("RGB")
 
 
-def render_preview(lat: float, lng: float, out_path: str) -> bool:
+def render_preview(lat: float, lng: float, out_path: str, area: list | None = None) -> bool:
     """True если получилось с тайлами, False если заглушка (тоже пишется)."""
+    to_px = None
     try:
         xt, yt = _tile_xy(lat, lng, Z)
         x0, y0 = math.floor(xt) - 1, math.floor(yt) - 1
@@ -45,12 +46,25 @@ def render_preview(lat: float, lng: float, out_path: str) -> bool:
                 canvas.paste(tile, (dx * 256, dy * 256))
         cx = int((xt - x0) * 256)
         cy = int((yt - y0) * 256)
+
+        def to_px(la: float, ln: float) -> tuple[int, int]:
+            px, py = _tile_xy(la, ln, Z)
+            return int((px - x0) * 256 - (cx - W // 2)), int((py - y0) * 256 - (cy - H // 2))
+
         canvas = canvas.crop((cx - W // 2, cy - H // 2, cx + W // 2, cy + H // 2))
     except Exception:
         canvas = Image.new("RGB", (W, H), (226, 232, 240))
         cx, cy = W // 2, H // 2
-    d = ImageDraw.Draw(canvas)
+        to_px = None
+    d = ImageDraw.Draw(canvas, "RGBA")
     cx, cy = W // 2, H // 2
+    if area and to_px:
+        try:
+            pts = [to_px(float(p[0]), float(p[1])) for p in area if len(p) >= 2]
+            if len(pts) >= 3:
+                d.polygon(pts, fill=(5, 150, 105, 60), outline=(5, 150, 105), width=3)
+        except Exception:
+            pass
     d.ellipse([cx - 26, cy - 26, cx + 26, cy + 26], fill=(163, 230, 53, 90))
     d.ellipse([cx - 13, cy - 13, cx + 13, cy + 13], fill=(5, 150, 105), outline=(255, 255, 255), width=3)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)

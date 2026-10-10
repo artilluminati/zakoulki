@@ -37,13 +37,19 @@ class CommentCreate(BaseModel):
 
 def _place_out(p) -> dict:
     import os as _os
+    import json as _json
     from app.core.config import settings as _settings
     from app.services.mapshot import preview_name as _pv
     _map_pv = _pv(p.id)
     has_map = _os.path.exists(_os.path.join(_settings.UPLOAD_DIR, _map_pv))
+    try:
+        area = _json.loads(p.area_json) if p.area_json else None
+    except Exception:
+        area = None
     return {"id": p.id, "name": p.name, "address": p.address,
             "district": p.district, "lat": p.latitude, "lng": p.longitude,
             "preview_url": p.preview_url,
+            "area": area,
             "map_preview": f"/uploads/{_map_pv}" if has_map else None}
 
 
@@ -204,7 +210,7 @@ def list_threads(
     if has_geo is True:
         # «Важное»: признанные важными + вопросы с точкой
         from sqlalchemy import or_ as _or
-        q = q.filter(_or_(Thread.is_important == True, Thread.place_id.isnot(None)))  # noqa: E712
+        q = q.filter(_or(Thread.is_important == True, Thread.place_id.isnot(None)))  # noqa: E712
     if has_geo is False:
         q = q.filter(Thread.place_id.is_(None))
     if is_offtop is not None:

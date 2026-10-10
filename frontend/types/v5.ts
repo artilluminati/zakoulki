@@ -7,6 +7,7 @@ export interface GeoPlaceV5 {
   street?: string | null;
   lat: number;
   lng: number;
+  area?: [number, number][] | null;
   yandex_kind: string;
   preview_url?: string | null;
   map_preview?: string | null;
