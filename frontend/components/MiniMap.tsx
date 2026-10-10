@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Maximize2, X, Search } from "lucide-react";
 import { loadYandex } from "@/lib/yandex";
-import { makePin, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
+import { makePin, makeDot, PIN_SIZE, PIN_OFFSET, DOT_SIZE, DOT_OFFSET } from "@/lib/mapIcons";
 import { searchGeoPlaces } from "@/lib/v5";
 import type { GeoPlaceV5 } from "@/types/v5";
 
@@ -108,7 +108,12 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
       if (areaMode) {
         const ymaps = (window as any).ymaps;
         for (const [la, ln] of vertices) {
-          const d = new ymaps.Placemark([la, ln], {}, { preset: "islands#greenDotIcon" });
+          const d = new ymaps.Placemark([la, ln], {}, {
+            iconLayout: "default#image",
+            iconImageHref: makeDot("#059669"),
+            iconImageSize: [...DOT_SIZE],
+            iconImageOffset: [...DOT_OFFSET],
+          });
           map.geoObjects.add(d);
           fresh.push(d);
         }
@@ -151,12 +156,12 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
       onClick={expanded ? toggleExpand : undefined}
     >
       <div
-        className={expanded
+        className={`${expanded
           ? "relative mx-auto h-full max-w-3xl overflow-hidden rounded-2xl"
-          : "relative h-full w-full overflow-hidden rounded-xl"}
+          : "relative h-full w-full overflow-hidden rounded-xl"}${areaMode ? " minimap-area" : ""}`}
         onClick={expanded ? (e) => e.stopPropagation() : undefined}
       >
-        <div ref={ref} className="absolute inset-0 overflow-hidden bg-slate-100" />
+        <div ref={ref} className={`absolute inset-0 overflow-hidden bg-slate-100 ${areaMode ? "cursor-crosshair" : ""}`} />
         {expanded && (
           <div className="absolute left-2 right-12 top-2 z-10">
             <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-lg">

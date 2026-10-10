@@ -57,3 +57,17 @@ export const CLUSTER_OFFSET: [number, number] = [-32, -32];
 
 export const PIN_SIZE: [number, number] = [44, 48];
 export const PIN_OFFSET: [number, number] = [-22, -44];
+
+/** Маленькая капля-пин для вершин территории и прочих мелких меток. */
+export function makeDot(color = "#059669"): string {
+  return svgUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">` +
+      `<ellipse cx="12" cy="29.5" rx="5" ry="1.8" fill="rgba(2,6,23,.25)"/>` +
+      `<path d="M12 1a10 10 0 0 1 10 10c0 7.5-10 19-10 19S2 18.5 2 11a10 10 0 0 1 10-10z" fill="${color}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>` +
+      `<circle cx="12" cy="11" r="3.6" fill="#fff"/>` +
+      `</svg>`
+  );
+}
+
+export const DOT_SIZE: [number, number] = [24, 32];
+export const DOT_OFFSET: [number, number] = [-12, -30];

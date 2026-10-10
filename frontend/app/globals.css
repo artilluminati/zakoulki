@@ -19,6 +19,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* режим территории: прицел вместо grab-руки поверх тайлов Яндекса */
+.minimap-area, .minimap-area * {
+  cursor: crosshair !important;
+}
+
 * { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,.2) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(15,23,42,.18); border-radius: 999px; }
