@@ -389,7 +389,7 @@ export default function CreatePage() {
                 className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
               />
               <button onClick={useGeolocation} disabled={geoLocating} className="shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold text-emerald-700 disabled:opacity-50">
-                {geoLocating ? "…" : "Я здесь"}
+                {geoLocating ? "…" : "Найти меня"}
               </button>
             </div>
             {found.map((p) => (
