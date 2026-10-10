@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { likeThread, reportThread, bookmarkThread } from "@/lib/v5";
@@ -28,11 +29,23 @@ function avatarColor(name?: string | null) {
 /** Рендер body_html: заменяем <a class=place> на чип с иконкой + тултип (фото/улица·район). */
 export function ThreadHtml({ html, placePreview }: { html: string; placePreview?: Record<number, { name: string; address?: string | null; district?: string | null; preview_url?: string | null }> }) {
   const [tip, setTip] = useState<number | null>(null);
+  const router = useRouter();
+
+  // внутренние ссылки (теги, пользователи) — через роутер без перезагрузки
+  const onNav = (e: React.MouseEvent) => {
+    const a = (e.target as HTMLElement).closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href") ?? "";
+    if (href.startsWith("/")) {
+      e.preventDefault();
+      router.push(href);
+    }
+  };
 
   // грубо парсим чипы мест регуляркой — без dangerouslySetInnerHTML для всего
   const parts = html.split(/(<a class="place" data-place-id="\d+" href="[^"]*">.*?<\/a>)/g);
   return (
-    <div className="thread-html text-[15px] leading-relaxed">
+    <div className="thread-html text-[15px] leading-relaxed" onClick={onNav}>
       {parts.map((p, i) => {
         const m = p.match(/data-place-id="(\d+)".*?>(.*?)<\/a>/);
         if (!m) return <span key={i} dangerouslySetInnerHTML={{ __html: p }} />;

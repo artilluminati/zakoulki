@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag } from "lucide-react";
 import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment } from "@/lib/v5";
@@ -12,6 +12,7 @@ import { useToast } from "@/lib/toast";
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
   const [t, setT] = useState<Awaited<ReturnType<typeof fetchThread>> | null>(null);
@@ -84,8 +85,14 @@ export default function ThreadPage() {
       setReply("");
       toast("Ответ опубликован", "success");
       load();
-    } catch {
-      toast("Не опубликовалось — попробуйте ещё раз", "error");
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 401) {
+        toast("Сессия истекла — войдите снова", "error");
+        router.push("/login");
+      } else {
+        toast("Не опубликовалось — попробуйте ещё раз", "error");
+      }
     } finally {
       setSending(false);
     }

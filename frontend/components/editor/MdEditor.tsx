@@ -32,6 +32,12 @@ export default function MdEditor({
     setActive(idx);
   };
 
+  // если строк стало меньше чем active (очистка извне) — сбрасываем
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- сброс вышедшего за границы индекса
+  useEffect(() => {
+    if (active !== null && active >= lines.length) setActive(null);
+  }, [lines.length, active]);
+
   // фокус + каретка после активации строки
   useEffect(() => {
     const el = areaRef.current;

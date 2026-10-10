@@ -160,6 +160,13 @@ export default function CreatePage() {
       if (failedPhotos > 0) toast(`Опубликовано, но ${failedPhotos} фото не загрузилось`, "error");
       router.push(`/thread/${t.id}`);
     } catch (e: unknown) {
+      const status = (e as { response?: { status?: number; data?: { detail?: string } } })?.response?.status;
+      if (status === 401) {
+        toast("Сессия истекла — войдите снова", "error");
+        router.push("/login");
+        setSaving(false);
+        return;
+      }
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "Не опубликовалось";
       setError(msg); setSaving(false);
     }
