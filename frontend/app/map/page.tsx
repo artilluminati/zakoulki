@@ -31,7 +31,7 @@ export default function MapPage() {
   const toast = useToast();
   const { scope } = useScope();
   const scopeRef = useRef(scope);
-  scopeRef.current = scope;
+  useEffect(() => { scopeRef.current = scope; }, [scope]);
   const focusPlace = params.get("place");
   const ref = useRef<HTMLDivElement>(null);
   const reqRef = useRef(0);
@@ -169,7 +169,6 @@ export default function MapPage() {
       if (alive) setPts(list);
     })();
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, scope]);
 
   // перерисовка меток при смене точек/фильтра/выбора
