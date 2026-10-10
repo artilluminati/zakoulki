@@ -82,6 +82,11 @@ export async function createGeoPlace(p: { name: string; latitude: number; longit
   return res.data as GeoPlaceV5;
 }
 
+export async function reverseGeocode(lat: number, lng: number) {
+  const res = await api.get("/geo-places/reverse", { params: { lat, lng } });
+  return res.data as { name: string; address?: string | null; district?: string | null; street?: string | null; lat: number; lng: number };
+}
+
 export async function uploadThreadPhoto(threadId: number, file: File) {
   const form = new FormData();
   form.append("file", file);

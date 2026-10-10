@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { MapPin, X, ImagePlus } from "lucide-react";
 import MdEditor from "@/components/editor/MdEditor";
 import TagPicker from "@/components/TagPicker";
-import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto } from "@/lib/v5";
+import MiniMap from "@/components/MiniMap";
+import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
@@ -29,6 +30,20 @@ export default function CreatePage() {
   const [body, setBody] = useState("");
   const [place, setPlace] = useState<GeoPlaceV5 | null>(null);
   const [pendingGeo, setPendingGeo] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [pendingLabel, setPendingLabel] = useState<{ name: string; address?: string | null } | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  const resolveGeo = async (latitude: number, longitude: number) => {
+    setResolving(true);
+    try {
+      const r = await reverseGeocode(latitude, longitude);
+      setPendingLabel({ name: r.name, address: r.address });
+    } catch {
+      setPendingLabel({ name: "Точка на карте", address: null });
+    } finally {
+      setResolving(false);
+    }
+  };
   const [tags, setTags] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
 
@@ -108,6 +123,7 @@ export default function CreatePage() {
         navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
       const { latitude, longitude } = pos.coords;
       setPendingGeo({ latitude, longitude });
+      resolveGeo(latitude, longitude);
       try { setNearby(await fetchNearbyThreads(latitude, longitude)); } catch { /* ignore */ }
     } catch {
       setError("Не можем определить местоположение — разрешите доступ в браузере");
@@ -116,13 +132,23 @@ export default function CreatePage() {
     }
   };
 
+  const onPinMove = (latitude: number, longitude: number) => {
+    setPendingGeo({ latitude, longitude });
+    resolveGeo(latitude, longitude);
+    fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
+  };
+
   const publish = async () => {
     if (!body.trim() || saving) return;
     setSaving(true); setError(null);
     try {
       let placeId = place && place.id > 0 ? place.id : null;
       if (!placeId && pendingGeo) {
-        const p = await createGeoPlace({ name: "Точка на карте", latitude: pendingGeo.latitude, longitude: pendingGeo.longitude, address: "Моя геолокация" });
+        const p = await createGeoPlace({
+          name: pendingLabel?.name || "Точка на карте",
+          latitude: pendingGeo.latitude, longitude: pendingGeo.longitude,
+          address: pendingLabel?.address || null,
+        });
         placeId = p.id;
       }
       const t = await createThread({ title: title || null, body_md: body, place_id: placeId, tags });
@@ -216,7 +242,7 @@ export default function CreatePage() {
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600" /> Место</span>
           {place || pendingGeo ? (
-            <button onClick={() => { setPlace(null); setPendingGeo(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
+            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
           ) : (
             <button onClick={useGeolocation} disabled={geoLocating} className="text-xs font-bold text-emerald-700 disabled:opacity-50">
               {geoLocating ? "Определяем…" : "Моя геолокация"}
@@ -229,9 +255,19 @@ export default function CreatePage() {
             <div className="text-xs text-emerald-600">{[place.address, place.district].filter(Boolean).join(" · ")}</div>
           </div>
         ) : pendingGeo ? (
-          <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
-            <div className="font-bold text-emerald-800">Точка на карте</div>
-            <div className="text-xs text-emerald-600">Ваша геолокация · прикрепится при публикации</div>
+          <div className="mt-2 overflow-hidden rounded-xl bg-emerald-50">
+            <div className="px-3 pt-2.5">
+              <div className="font-bold text-emerald-800">
+                {resolving ? "Определяем адрес…" : (pendingLabel?.name ?? "Точка на карте")}
+              </div>
+              {pendingLabel?.address && !resolving && (
+                <div className="truncate text-xs text-emerald-600">{pendingLabel.address}</div>
+              )}
+              <div className="pb-1 text-[11px] text-emerald-600/70">Метку можно перетащить</div>
+            </div>
+            <div className="p-1.5">
+              <MiniMap lat={pendingGeo.latitude} lng={pendingGeo.longitude} onMove={onPinMove} />
+            </div>
           </div>
         ) : (
           <>

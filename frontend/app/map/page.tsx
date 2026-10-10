@@ -6,22 +6,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
 import { fetchMapPoints, fetchThread } from "@/lib/v5";
+import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_ICON, CLUSTER_SIZE, CLUSTER_OFFSET, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import { useToast } from "@/lib/toast";
 import type { ThreadV5 } from "@/types/v5";
-
-function loadYandex(key: string): Promise<any> {
-  if (typeof window === "undefined") return Promise.reject("ssr");
-  if ((window as any).ymaps) return (window as any).ymaps.ready();
-  return new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = `https://api-maps.yandex.ru/2.1/?apikey=${key}&lang=ru_RU`;
-    s.onload = () => (window as any).ymaps.ready().then(() => resolve((window as any).ymaps)).catch(reject);
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-}
 
 interface MapPt { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; }
 

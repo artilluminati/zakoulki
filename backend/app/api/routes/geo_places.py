@@ -102,6 +102,33 @@ def create_place(data: GeoPlaceCreate, db: Session = Depends(get_db), user: User
     return _out(p)
 
 
+@router.get("/reverse")
+def reverse_geocode(lat: float, lng: float):
+    """Координаты -> человеческий адрес (Nominatim, бесплатно). Для превью геолокации."""
+    try:
+        import urllib.parse
+        import urllib.request
+        import json as _json
+        params = urllib.parse.urlencode({"lat": lat, "lon": lng, "format": "json", "accept-language": "ru"})
+        req = urllib.request.Request(
+            f"https://nominatim.openstreetmap.org/reverse?{params}",
+            headers={"User-Agent": "zakoulki-app/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = _json.load(r)
+        addr = data.get("address", {})
+        disp = data.get("display_name", "")
+        return {
+            "name": addr.get("road", addr.get("suburb", addr.get("city", disp.split(",")[0] if disp else "Точка на карте"))),
+            "address": disp or None,
+            "district": addr.get("city") or addr.get("town") or addr.get("borough"),
+            "street": addr.get("road"),
+            "lat": lat, "lng": lng,
+        }
+    except Exception:
+        return {"name": "Точка на карте", "address": None, "district": None, "street": None, "lat": lat, "lng": lng}
+
+
 @router.get("/nearby")
 def nearby_threads(lat: float, lng: float, radius: float = Query(0.3, description="км, default 300м"),
                    db: Session = Depends(get_db)):
