@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- дебаунс-поиск разделов и мест */
 
 import { useEffect, useState } from "react";
 import { ChevronDown, MapPin, Plus, Search } from "lucide-react";
