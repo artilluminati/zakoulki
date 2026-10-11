@@ -2,6 +2,20 @@ import { api } from "@/lib/api";
 import type { ThreadV5, GeoPlaceV5 } from "@/types/v5";
 import type { Scope } from "@/lib/scope";
 
+/** Анонимный id зрителя для честных просмотров: один на браузер. */
+export function viewerId(): string {
+  try {
+    let v = localStorage.getItem("zakoulki_viewer");
+    if (!v) {
+      v = (crypto.randomUUID ? crypto.randomUUID() : `v-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      localStorage.setItem("zakoulki_viewer", v);
+    }
+    return v;
+  } catch {
+    return "unknown";
+  }
+}
+
 /** Параметры региона: комбо «город и область» идет через OR, обычное — через AND. */
 export function scopeParams(s: Scope): Record<string, string | string[]> {
   if (s.any && s.any.length > 0) return { geo_any: s.any };
@@ -29,7 +43,7 @@ export async function fetchThreads(params: Record<string, string | number | bool
 }
 
 export async function fetchThread(id: number | string) {
-  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; author_username?: string | null; author_badge?: string | null; body_md: string; body_html: string; photos?: { id: number; url: string; preview_url?: string }[]; created_at: string }[] }>(`/threads/${id}`);
+  const res = await api.get<ThreadV5 & { comments: { id: number; parent_id?: number | null; author_id: number; author_username?: string | null; author_badge?: string | null; body_md: string; body_html: string; photos?: { id: number; url: string; preview_url?: string }[]; created_at: string }[] }>(`/threads/${id}`, { params: { viewer: viewerId() } });
   return res.data;
 }
 

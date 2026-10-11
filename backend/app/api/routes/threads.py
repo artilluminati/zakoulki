@@ -450,11 +450,25 @@ def _poll_out(db: Session, thread_id: int, user_id: int | None) -> dict | None:
 
 @router.get("/{thread_id}")
 def get_thread(thread_id: int, db: Session = Depends(get_db),
-               user: User | None = Depends(get_optional_user)):
+               user: User | None = Depends(get_optional_user),
+               viewer: str | None = Query(None, max_length=64, description="анонимный id зрителя из localStorage")):
+    from datetime import datetime, timezone as _tz
+    from app.models.thread_view import ThreadView
     t = db.query(Thread).options(joinedload(Thread.place)).filter(Thread.id == thread_id).first()
     if not t:
         raise HTTPException(404, "Тред не найден")
-    t.views += 1; db.commit()
+    # уникальный просмотр: один зритель — +1 раз в 24 часа (поллинг и F5 не накручивают)
+    key = f"u:{user.id}" if user else (viewer.strip()[:64] if viewer and viewer.strip() else None)
+    if key:
+        now = datetime.now(_tz.utc)
+        seen = db.get(ThreadView, {"thread_id": thread_id, "viewer": key})
+        if not seen:
+            db.add(ThreadView(thread_id=thread_id, viewer=key, viewed_at=now))
+            t.views += 1
+        elif not seen.viewed_at or (now - seen.viewed_at).total_seconds() > 24 * 3600:
+            seen.viewed_at = now
+            t.views += 1
+    db.commit()
     out = _thread_out(t, db, user.id if user else None)
     from app.models.thread_comment import CommentVote
     my_votes = {}
