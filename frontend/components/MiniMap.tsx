@@ -8,7 +8,7 @@ import { makePin, makeDot, PIN_SIZE, PIN_OFFSET, DOT_SIZE, DOT_OFFSET } from "@/
 import { searchGeoPlaces } from "@/lib/v5";
 import type { GeoPlaceV5 } from "@/types/v5";
 
-export interface MapCenter { lat: number; lng: number; nonce: number; }
+export interface MapCenter { lat: number; lng: number; nonce: number; zoom?: number; }
 
 /** Мини-карта: одна инстанция на оба режима (позиция не слетает).
  * center — явные запросы центрирования (nonce меняется), pin — точка. */
@@ -102,7 +102,7 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
       } else {
         try { markRef.current?.options.set("visible", false); } catch { /* ignore */ }
       }
-      mapRef.current?.setCenter([center.lat, center.lng]);
+      mapRef.current?.setCenter([center.lat, center.lng], center.zoom ?? mapRef.current?.getZoom());
     } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center.nonce, areaMode]);

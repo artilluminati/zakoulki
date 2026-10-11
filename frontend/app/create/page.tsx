@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect -- эффекты ниже синхронизируют состояние с сервером/localStorage */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, X, ImagePlus } from "lucide-react";
 import MdEditor from "@/components/editor/MdEditor";
@@ -61,8 +61,25 @@ export default function CreatePage() {
 
   // вид карты (центр держится при переключении режимов)
   const [view, setView] = useState({ lat: 55.755, lng: 37.617, nonce: 0 });
-  const goView = (latitude: number, longitude: number) =>
-    setView((v) => ({ lat: latitude, lng: longitude, nonce: v.nonce + 1 }));
+  const goView = (latitude: number, longitude: number, zoom?: number) =>
+    setView((v) => ({ lat: latitude, lng: longitude, nonce: v.nonce + 1, ...(zoom ? { zoom } : {}) }));
+
+  // автопереход карты на глобально выбранный регион (один раз, пока точку не выбрали)
+  const scopeJumped = useRef(false);
+  useEffect(() => {
+    if (scopeJumped.current) return;
+    if (place || pendingGeo || vertices.length > 0) { scopeJumped.current = true; return; }
+    if (params.get("lat") && params.get("lng")) { scopeJumped.current = true; return; }
+    const label = scope.district || scope.city || scope.region;
+    if (!label) { scopeJumped.current = true; return; }
+    scopeJumped.current = true;
+    const zoom = scope.district ? 13 : scope.city ? 12 : 9;
+    searchGeoPlaces(label).then((list) => {
+      const hit = list[0];
+      if (hit) goView(hit.lat, hit.lng, zoom);
+    }).catch(() => { /* ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope]);
 
   const resolveGeo = async (latitude: number, longitude: number) => {
     setResolving(true);

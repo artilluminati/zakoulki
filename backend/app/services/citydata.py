@@ -25,15 +25,23 @@ _nominatim_last_call = 0.0
 _nominatim_cache: dict = {}
 
 
+class _NominatimBusy(Exception):
+    """Сеть уже занята другим запросом — fallback пропускаем, не копим очередь."""
+
+
 def _nominatim_get(url: str, cache_key: tuple):
-    """GET с кэшем и троттлингом. При 429/ошибке — исключение наружу."""
+    """GET с кэшем и троттлингом. При 429/ошибке/занятости — исключение наружу,
+    вызывающий отдаёт локальные данные. Очередь НЕ копим: иначе запросы держат
+    DB-коннекты пула и кладут весь бэкенд (502)."""
     now = _time.monotonic()
     hit = _nominatim_cache.get(cache_key)
     if hit and now - hit[1] < _NOMINATIM_CACHE_TTL:
         return hit[0]
     global _nominatim_last_call
-    with _nominatim_lock:
-        # перепроверка кэша: пока ждали лок, другой поток мог уже сходить
+    if not _nominatim_lock.acquire(blocking=False):
+        raise _NominatimBusy()
+    try:
+        # перепроверка кэша: пока ждали, другой поток мог уже сходить
         now = _time.monotonic()
         hit = _nominatim_cache.get(cache_key)
         if hit and now - hit[1] < _NOMINATIM_CACHE_TTL:
@@ -52,6 +60,8 @@ def _nominatim_get(url: str, cache_key: tuple):
             for k in [k for k, (_, ts) in _nominatim_cache.items() if ts < cutoff]:
                 _nominatim_cache.pop(k, None)
         return data
+    finally:
+        _nominatim_lock.release()
 
 
 def _nominatim_kind(item: dict) -> str | None:
