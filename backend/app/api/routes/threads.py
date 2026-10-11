@@ -573,6 +573,14 @@ def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = 
     db.commit()
 
 
+def _move_comments_to_talk(db: Session, hub: Thread, talk: Thread) -> None:
+    """Ответы, оставленные пока тред был вопросом, переезжают в обсуждение раздела."""
+    db.query(ThreadComment).filter(ThreadComment.thread_id == hub.id).update(
+        {ThreadComment.thread_id: talk.id}, synchronize_session=False)
+    hub.comments_count = 0
+    talk.comments_count = db.query(ThreadComment).filter(ThreadComment.thread_id == talk.id).count()
+
+
 def _make_talk(db: Session, hub: Thread, author_id: int) -> Thread:
     """Тред общего обсуждения уголка. Раздел готов сразу, модерация — жалобами."""
     name = (hub.title or "Раздел").strip() or "Раздел"
@@ -653,6 +661,7 @@ def make_hub(thread_id: int, data: HubTitle, db: Session = Depends(get_db),
     t.is_offtop = False
     db.flush()
     talk = _make_talk(db, t, user.id)
+    _move_comments_to_talk(db, t, talk)
     db.commit(); db.refresh(t)
     out = _thread_out(t, db, user.id)
     out["talk_id"] = talk.id
@@ -868,7 +877,7 @@ def vote_hub(thread_id: int, db: Session = Depends(get_db),
         t.is_hub = True
         t.is_offtop = False
         db.flush()
-        _make_talk(db, t, t.author_id)
+        _move_comments_to_talk(db, t, _make_talk(db, t, t.author_id))
     db.commit()
     return _thread_out(t, db, user.id)
 
