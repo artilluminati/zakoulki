@@ -9,10 +9,49 @@
 import urllib.parse
 import urllib.request
 import json as _json
+import threading as _threading
+import time as _time
 
 from app.core.config import settings
 
 UA = {"User-Agent": "zakoulki-app/1.0"}
+
+# Nominatim: лимит 1 req/s с IP. Кэш + троттлинг, иначе 429 при
+# параллельных подсказках (ScopePicker шлёт city+district+region разом).
+_NOMINATIM_MIN_INTERVAL = 1.2
+_NOMINATIM_CACHE_TTL = 3600.0
+_nominatim_lock = _threading.Lock()
+_nominatim_last_call = 0.0
+_nominatim_cache: dict = {}
+
+
+def _nominatim_get(url: str, cache_key: tuple):
+    """GET с кэшем и троттлингом. При 429/ошибке — исключение наружу."""
+    now = _time.monotonic()
+    hit = _nominatim_cache.get(cache_key)
+    if hit and now - hit[1] < _NOMINATIM_CACHE_TTL:
+        return hit[0]
+    global _nominatim_last_call
+    with _nominatim_lock:
+        # перепроверка кэша: пока ждали лок, другой поток мог уже сходить
+        now = _time.monotonic()
+        hit = _nominatim_cache.get(cache_key)
+        if hit and now - hit[1] < _NOMINATIM_CACHE_TTL:
+            return hit[0]
+        wait = _NOMINATIM_MIN_INTERVAL - (now - _nominatim_last_call)
+        if wait > 0:
+            _time.sleep(wait)
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = _json.load(r)
+        _nominatim_last_call = _time.monotonic()
+        _nominatim_cache[cache_key] = (data, _nominatim_last_call)
+        # чистим старые записи, чтобы не рос бесконечно
+        if len(_nominatim_cache) > 500:
+            cutoff = _nominatim_last_call - _NOMINATIM_CACHE_TTL
+            for k in [k for k, (_, ts) in _nominatim_cache.items() if ts < cutoff]:
+                _nominatim_cache.pop(k, None)
+        return data
 
 
 def _nominatim_kind(item: dict) -> str | None:
@@ -36,9 +75,8 @@ def nominatim_search(q: str, limit: int = 5) -> list[dict]:
         "q": q, "format": "json", "limit": limit,
         "accept-language": "ru", "countrycodes": "ru",
     })
-    req = urllib.request.Request(f"https://nominatim.openstreetmap.org/search?{params}", headers=UA)
-    with urllib.request.urlopen(req, timeout=5) as r:
-        data = _json.load(r)
+    data = _nominatim_get(f"https://nominatim.openstreetmap.org/search?{params}",
+                          ("search", q.strip().lower(), limit))
     out = []
     for item in data:
         addr = item.get("address", {}) or {}
@@ -58,9 +96,8 @@ def nominatim_search(q: str, limit: int = 5) -> list[dict]:
 
 def nominatim_reverse(lat: float, lng: float) -> dict | None:
     params = urllib.parse.urlencode({"lat": lat, "lon": lng, "format": "json", "accept-language": "ru"})
-    req = urllib.request.Request(f"https://nominatim.openstreetmap.org/reverse?{params}", headers=UA)
-    with urllib.request.urlopen(req, timeout=5) as r:
-        data = _json.load(r)
+    data = _nominatim_get(f"https://nominatim.openstreetmap.org/reverse?{params}",
+                          ("reverse", round(lat, 4), round(lng, 4)))
     addr = data.get("address", {})
     disp = data.get("display_name", "")
     city = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("municipality")

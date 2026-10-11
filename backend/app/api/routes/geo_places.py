@@ -234,12 +234,23 @@ def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"
         query = query.filter(GeoPlace.country == parent)
     rows = query.group_by(col).order_by(func.count(GeoPlace.id).desc()).limit(limit).all()
     out = [{"name": name, "count": count} for name, count in rows]
+    # статический справочник РФ: работает всегда, без сетевых лимитов
+    if q and len(out) < limit:
+        try:
+            from app.services import russia_geo as _rg
+            seen = {str(n).lower() for n, _ in rows if n}
+            for val in _rg.match_static(q, level, limit - len(out)):
+                if val.lower() not in seen:
+                    seen.add(val.lower())
+                    out.append({"name": val, "count": 0})
+        except Exception:
+            pass
     # fallback: города/регионы, которых ещё нет в базе (например Саяногорск) —
     # подтягиваем из бесплатного Nominatim, чтобы выбор региона работал везде
     if q and len(out) < limit:
         try:
             from app.services import citydata as _cd
-            seen = {str(n).lower() for n, _ in rows if n}
+            seen = {o["name"].lower() for o in out}
             ql = q.strip().lower()
             for g in _cd.nominatim_search(q, limit=5):
                 name = (g.get("name") or "").strip()
@@ -278,6 +289,16 @@ def resolve_scope(name: str = Query(min_length=2, max_length=200), db: Session =
            .group_by(GeoPlace.district, GeoPlace.city, GeoPlace.region, GeoPlace.country)
            .order_by(func.count(GeoPlace.id).desc()).first())
     if not row or not row[0]:
+        # статический справочник РФ — без сети и лимитов
+        try:
+            from app.services import russia_geo as _rg
+            hit = _rg.find_city(name)
+            if hit:
+                return {"district": None, "city": hit[0], "region": hit[1], "country": "Россия"}
+            if _rg.is_region(name):
+                return {"district": None, "city": None, "region": name.strip(), "country": "Россия"}
+        except Exception:
+            pass
         # такого нет в базе — пробуем бесплатный Nominatim (города без постов)
         try:
             from app.services import citydata as _cd
