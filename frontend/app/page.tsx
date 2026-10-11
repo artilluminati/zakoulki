@@ -85,6 +85,48 @@ export default function FeedPage() {
   const itemsRef = useRef<ThreadV5[]>([]);
   useEffect(() => { itemsRef.current = items; }, [items]);
 
+  // лёгкий поллинг новых (только сортировка «новые»): раз в 30с, только когда
+  // вкладка видна; новые не вставляем сами — показываем пилюлю, чтобы не прыгала лента
+  const [pending, setPending] = useState<ThreadV5[]>([]);
+  useEffect(() => {
+    setPending([]);
+    if (sort !== "new") return;
+    let alive = true;
+    let fails = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try {
+        if (document.visibilityState === "visible" && itemsRef.current.length > 0) {
+          const data = await fetchThreads({
+            search: search || undefined,
+            sort: "new",
+            has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
+            is_offtop: filter === "offtop" ? true : undefined,
+            ...scopeParams(scope),
+            limit: PAGE,
+            after_id: itemsRef.current[0].id,
+          });
+          if (alive && data.length > 0) {
+            setPending((prev) => {
+              const known = new Set([...itemsRef.current.map((t) => t.id), ...prev.map((t) => t.id)]);
+              const fresh = data.filter((t) => !known.has(t.id));
+              return [...fresh, ...prev].slice(0, PAGE);
+            });
+            fails = 0;
+          } else if (alive) {
+            fails = 0;
+          }
+        }
+      } catch {
+        fails = Math.min(fails + 1, 3);
+      }
+      if (alive) timer = setTimeout(tick, 30000 * 2 ** fails);
+    };
+    timer = setTimeout(tick, 30000);
+    return () => { alive = false; clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, filter, search, geo, scope]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
@@ -290,6 +332,14 @@ export default function FeedPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          {pending.length > 0 && (
+            <button
+              onClick={() => { setItems((prev) => [...pending, ...prev]); setPending([]); }}
+              className="w-full rounded-2xl bg-lime-300 py-2.5 text-sm font-extrabold text-slate-900 shadow-sm transition hover:bg-lime-200 active:scale-[0.99]"
+            >
+              {pending.length} {pending.length === 1 ? "новый вопрос" : pending.length < 5 ? "новых вопроса" : "новых вопросов"} — показать ↑
+            </button>
+          )}
           {items.map((t) => <ThreadCard key={t.id} t={t} />)}
           {hasMore ? (
             <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800">

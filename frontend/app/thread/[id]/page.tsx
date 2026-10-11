@@ -122,6 +122,35 @@ export default function ThreadPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
+  // лёгкий поллинг ответов: раз в 20с, только когда вкладка видна;
+  // сами не подменяем (черновик и скролл целы) — показываем пилюлю
+  const [freshComments, setFreshComments] = useState(0);
+  const knownRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    knownRef.current = new Set((t?.comments ?? []).map((c) => c.id));
+    if (freshComments > 0) setFreshComments(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t?.id, loading]);
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try {
+        if (document.visibilityState === "visible" && !loading) {
+          const fresh = await fetchThread(id);
+          if (!alive) return;
+          const known = knownRef.current;
+          const n = (fresh.comments ?? []).filter((c) => !known.has(c.id)).length;
+          if (n > 0) setFreshComments(n);
+        }
+      } catch { /* ignore — следующий тик повторит */ }
+      if (alive) timer = setTimeout(tick, 20000);
+    };
+    timer = setTimeout(tick, 20000);
+    return () => { alive = false; clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, loading]);
+
   // превью выбранных фото ответа
   useEffect(() => {
     const urls = replyFiles.map((f) => URL.createObjectURL(f));
@@ -452,6 +481,14 @@ export default function ThreadPage() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
         <h2 className="font-extrabold">Ответы · {t.comments?.length ?? 0}</h2>
+        {freshComments > 0 && (
+          <button
+            onClick={() => { load(); }}
+            className="mt-2 w-full rounded-xl bg-lime-300 py-2 text-sm font-extrabold text-slate-900 transition hover:bg-lime-200 active:scale-[0.99]"
+          >
+            {freshComments} {freshComments === 1 ? "новый ответ" : freshComments < 5 ? "новых ответа" : "новых ответов"} — показать ↓
+          </button>
+        )}
         <div className="mt-2 space-y-2">
           {(t.comments ?? []).map((c) => (
             <div key={c.id} id={`comment-${c.id}`} className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-neutral-800">

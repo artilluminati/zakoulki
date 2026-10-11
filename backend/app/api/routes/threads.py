@@ -225,6 +225,7 @@ def list_threads(
     sort: str = Query("new", pattern="^(new|top|near)$"),
     lat: float | None = None, lng: float | None = None, radius: float | None = Query(None, description="км"),
     before_id: int | None = None, limit: int = Query(20, ge=1, le=50),
+    after_id: int | None = Query(None, description="только треды новее id — для лёгкого поллинга ленты"),
     db: Session = Depends(get_db),
 ):
     q = db.query(Thread).options(joinedload(Thread.place)).order_by(Thread.id.desc())
@@ -248,6 +249,8 @@ def list_threads(
             q = q.filter(_loc_or(GeoPlace.country == country, Thread.country == country))
     if before_id:
         q = q.filter(Thread.id < before_id)
+    if after_id:
+        q = q.filter(Thread.id > after_id)
     if author_id:
         q = q.filter(Thread.author_id == author_id)
     if place_id:
