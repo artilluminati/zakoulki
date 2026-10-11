@@ -74,13 +74,8 @@ interface ScopeCtx {
 const Ctx = createContext<ScopeCtx>({ scope: {}, setScope: () => {}, clearScope: () => {} });
 
 export function ScopeProvider({ children }: { children: ReactNode }) {
-  // по умолчанию — домашний город, иначе вся Россия (пустой скоуп = без фильтра)
-  const [scope, setScopeState] = useState<Scope>(() => {
-    try {
-      const h = typeof window !== "undefined" ? localStorage.getItem(HOME_KEY) : null;
-      return h ? { city: h } : {};
-    } catch { return {}; }
-  });
+  // стартуем пустыми (иначе расхождение сервера/клиента), домашний подтянет эффект ниже
+  const [scope, setScopeState] = useState<Scope>({});
 
   useEffect(() => {
     try {
