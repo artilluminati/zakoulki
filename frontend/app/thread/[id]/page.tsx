@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace } from "@/lib/v5";
-import { ThreadHtml, timeAgo, OfficialBadge, HubBadge } from "@/components/ThreadCard";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached } from "@/lib/v5";
+import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge } from "@/components/ThreadCard";
 import HubSection from "@/components/HubSection";
 import MiniMap from "@/components/MiniMap";
 import MdEditor from "@/components/editor/MdEditor";
@@ -16,6 +16,7 @@ import PollView from "@/components/PollView";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
+import type { ThreadV5 } from "@/types/v5";
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
@@ -166,6 +167,16 @@ export default function ThreadPage() {
       toast(`Фото добавлено: ${imgs.length}`, "success");
     }
   };
+
+  // подвопросы раздела: вместо ответов — посты с фильтрами
+  const [attached, setAttached] = useState<ThreadV5[]>([]);
+  const [attSort, setAttSort] = useState<"new" | "top">("new");
+  useEffect(() => {
+    if (t?.is_hub) fetchAttached(t.id).then(setAttached).catch(() => setAttached([]));
+    else setAttached([]);
+  }, [t?.id, t?.is_hub]);
+  const sortedAttached = [...attached].sort((a, b) =>
+    attSort === "top" ? (b.comments_count - a.comments_count || b.id - a.id) : b.id - a.id);
 
   // подсветка коммента из уведомления (#comment-123)
   useEffect(() => {
@@ -466,6 +477,33 @@ export default function ThreadPage() {
         )}
       </article>
 
+      {t.is_hub && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-[15px] font-extrabold dark:text-neutral-100">Вопросы раздела · {attached.length}</h2>
+            <span className="ml-auto flex gap-1 text-xs">
+              {(["new", "top"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setAttSort(s)}
+                  className={`rounded-full px-2.5 py-1 font-bold ${attSort === s ? "bg-slate-900 text-white" : "text-slate-500 dark:text-neutral-400"}`}
+                >
+                  {s === "new" ? "Новые" : "Обсуждают"}
+                </button>
+              ))}
+            </span>
+          </div>
+          {sortedAttached.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+              Пока тихо — <Link href={`/create?hub=${t.id}`} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">задайте первый вопрос</Link>.
+            </div>
+          ) : (
+            sortedAttached.map((a) => <ThreadCard key={a.id} t={a} />)
+          )}
+        </section>
+      )}
+
+      {!t.is_hub && (
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
         <h2 className="font-extrabold">Ответы · {t.comments?.length ?? 0}</h2>
         {freshComments > 0 && (
@@ -578,6 +616,7 @@ export default function ThreadPage() {
           <Link href="/login" className="mt-3 block rounded-xl bg-slate-100 p-3 text-center text-sm dark:bg-neutral-800">Войдите, чтобы ответить →</Link>
         )}
       </section>
+      )}
     </div>
   );
 }
