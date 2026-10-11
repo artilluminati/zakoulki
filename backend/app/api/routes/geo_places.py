@@ -160,9 +160,8 @@ def map_points(north: float, south: float, east: float, west: float,
     items = (db.query(Thread).join(GeoPlace, Thread.place_id == GeoPlace.id)
              .filter(GeoPlace.latitude.between(south, north))
              .filter(GeoPlace.longitude.between(west, east)))
-    # прикреплённые к уголкам вопросы на карте не дублируем —
-    # территория ведёт на свой раздел
-    items = items.filter(Thread.hub_id.is_(None))
+    # все вопросы с точкой участвуют в кластеризации — включая прикреплённые
+    # к разделам: счёт в кружке должен сходиться с реальным числом тредов
     if geo_any:
         vals = [v for v in geo_any if v]
         items = items.filter(_or2(GeoPlace.city.in_(vals), GeoPlace.district.in_(vals), GeoPlace.region.in_(vals)))
@@ -190,7 +189,7 @@ def map_points(north: float, south: float, east: float, west: float,
         except Exception:
             area = None
         out.append({"id": t.id, "lat": t.place.latitude, "lng": t.place.longitude,
-                    "is_offtop": t.is_offtop,
+                    "is_offtop": t.is_offtop, "is_hub": t.is_hub,
                     "comments": t.comments_count,
                     "has_photo": cover is not None,
                     "cover_url": cover_url,

@@ -15,7 +15,7 @@ import type { Scope } from "@/lib/scope";
 import PhotoImg from "@/components/PhotoImg";
 import type { ThreadV5 } from "@/types/v5";
 
-interface MapPt { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; area?: [number, number][] | null; }
+interface MapPt { id: number; lat: number; lng: number; is_offtop: boolean; is_hub?: boolean; comments: number; has_photo: boolean; cover_url?: string | null; area?: [number, number][] | null; }
 
 const FILTERS = ["Все", "Вопросы", "С фото", "Обсуждают"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -46,6 +46,11 @@ export default function MapPage() {
   const focusPlace = params.get("place");
   const ref = useRef<HTMLDivElement>(null);
   const reqRef = useRef(0);
+  // точные ссылки на объекты карты: чистка по ref, а не по флагам
+  // (флаги через properties ненадёжны — старые кластереры копились и врали счёт)
+  const clusterRef = useRef<any>(null);
+  const areasRef = useRef<any[]>([]);
+  const focusRef = useRef<any[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -101,10 +106,15 @@ export default function MapPage() {
           const my = ++reqRef.current;
           const b = map.getBounds();
           const s = scopeRef.current;
-          const list = await fetchMapPoints({
-            south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
-            ...scopeParams(s),
-          }).catch(() => [] as MapPt[]);
+          let list: MapPt[];
+          try {
+            list = await fetchMapPoints({
+              south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
+              ...scopeParams(s),
+            });
+          } catch {
+            return; // сеть моргнула — оставляем старые точки, а не пустую карту
+          }
           if (!alive || my !== reqRef.current) return;
           setPts(list);
         };
@@ -117,7 +127,23 @@ export default function MapPage() {
         map.events.add("boundschange", () => { paint().catch(() => { /* ignore */ }); });
       } catch { if (alive) { setErr("Карта не загрузилась"); setLoading(false); } }
     })();
-    return () => { alive = false; try { map?.destroy(); } catch { /* ignore */ } };
+    return () => {
+      alive = false;
+      // сносим наши объекты при размонтировании, чтобы не было висяков
+      try {
+        if (clusterRef.current) map.geoObjects.remove(clusterRef.current);
+      } catch { /* ignore */ }
+      clusterRef.current = null;
+      for (const o of areasRef.current) {
+        try { map.geoObjects.remove(o); } catch { /* ignore */ }
+      }
+      areasRef.current = [];
+      for (const o of focusRef.current) {
+        try { map.geoObjects.remove(o); } catch { /* ignore */ }
+      }
+      focusRef.current = [];
+      try { map?.destroy(); } catch { /* ignore */ }
+    };
   }, [key, toast]);
 
   // смена глобального региона на открытой карте — переносим камеру следом
@@ -158,7 +184,13 @@ export default function MapPage() {
   // фокус на месте из ?place= — отдельным эффектом, чтобы работал и при смене параметра
   useEffect(() => {
     const map = (window as any).__ymap;
-    if (!mapReady || !map || !focusPlace) return;
+    if (!mapReady || !map) return;
+    if (!focusPlace) {
+      // ушли с фокуса — гасим полигон и точку, чтобы не висели чужие метки
+      setPlacePoly(null);
+      setInnerPt(null);
+      return;
+    }
     let alive = true;
     (async () => {
       try {
@@ -201,14 +233,11 @@ export default function MapPage() {
     const map = (window as any).__ymap;
     if (!mapReady || !map || !(window as any).ymaps) return;
     const ymaps = (window as any).ymaps;
-    // удаляем старые полигоны/точки
-    const toRemove: any[] = [];
-    map.geoObjects.each((obj: any) => {
-      try {
-        if (obj.properties?.get?.("isPlacePoly") || obj.properties?.get?.("isInnerPt")) toRemove.push(obj);
-      } catch { /* ignore */ }
-    });
-    toRemove.forEach((obj) => { try { map.geoObjects.remove(obj); } catch { /* ignore */ } });
+    // удаляем старые полигоны/точки — только наши, по ref
+    for (const o of focusRef.current) {
+      try { map.geoObjects.remove(o); } catch { /* ignore */ }
+    }
+    focusRef.current = [];
     if (!placePoly) return;
     const poly = new ymaps.Polygon([[...placePoly.area, placePoly.area[0]]], {
       isPlacePoly: true,
@@ -225,6 +254,7 @@ export default function MapPage() {
       catch { toast("Не получилось открыть вопрос", "error"); }
     });
     map.geoObjects.add(poly);
+    focusRef.current.push(poly);
     if (innerPt && innerPt.placeId === placePoly.id) {
       const pt = new ymaps.Placemark([innerPt.lat, innerPt.lng], {
         isInnerPt: true,
@@ -245,20 +275,26 @@ export default function MapPage() {
         catch { toast("Не получилось открыть вопрос", "error"); }
       });
       map.geoObjects.add(pt);
+      focusRef.current.push(pt);
     }
   }, [placePoly, innerPt, mapReady, toast]);
 
-  // перерисовка точек при смене региона
+  // фокус на месте из ?place= — отдельным эффектом, чтобы работал и при смене параметра
   useEffect(() => {
     const map = (window as any).__ymap;
     if (!mapReady || !map) return;
     let alive = true;
     (async () => {
       const b = map.getBounds();
-      const list = await fetchMapPoints({
-        south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
-        ...scopeParams(scope),
-      }).catch(() => [] as MapPt[]);
+      let list: MapPt[];
+      try {
+        list = await fetchMapPoints({
+          south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
+          ...scopeParams(scope),
+        });
+      } catch {
+        return; // сеть моргнула — оставляем старые точки
+      }
       if (alive) setPts(list);
     })();
     return () => { alive = false; };
@@ -269,21 +305,23 @@ export default function MapPage() {
     const map = (window as any).__ymap;
     if (!map || !(window as any).ymaps) return;
     const ymaps = (window as any).ymaps;
-    // удаляем только старые кластеры, оставляя полигоны места и внутренние точки
-    const toRemove: any[] = [];
-    map.geoObjects.each((obj: any) => {
-      if (obj.properties?.get?.("isCluster")) toRemove.push(obj);
-    });
-    toRemove.forEach((obj) => { try { map.geoObjects.remove(obj); } catch { /* ignore */ } });
+    // детерминированная чистка: ровно те объекты, что создали мы
+    if (clusterRef.current) {
+      try { map.geoObjects.remove(clusterRef.current); } catch { /* ignore */ }
+      clusterRef.current = null;
+    }
+    for (const o of areasRef.current) {
+      try { map.geoObjects.remove(o); } catch { /* ignore */ }
+    }
+    areasRef.current = [];
     const visible = (filter === "Обсуждают"
       ? [...pts].sort((a, b) => b.comments - a.comments)
       : pts
     ).filter((p) => passFilter(p, filter));
     setCount(visible.length);
     const zoom = map.getZoom ? map.getZoom() : 11;
-    // адаптивная сетка: чем дальше обзор, тем охотнее схлопываем
-    // сдвинуто вверх: 64px давал висящие рядом пины при городском зуме
-    const grid = zoom < 9 ? 384 : zoom < 12 ? 256 : zoom < 14 ? 160 : 128;
+    // крупная сетка: мелкие ячейки давали «висящие рядом» пины на границах
+    const grid = zoom < 9 ? 512 : zoom < 12 ? 384 : zoom < 14 ? 256 : 192;
     const clusterer = new ymaps.Clusterer({
       groupByCoordinates: false,
       gridSize: grid,
@@ -294,7 +332,7 @@ export default function MapPage() {
         '<div style="width:64px;height:64px;border-radius:50%;background:#0f172a;border:4px solid #a3e635;box-shadow:0 4px 14px rgba(2,6,23,.35);display:flex;align-items:center;justify-content:center;color:#a3e635;font-weight:800;font-size:18px;font-family:system-ui,sans-serif;">{{ properties.geoObjects.length }}</div>'
       ),
     });
-    try { clusterer.properties.set("isCluster", true); } catch { /* ignore */ }
+    clusterRef.current = clusterer;
     // тап по кластеру на крупном зуме — список тредов, а не бесконечный зум
     clusterer.events.add("click", async (e: any) => {
       const target = e.get("target");
@@ -320,16 +358,24 @@ export default function MapPage() {
       }
     });
     for (const p of visible) {
-      // полигоны рисуем отдельно от кластера — чтобы видеть территорию
-      if (p.area && p.area.length >= 3) continue;
       const isSel = selected?.id === p.id;
-      const href = makePin({
-        color: p.is_offtop ? "#64748b" : "#059669",
-        glyph: p.is_offtop ? "chat" : "q",
-        photoUrl: p.has_photo && p.cover_url ? apiOrigin + p.cover_url : null,
-        selected: isSel,
-      });
-      const m = new ymaps.Placemark([p.lat, p.lng], { threadId: p.id }, {
+      const isHub = !!p.is_hub;
+      // центр полигона — для пина раздела и клика
+      let cx = p.lat;
+      let cy = p.lng;
+      if (p.area && p.area.length >= 3) {
+        cx = p.area.reduce((s, a) => s + a[0], 0) / p.area.length;
+        cy = p.area.reduce((s, a) => s + a[1], 0) / p.area.length;
+      }
+      const href = isHub
+        ? makePin({ color: "#065f46", glyph: "hub", selected: isSel })
+        : makePin({
+          color: p.is_offtop ? "#64748b" : "#059669",
+          glyph: p.is_offtop ? "chat" : "q",
+          photoUrl: p.has_photo && p.cover_url ? apiOrigin + p.cover_url : null,
+          selected: isSel,
+        });
+      const m = new ymaps.Placemark([cx, cy], { threadId: p.id }, {
         iconLayout: "default#image", iconImageHref: href,
         iconImageSize: PIN_SIZE, iconImageOffset: PIN_OFFSET,
         hideIconOnBalloonOpen: false,
@@ -342,17 +388,11 @@ export default function MapPage() {
     }
     map.geoObjects.add(clusterer);
 
-    // полигоны из map-points — отдельно от кластера
-    const toRemoveAreas: any[] = [];
-    map.geoObjects.each((obj: any) => {
-      if (obj.properties?.get?.("isMapArea")) toRemoveAreas.push(obj);
-    });
-    toRemoveAreas.forEach((obj) => { try { map.geoObjects.remove(obj); } catch { /* ignore */ } });
+    // полигоны из map-points — отдельно от кластера (тоже в ref для чистки)
     for (const p of visible) {
       if (!p.area || p.area.length < 3) continue;
       const isSel = selected?.id === p.id;
       const poly = new ymaps.Polygon([[...p.area, p.area[0]]], {
-        isMapArea: true,
         threadId: p.id,
       }, {
         fillColor: isSel ? "#05966988" : "#05966955",
@@ -365,6 +405,7 @@ export default function MapPage() {
         catch { toast("Не получилось открыть вопрос", "error"); }
       });
       map.geoObjects.add(poly);
+      areasRef.current.push(poly);
     }
   }, [pts, filter, selected, toast]);
 

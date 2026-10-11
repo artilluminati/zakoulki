@@ -10,10 +10,11 @@ const GLYPH_CHAT_SVG = (color: string) =>
   `<rect x="16" y="14.5" width="12" height="2.6" rx="1.3" fill="${color}"/>` +
   `<rect x="16" y="19" width="8" height="2.6" rx="1.3" fill="${color}"/>`;
 const GLYPH_Q_TEXT = `<text x="22" y="30.5" text-anchor="middle" font-size="23" font-weight="800" font-family="system-ui,-apple-system,sans-serif" fill="#fff">?</text>`;
+const GLYPH_HUB_TEXT = `<text x="22" y="30.5" text-anchor="middle" font-size="22" font-weight="800" font-family="system-ui,-apple-system,sans-serif" fill="#fff">Р</text>`;
 
 export interface PinOpts {
   color: string;
-  glyph?: "q" | "chat";
+  glyph?: "q" | "chat" | "hub";
   photoUrl?: string | null;
   selected?: boolean;
 }
@@ -23,7 +24,9 @@ export function makePin({ color, glyph = "q", photoUrl, selected = false }: PinO
     ? `<clipPath id="c"><circle cx="22" cy="22" r="13"/></clipPath><image href="${photoUrl}" x="9" y="9" width="26" height="26" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/><circle cx="22" cy="22" r="13" fill="none" stroke="#fff" stroke-width="3"/>`
     : glyph === "q"
       ? GLYPH_Q_TEXT
-      : GLYPH_CHAT_SVG(color);
+      : glyph === "hub"
+        ? GLYPH_HUB_TEXT
+        : GLYPH_CHAT_SVG(color);
   const ring = selected ? `<circle cx="22" cy="22" r="20" fill="none" stroke="#a3e635" stroke-width="3"/>` : "";
   return svgUri(
     `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="48" viewBox="0 0 44 48">` +
