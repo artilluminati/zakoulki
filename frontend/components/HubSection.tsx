@@ -43,11 +43,11 @@ export default function HubSection({ t, user, reload }: {
   };
 
   const doMakeHub = async () => {
-    const title = window.prompt("Название уголка:", t.title || "Уголок");
+    const title = window.prompt("Название раздела:", t.title || "Раздел");
     if (title === null) return;
     try {
       await makeHub(t.id, title.trim() || null);
-      toast("Уголок создан", "success");
+      toast("Раздел создан", "success");
       reload();
     } catch (e: unknown) {
       const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -59,7 +59,7 @@ export default function HubSection({ t, user, reload }: {
     return (
       <div className="mt-3 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/40">
         <div className="flex items-center gap-2 px-3 py-2 text-sm font-extrabold text-emerald-800 dark:text-emerald-300">
-          <MessagesSquare className="h-4 w-4" /> Уголок · вопросов: {attached.length}
+          <MessagesSquare className="h-4 w-4" /> Раздел · вопросов: {attached.length}
         </div>
         {attached.length > 0 && (
           <div className="space-y-1 px-3 pb-2">
@@ -99,7 +99,7 @@ export default function HubSection({ t, user, reload }: {
     <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
       {t.hub ? (
         <>
-          <span className="text-slate-500 dark:text-neutral-400">Уголок:</span>
+          <span className="text-slate-500 dark:text-neutral-400">Раздел:</span>
           <Link href={`/thread/${t.hub.id}`} className="rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
             {t.hub.title}
           </Link>
@@ -113,7 +113,7 @@ export default function HubSection({ t, user, reload }: {
         <>
           {t.place && hubs.length > 0 && canMod && (
             <span className="flex flex-wrap items-center gap-1.5">
-              <span className="text-slate-500 dark:text-neutral-400">В уголок:</span>
+              <span className="text-slate-500 dark:text-neutral-400">В раздел:</span>
               {hubs.map((h) => (
                 <button
                   key={h.id}

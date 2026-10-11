@@ -80,11 +80,9 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "created_at": t.created_at,
         "city": t.city, "district": t.district, "region": t.region, "country": t.country,
         "poll": _poll_out(db, t.id, user_id),
-        "is_important": t.is_important,
-        "important_requested": t.important_requested,
-        "important_pinned": t.important_pinned,
-        "important_votes": t.important_votes,
-        "important_voted": _important_voted(db, t.id, user_id),
+        "hub_requested": t.hub_requested,
+        "hub_votes": t.hub_votes,
+        "hub_voted": _hub_voted(db, t.id, user_id),
         "is_hub": t.is_hub,
         "is_hub_talk": t.is_hub_talk,
         "hub_id": t.hub_id,
@@ -98,7 +96,7 @@ def _hub_brief(db: Session, hub_id: int) -> dict | None:
     h = db.get(Thread, hub_id)
     if not h or not h.is_hub:
         return None
-    return {"id": h.id, "title": h.title or "Уголок"}
+    return {"id": h.id, "title": h.title or "Раздел"}
 
 
 def _hub_talk_id(db: Session, hub_id: int) -> int | None:
@@ -216,6 +214,7 @@ def list_threads(
     category_id: int | None = Query(None),
     place_id: int | None = Query(None),
     has_geo: bool | None = Query(None),
+    is_hub: bool | None = Query(None, description="только разделы"),
     is_offtop: bool | None = Query(None),
     district: str | None = Query(None, description="район"),
     city: str | None = Query(None, description="город/округ"),
@@ -263,11 +262,12 @@ def list_threads(
         from app.models.thread import thread_categories
         q = q.join(thread_categories, thread_categories.c.thread_id == Thread.id).filter(thread_categories.c.category_id == category_id)
     if has_geo is True:
-        # «Важное»: признанные важными + вопросы с точкой
-        from sqlalchemy import or_ as _or
-        q = q.filter(_or(Thread.is_important == True, Thread.place_id.isnot(None)))  # noqa: E712
+        # вопросы с точкой
+        q = q.filter(Thread.place_id.isnot(None))
     if has_geo is False:
         q = q.filter(Thread.place_id.is_(None))
+    if is_hub is not None:
+        q = q.filter(Thread.is_hub == is_hub)
     if is_offtop is not None:
         q = q.filter(Thread.is_offtop == is_offtop)
     if sort == "near" and lat is not None and lng is not None and radius:
@@ -318,14 +318,14 @@ def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User 
     return _thread_out(t, db)
 
 
-IMPORTANT_THRESHOLD = 3
+HUB_THRESHOLD = 3
 
 
-def _important_voted(db: Session, thread_id: int, user_id: int | None) -> bool:
+def _hub_voted(db: Session, thread_id: int, user_id: int | None) -> bool:
     if not user_id:
         return False
-    from app.models.important_vote import ImportantVote
-    return db.get(ImportantVote, {"user_id": user_id, "thread_id": thread_id}) is not None
+    from app.models.hub_vote import HubVote
+    return db.get(HubVote, {"user_id": user_id, "thread_id": thread_id}) is not None
 
 
 def _poll_out(db: Session, thread_id: int, user_id: int | None) -> dict | None:
@@ -372,7 +372,7 @@ def add_comment(thread_id: int, data: CommentCreate, db: Session = Depends(get_d
         raise HTTPException(404, "Тред не найден")
     if t.is_hub and not t.is_hub_talk:
         talk_id = _hub_talk_id(db, t.id)
-        raise HTTPException(400, f"Уголок не обсуждают здесь — общее обсуждение в треде #{talk_id}" if talk_id else "Уголок не обсуждают здесь")
+        raise HTTPException(400, f"Раздел не обсуждают здесь — общее обсуждение в треде #{talk_id}" if talk_id else "Раздел не обсуждают здесь")
     html, entities = render_markdown(data.body_md, comments_mode=True)
     c = ThreadComment(thread_id=thread_id, parent_id=data.parent_id, author_id=user.id,
                       body_md=data.body_md, body_html=html)
@@ -471,8 +471,8 @@ def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = 
 
 
 def _make_talk(db: Session, hub: Thread, author_id: int) -> Thread:
-    """Тред общего обсуждения уголка. Уголок готов сразу, модерация — жалобами."""
-    name = (hub.title or "Уголок").strip() or "Уголок"
+    """Тред общего обсуждения уголка. Раздел готов сразу, модерация — жалобами."""
+    name = (hub.title or "Раздел").strip() or "Раздел"
     talk = Thread(author_id=author_id, title=None,
                   body_md=f"Общее обсуждение: {name}",
                   body_html=f"Общее обсуждение: {name}",
@@ -490,7 +490,7 @@ class HubCreate(BaseModel):
 
 @router.post("/hubs", status_code=201)
 def create_hub(data: HubCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Создать уголок места. Готов сразу; споры — через жалобы."""
+    """Создать раздел места. Готов сразу; споры — через жалобы."""
     place = db.get(GeoPlace, data.place_id)
     if not place:
         raise HTTPException(404, "Место не найдено")
@@ -513,20 +513,20 @@ class HubTitle(BaseModel):
 @router.post("/{thread_id}/make-hub", status_code=201)
 def make_hub(thread_id: int, data: HubTitle, db: Session = Depends(get_db),
              user: User = Depends(get_current_user)):
-    """Переквалифицировать тред с местом в уголок (автор или админ)."""
+    """Переквалифицировать тред с местом в раздел (автор или админ)."""
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
     if t.author_id != user.id and user.role != "admin":
         raise HTTPException(403, "Недостаточно прав")
     if t.is_hub or t.is_hub_talk:
-        raise HTTPException(400, "Уже уголок")
+        raise HTTPException(400, "Уже раздел")
     if t.place_id is None:
         raise HTTPException(400, "Уголку нужна точка или территория")
     if data.title:
         t.title = data.title.strip() or t.title
     if not t.title:
-        t.title = "Уголок"
+        t.title = "Раздел"
     t.is_hub = True
     t.is_offtop = False
     db.flush()
@@ -550,13 +550,13 @@ def attach_hub(thread_id: int, data: HubAttach, db: Session = Depends(get_db),
     if not t or not hub:
         raise HTTPException(404, "Тред не найден")
     if not hub.is_hub:
-        raise HTTPException(400, "Это не уголок")
+        raise HTTPException(400, "Это не раздел")
     if t.is_hub or t.is_hub_talk:
-        raise HTTPException(400, "Уголок нельзя прикрепить")
+        raise HTTPException(400, "Раздел нельзя прикрепить")
     if t.author_id != user.id and user.role != "admin":
         raise HTTPException(403, "Недостаточно прав")
     if t.place_id != hub.place_id:
-        raise HTTPException(400, "Уголок другого места")
+        raise HTTPException(400, "Раздел другого места")
     t.hub_id = hub.id
     db.commit(); db.refresh(t)
     return _thread_out(t, db, user.id)
@@ -579,7 +579,7 @@ def hub_attached(thread_id: int, db: Session = Depends(get_db)):
     """Вопросы, прикреплённые к уголку (в общую ленту они тоже попадают)."""
     hub = db.get(Thread, thread_id)
     if not hub or not hub.is_hub:
-        raise HTTPException(404, "Уголок не найден")
+        raise HTTPException(404, "Раздел не найден")
     items = (db.query(Thread).filter(Thread.hub_id == thread_id, Thread.is_hub_talk == False)
              .order_by(Thread.id.desc()).limit(30).all())
     return [_thread_out(t, db) for t in items]
@@ -627,42 +627,52 @@ def like_thread(thread_id: int, db: Session = Depends(get_db), user: User = Depe
     return {"liked": True}
 
 
-@router.post("/{thread_id}/request-important", status_code=201)
-def request_important(thread_id: int, db: Session = Depends(get_db),
-                      user: User = Depends(get_current_user)):
-    """Автор выдвигает пост в важные -> статус «на рассмотрении»."""
+@router.post("/{thread_id}/request-hub", status_code=201)
+def request_hub(thread_id: int, db: Session = Depends(get_db),
+                user: User = Depends(get_current_user)):
+    """Автор выдвигает тред на голосование за раздел -> статус «на рассмотрении»."""
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
     if t.author_id != user.id and user.role != "admin":
         raise HTTPException(403, "Только автор")
-    t.important_requested = True
+    if t.is_hub or t.is_hub_talk:
+        raise HTTPException(400, "Уже раздел")
+    if t.place_id is None:
+        raise HTTPException(400, "Уголку нужна точка или территория")
+    t.hub_requested = True
     db.commit()
     return _thread_out(t, db, user.id)
 
 
-@router.post("/{thread_id}/vote-important")
-def vote_important(thread_id: int, db: Session = Depends(get_db),
-                   user: User = Depends(get_current_user)):
-    """Голос «это важно» (переключается). N голосов -> автоматически важный."""
-    from app.models.important_vote import ImportantVote
+@router.post("/{thread_id}/vote-hub")
+def vote_hub(thread_id: int, db: Session = Depends(get_db),
+             user: User = Depends(get_current_user)):
+    """Голос «в раздел» (переключается). N голосов -> автоматически раздел."""
+    from app.models.hub_vote import HubVote
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
-    if not t.important_requested and not t.is_important:
-        raise HTTPException(400, "Пост не выдвинут в важные")
-    ex = db.get(ImportantVote, {"user_id": user.id, "thread_id": thread_id})
+    if t.is_hub or t.is_hub_talk:
+        raise HTTPException(400, "Уже раздел")
+    if t.place_id is None:
+        raise HTTPException(400, "Уголку нужна точка или территория")
+    if not t.hub_requested:
+        raise HTTPException(400, "Тред не выдвинут в раздел")
+    ex = db.get(HubVote, {"user_id": user.id, "thread_id": thread_id})
     if ex:
         db.delete(ex)
-        t.important_votes = max(0, t.important_votes - 1)
+        t.hub_votes = max(0, t.hub_votes - 1)
     else:
-        db.add(ImportantVote(user_id=user.id, thread_id=thread_id))
-        t.important_votes += 1
-    if t.important_votes >= IMPORTANT_THRESHOLD:
-        t.is_important = True
+        db.add(HubVote(user_id=user.id, thread_id=thread_id))
+        t.hub_votes += 1
+    if t.hub_votes >= HUB_THRESHOLD and not t.is_hub:
+        if not t.title:
+            t.title = "Раздел"
+        t.is_hub = True
         t.is_offtop = False
-    else:
-        t.is_important = t.important_pinned
+        db.flush()
+        _make_talk(db, t, t.author_id)
     db.commit()
     return _thread_out(t, db, user.id)
 

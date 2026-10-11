@@ -111,26 +111,6 @@ def admin_delete_thread(thread_id: int, db: Session = Depends(get_db),
     db.commit()
 
 
-class ImportantPin(BaseModel):
-    pinned: bool
-
-
-@router.patch("/threads/{thread_id}/important")
-def admin_pin_important(thread_id: int, data: ImportantPin, db: Session = Depends(get_db),
-                        user: User = Depends(get_current_user)):
-    """Принудительно сделать пост важным (или снять). Голоса это не перетирают."""
-    require_admin(user)
-    t = db.get(Thread, thread_id)
-    if not t:
-        raise HTTPException(404, "Тред не найден")
-    t.important_pinned = data.pinned
-    t.is_important = data.pinned or t.important_votes >= 3
-    if t.is_important:
-        t.is_offtop = False
-    db.commit()
-    return {"id": t.id, "is_important": t.is_important, "important_pinned": t.important_pinned}
-
-
 class ReportStatus(BaseModel):
     status: str = Field(pattern="^(reviewed|rejected)$")
 
@@ -170,6 +150,5 @@ def admin_threads(limit: int = Query(30, le=100), db: Session = Depends(get_db),
     authors = {u.id: u.username for u in db.query(User).filter(User.id.in_(author_ids)).all()} if author_ids else {}
     return [{"id": t.id, "author": authors.get(t.author_id), "title": t.title,
              "snippet": (t.body_md or "")[:120], "is_offtop": t.is_offtop,
-             "is_important": t.is_important, "important_pinned": t.important_pinned,
-             "place_id": t.place_id, "comments_count": t.comments_count,
+             "is_hub": t.is_hub, "place_id": t.place_id, "comments_count": t.comments_count,
              "created_at": t.created_at} for t in items]

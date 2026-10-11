@@ -90,13 +90,13 @@ export async function votePoll(threadId: number, optionIds: number[]) {
   return res.data;
 }
 
-export async function requestImportant(threadId: number) {
-  const res = await api.post(`/threads/${threadId}/request-important`);
+export async function requestHub(threadId: number) {
+  const res = await api.post(`/threads/${threadId}/request-hub`);
   return res.data;
 }
 
-export async function voteImportant(threadId: number) {
-  const res = await api.post(`/threads/${threadId}/vote-important`);
+export async function voteHub(threadId: number) {
+  const res = await api.post(`/threads/${threadId}/vote-hub`);
   return res.data;
 }
 

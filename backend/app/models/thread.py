@@ -31,12 +31,11 @@ class Thread(Base):
     country: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     # важные посты: по умолчанию все оффтоп; автор жмет «Важный пост» -> на рассмотрении;
     # N голосов пользователей -> автоматически важный
-    is_important: Mapped[bool] = mapped_column(Boolean, default=False)
-    important_pinned: Mapped[bool] = mapped_column(Boolean, default=False)  # принудительно от админа, голоса не снимают
-    important_requested: Mapped[bool] = mapped_column(Boolean, default=False)
-    important_votes: Mapped[int] = mapped_column(Integer, default=0)
     place_id: Mapped[int | None] = mapped_column(ForeignKey("geo_places.id"), nullable=True)
-    # уголки: is_hub — тред-раздел территории/точки; hub_id — привязка
+    # выдвижение в разделы голосами: requested + votes, порог -> авто-раздел
+    hub_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    hub_votes: Mapped[int] = mapped_column(Integer, default=0)
+    # разделы: is_hub — тред-раздел территории/точки; hub_id — привязка
     # вопроса или треда обсуждения (is_hub_talk) к уголку
     is_hub: Mapped[bool] = mapped_column(Boolean, default=False)
     is_hub_talk: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestImportant, voteImportant, createGeoPlace } from "@/lib/v5";
-import { ThreadHtml, timeAgo, OfficialBadge, ImportantBadge, HubBadge } from "@/components/ThreadCard";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace } from "@/lib/v5";
+import { ThreadHtml, timeAgo, OfficialBadge, HubBadge } from "@/components/ThreadCard";
 import HubSection from "@/components/HubSection";
 import MiniMap from "@/components/MiniMap";
 import MdEditor from "@/components/editor/MdEditor";
@@ -356,37 +356,40 @@ export default function ThreadPage() {
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-neutral-400">
           <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}</span>
           {t.author_badge === "official" && <OfficialBadge />}
-          <ImportantBadge t={t} />
+          <HubBadge t={t} />
         </div>
-        {!t.is_important && user && (
+        {!t.is_hub && !t.is_hub_talk && t.place && user && (
           <div className="mt-2">
-            {!t.important_requested ? (
+            {!t.hub_requested ? (
               (user.id === t.author_id || user.role === "admin") && (
                 <button
                   onClick={async () => {
-                    try { const u = await requestImportant(t.id); setT({ ...t, ...u }); toast("Выдвинуто — жители решат голосами", "success"); }
-                    catch { toast("Не получилось", "error"); }
+                    try { const u = await requestHub(t.id); setT({ ...t, ...u }); toast("Выдвинуто — жители решат голосами", "success"); }
+                    catch (e: unknown) {
+                      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+                      toast(detail ?? "Не получилось", "error");
+                    }
                   }}
-                  className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-[13px] font-bold text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
+                  className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[13px] font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                 >
-                  Сделать важным
+                  В раздел
                 </button>
               )
             ) : (
               <button
                 onClick={async () => {
                   try {
-                    const u = await voteImportant(t.id);
+                    const u = await voteHub(t.id);
                     setT({ ...t, ...u });
-                    toast(u.important_voted ? "Голос учтён" : "Голос снят", "success");
+                    toast(u.hub_voted ? "Голос учтён" : "Голос снят", "success");
                   } catch (e) {
                     const status = (e as { response?: { status?: number } })?.response?.status;
                     toast(status === 401 ? "Войдите, чтобы голосовать" : "Не получилось", "error");
                   }
                 }}
-                className={`rounded-xl border px-3 py-1.5 text-[13px] font-bold ${t.important_voted ? "border-amber-400 bg-amber-100 text-amber-900 dark:bg-amber-950" : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"}`}
+                className={`rounded-xl border px-3 py-1.5 text-[13px] font-bold ${t.hub_voted ? "border-emerald-400 bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"}`}
               >
-                {t.important_voted ? "✓ Это важно" : "Это важно"} · {t.important_votes ?? 0}/3
+                {t.hub_voted ? "✓ В раздел" : "В раздел"} · {t.hub_votes ?? 0}/3
               </button>
             )}
           </div>
@@ -445,22 +448,6 @@ export default function ThreadPage() {
           )}
           {user?.role === "admin" && (
             <button onClick={adminDelete} className="font-bold text-red-600 hover:underline dark:text-red-400">Удалить</button>
-          )}
-          {user?.role === "admin" && (
-            <button
-              onClick={async () => {
-                try {
-                  const r = await api.patch(`/admin/threads/${t.id}/important`, { pinned: !t.important_pinned });
-                  setT({ ...t, is_important: r.data.is_important, important_pinned: r.data.important_pinned });
-                  toast(r.data.is_important ? "Пост помечен важным" : "Важность снята", "success");
-                } catch {
-                  toast("Не получилось", "error");
-                }
-              }}
-              className="font-bold text-amber-700 hover:underline"
-            >
-              {t.important_pinned ? "Снять важность" : "Сделать важным"}
-            </button>
           )}
           <span className="relative ml-auto">
             <button onClick={() => setReportOpen(!reportOpen)} className="flex items-center gap-1 text-slate-400 hover:text-red-500 dark:text-neutral-500"><Flag className="h-4 w-4" /> Жалоба</button>
@@ -540,7 +527,7 @@ export default function ThreadPage() {
         {user ? (
           t.is_hub && !t.is_hub_talk ? (
             <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-center text-[13px] text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">
-              Уголок не обсуждают здесь —{" "}
+              Раздел не обсуждают здесь —{" "}
               {t.talk_id ? (
                 <Link href={`/thread/${t.talk_id}`} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">
                   общее обсуждение →

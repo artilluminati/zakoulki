@@ -6,10 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 
-class ImportantVote(Base):
-    """Голоса «это важно» за тред на рассмотрении. N голосов -> автоматически важный."""
+class HubVote(Base):
+    """Голоса «в раздел» за тред на рассмотрении. N голосов -> автоматически раздел."""
 
-    __tablename__ = "important_votes"
+    __tablename__ = "hub_votes"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     thread_id: Mapped[int] = mapped_column(ForeignKey("threads.id", ondelete="CASCADE"), primary_key=True)

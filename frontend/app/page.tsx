@@ -32,7 +32,7 @@ export default function FeedPage() {
   const [loadError, setLoadError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [sort, setSort] = useState<Sort>("new");
-  const [filter, setFilter] = useState<"all" | "important" | "offtop">("all");
+  const [filter, setFilter] = useState<"all" | "hubs" | "offtop">("all");
   const [draft, setDraft] = useState("");
   const [draftFiles, setDraftFiles] = useState<File[]>([]);
   const [draftThumbs, setDraftThumbs] = useState<string[]>([]);
@@ -100,7 +100,8 @@ export default function FeedPage() {
           const data = await fetchThreads({
             search: search || undefined,
             sort: "new",
-            has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
+            has_geo: filter === "offtop" ? false : undefined,
+        is_hub: filter === "hubs" ? true : undefined,
             is_offtop: filter === "offtop" ? true : undefined,
             ...scopeParams(scope),
             limit: PAGE,
@@ -135,7 +136,8 @@ export default function FeedPage() {
         search: search || undefined,
         sort: sort === "near" ? "near" : sort,
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
-        has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
+        has_geo: filter === "offtop" ? false : undefined,
+        is_hub: filter === "hubs" ? true : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
         ...scopeParams(scope),
         limit: PAGE,
@@ -159,7 +161,8 @@ export default function FeedPage() {
         search: search || undefined,
         sort: sort === "near" ? "near" : sort,
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
-        has_geo: filter === "important" ? true : filter === "offtop" ? false : undefined,
+        has_geo: filter === "offtop" ? false : undefined,
+        is_hub: filter === "hubs" ? true : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
         ...scopeParams(scope),
         limit: PAGE,
@@ -293,9 +296,9 @@ export default function FeedPage() {
           ))}
         </div>
         <div className="flex gap-1.5 text-[13px]">
-          {(["all", "important", "offtop"] as const).map((f) => (
+          {(["all", "hubs", "offtop"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)} className={`rounded-full border px-3 py-1.5 font-semibold ${filter === f ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-200 bg-white text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400"}`}>
-              {f === "all" ? "Все" : f === "important" ? "Важное" : "Оффтоп"}
+              {f === "all" ? "Все" : f === "hubs" ? "Разделы" : "Оффтоп"}
             </button>
           ))}
         </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Home, Map as MapIcon, PlusCircle, User, Bell, Search, MapPinned, ChevronDown } from "lucide-react";
+import { Home, Map as MapIcon, PlusCircle, User, Bell, Search, MapPinned, ChevronDown, MessagesSquare } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { timeAgo } from "@/components/ThreadCard";
@@ -155,6 +155,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="sticky top-[72px] hidden h-fit w-60 shrink-0 flex-col gap-1 pt-6 md:flex">
           {item("/", "Главная", Home)}
           {item("/map", "Карта", MapIcon)}
+          {item("/hubs", "Разделы", MessagesSquare)}
           {item("/create", "Создать", PlusCircle)}
           {item(user ? "/profile" : "/login", "Профиль", User)}
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-[13px] text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
@@ -179,11 +180,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* mobile bottom tabs */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-neutral-700 dark:bg-neutral-900/95">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {[
             { href: "/", label: "Главная", Icon: Home, fab: false },
             { href: "/map", label: "Карта", Icon: MapIcon, fab: false },
             { href: "/create", label: "Создать", Icon: PlusCircle, fab: true },
+            { href: "/hubs", label: "Разделы", Icon: MessagesSquare, fab: false },
             { href: "/search", label: "Поиск", Icon: Search, fab: false },
             { href: user ? "/profile" : "/login", label: "Профиль", Icon: User, fab: false },
           ].map(({ href, label, Icon, fab }) => (

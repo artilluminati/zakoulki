@@ -99,7 +99,7 @@ export default function CreatePage() {
   // (сам эффект ниже, после всех useState — см. перед pickFound)
   const [tags, setTags] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
-  // уголки места: прикрепить вопрос сразу или создать новый
+  // разделы места: прикрепить вопрос сразу или создать новый
   const [placeHubs, setPlaceHubs] = useState<PlaceHub[]>([]);
   const [pickedHubId, setPickedHubId] = useState<number | null>(null);
   const [hubTitle, setHubTitle] = useState("");
@@ -161,7 +161,7 @@ export default function CreatePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // уголки выбранного места — для прикрепления вопроса сразу
+  // разделы выбранного места — для прикрепления вопроса сразу
   useEffect(() => {
     if (!place || place.id <= 0) { setPlaceHubs([]); setPickedHubId(null); return; }
     fetchPlaceHubs(place.id).then((list) => {
@@ -364,7 +364,7 @@ export default function CreatePage() {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         maxLength={150}
-        placeholder="Заголовок (необязательно — для важного)"
+        placeholder="Заголовок (необязательно)"
         className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500 dark:border-neutral-700 dark:bg-neutral-900"
       />
 
@@ -418,6 +418,19 @@ export default function CreatePage() {
         </div>
       )}
 
+      {pickedHubId ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm dark:border-emerald-800 dark:bg-emerald-950/40">
+          <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className="min-w-0 flex-1 truncate">
+            Вопрос в раздел <b>«{placeHubs.find((h) => h.id === pickedHubId)?.title ?? "…"}»</b>
+            <span className="text-slate-500 dark:text-neutral-400"> — место уже задано</span>
+          </span>
+          <button type="button" onClick={() => setPickedHubId(null)} className="shrink-0 text-[13px] font-bold text-emerald-700 hover:underline dark:text-emerald-300">
+            Сменить
+          </button>
+        </div>
+      ) : (
+        <>
       {/* выбор города/региона — можно ввести вручную, даже если там ещё нет постов */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
         <div className="mb-2 flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Город или район</div>
@@ -517,7 +530,7 @@ export default function CreatePage() {
         )}
         {place && place.id > 0 && (
           <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm dark:border-emerald-800 dark:bg-emerald-950/40">
-            <div className="font-bold text-emerald-800 dark:text-emerald-300">Уголок места</div>
+            <div className="font-bold text-emerald-800 dark:text-emerald-300">Раздел места</div>
             {placeHubs.length === 0 && (
               <div className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">Уголков пока нет — вопрос попадёт в общий список.</div>
             )}
@@ -538,7 +551,7 @@ export default function CreatePage() {
               <input
                 value={hubTitle}
                 onChange={(e) => setHubTitle(e.target.value)}
-                placeholder="Новый уголок…"
+                placeholder="Новый раздел…"
                 maxLength={150}
                 className="h-8 min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-2 text-xs outline-none focus:border-emerald-500 dark:border-emerald-800 dark:bg-neutral-900"
               />
@@ -552,7 +565,7 @@ export default function CreatePage() {
                     setPlaceHubs((prev) => [...prev, { id: h.id, title: h.title || hubTitle.trim(), members: 0 }]);
                     setPickedHubId(h.id);
                     setHubTitle("");
-                    toast("Уголок создан", "success");
+                    toast("Раздел создан", "success");
                   } catch { toast("Не получилось", "error"); }
                   finally { setHubBusy(false); }
                 }}
@@ -611,6 +624,8 @@ export default function CreatePage() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">{error}</div>}
 

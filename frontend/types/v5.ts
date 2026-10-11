@@ -30,13 +30,11 @@ export interface ThreadV5 {
   district?: string | null;
   region?: string | null;
   country?: string | null;
-  is_important?: boolean;
-  important_requested?: boolean;
-  important_pinned?: boolean;
-  important_votes?: number;
-  important_voted?: boolean;
   is_hub?: boolean;
   is_hub_talk?: boolean;
+  hub_requested?: boolean;
+  hub_votes?: number;
+  hub_voted?: boolean;
   hub_id?: number | null;
   hub?: { id: number; title: string } | null;
   talk_id?: number | null;

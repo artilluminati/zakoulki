@@ -35,29 +35,11 @@ export function OfficialBadge() {
   );
 }
 
-export function ImportantBadge({ t }: { t: { is_important?: boolean; important_requested?: boolean; important_votes?: number } }) {
-  if (t.is_important) {
-    return (
-      <span title="Признан важным жителями" className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-        <Flame className="h-3 w-3" /> Важный
-      </span>
-    );
-  }
-  if (t.important_requested) {
-    return (
-      <span title="На рассмотрении: жители решают, важный ли это вопрос" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">
-        На рассмотрении · {t.important_votes ?? 0}/3
-      </span>
-    );
-  }
-  return null;
-}
-
-export function HubBadge({ t }: { t: { is_hub?: boolean; is_hub_talk?: boolean } }) {
+export function HubBadge({ t }: { t: { is_hub?: boolean; is_hub_talk?: boolean; hub_requested?: boolean; hub_votes?: number } }) {
   if (t.is_hub) {
     return (
-      <span title="Уголок — раздел места" className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-        <MessagesSquare className="h-3 w-3" /> Уголок
+      <span title="Раздел места" className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+        <MessagesSquare className="h-3 w-3" /> Раздел
       </span>
     );
   }
@@ -65,6 +47,13 @@ export function HubBadge({ t }: { t: { is_hub?: boolean; is_hub_talk?: boolean }
     return (
       <span title="Общее обсуждение уголка" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
         Обсуждение
+      </span>
+    );
+  }
+  if (t.hub_requested) {
+    return (
+      <span title="Жители решают, стать ли треду уголком" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">
+        В раздел · {t.hub_votes ?? 0}/3
       </span>
     );
   }
@@ -195,7 +184,6 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
           <span className="flex flex-wrap items-center gap-1.5">
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
             {t.author_badge === "official" && <OfficialBadge />}
-            <ImportantBadge t={t} />
             <HubBadge t={t} />
           </span>
           <div className="text-xs text-slate-500 dark:text-neutral-400">
@@ -250,7 +238,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {t.hub && (
             <Link href={`/thread/${t.hub.id}`} className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
-              Уголок: {t.hub.title}
+              Раздел: {t.hub.title}
             </Link>
           )}
           {(t.tags ?? []).map((tag) => (

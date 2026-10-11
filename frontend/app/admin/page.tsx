@@ -10,7 +10,7 @@ import { timeAgo } from "@/components/ThreadCard";
 
 interface AdminUser { id: number; username: string; email: string; role: string; badge?: string | null; created_at: string; }
 interface Report { id: number; reporter_id: number; reporter?: string; thread_id?: number | null; comment_id?: number | null; reason: string; text?: string | null; status: string; }
-interface AdminThread { id: number; author?: string | null; title?: string | null; snippet: string; is_offtop: boolean; is_important: boolean; important_pinned: boolean; place_id?: number | null; comments_count: number; created_at: string; }
+interface AdminThread { id: number; author?: string | null; title?: string | null; snippet: string; is_offtop: boolean; is_hub: boolean; place_id?: number | null; comments_count: number; created_at: string; }
 interface Stats { users: number; threads: number; places: number; reports_new: number; }
 
 const REASONS: Record<string, string> = { spam: "Спам", abuse: "Оскорбления", offtopic: "Не по теме", other: "Другое" };
@@ -112,16 +112,6 @@ export default function AdminPage() {
     try {
       await api.delete(`/admin/threads/${id}`);
       toast("Тред удалён", "success");
-      load();
-    } catch {
-      toast("Не получилось", "error");
-    }
-  };
-
-  const pinImportant = async (t: AdminThread) => {
-    try {
-      await api.patch(`/admin/threads/${t.id}/important`, { pinned: !t.important_pinned });
-      toast(t.important_pinned ? "Пин снят" : "Пост закреплён как важный", "success");
       load();
     } catch {
       toast("Не получилось", "error");
@@ -280,14 +270,11 @@ export default function AdminPage() {
                 <Link href={`/thread/${t.id}`} className="font-bold hover:underline dark:text-neutral-100">#{t.id}</Link>
                 {t.author && <span className="text-slate-500 dark:text-neutral-400">@{t.author}</span>}
                 {t.is_offtop && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">оффтоп</span>}
-                {t.is_important && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">важный</span>}
+                {t.is_hub && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">раздел</span>}
                 <span className="text-xs text-slate-400 dark:text-neutral-500">{timeAgo(t.created_at)} · {t.comments_count} комментов</span>
               </div>
               {(t.title || t.snippet) && <div className="mt-0.5 truncate text-[13px] text-slate-600 dark:text-neutral-300">{t.title ?? t.snippet}</div>}
               <div className="mt-1.5 flex gap-1.5">
-                <button onClick={() => pinImportant(t)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800">
-                  {t.important_pinned ? "Снять пин" : "Важный"}
-                </button>
                 <button onClick={() => deleteThread(t.id)} className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-500">
                   Удалить
                 </button>

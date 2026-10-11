@@ -161,7 +161,7 @@ def map_points(north: float, south: float, east: float, west: float,
              .filter(GeoPlace.latitude.between(south, north))
              .filter(GeoPlace.longitude.between(west, east)))
     # прикреплённые к уголкам вопросы на карте не дублируем —
-    # территория ведёт на свой уголок
+    # территория ведёт на свой раздел
     items = items.filter(Thread.hub_id.is_(None))
     if geo_any:
         vals = [v for v in geo_any if v]
@@ -345,7 +345,7 @@ def get_place(place_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{place_id}/hubs")
 def place_hubs(place_id: int, db: Session = Depends(get_db)):
-    """Уголки места — для прикрепления вопроса при создании."""
+    """Разделы места — для прикрепления вопроса при создании."""
     hubs = (db.query(Thread).filter(Thread.place_id == place_id, Thread.is_hub == True)
             .order_by(Thread.id).all())
     out = []
@@ -353,7 +353,7 @@ def place_hubs(place_id: int, db: Session = Depends(get_db)):
         talk = (db.query(Thread).filter(Thread.hub_id == h.id, Thread.is_hub_talk).first())
         members = (db.query(Thread).filter(Thread.hub_id == h.id, Thread.is_hub_talk == False).count())
         author = db.get(User, h.author_id)
-        out.append({"id": h.id, "title": h.title or "Уголок",
+        out.append({"id": h.id, "title": h.title or "Раздел",
                     "author": author.username if author else None,
                     "talk_id": talk.id if talk else None, "members": members})
     return out
