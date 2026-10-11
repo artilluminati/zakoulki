@@ -223,7 +223,7 @@ export default function MdEditor({
 
   return (
     <div ref={boxRef} className="relative overflow-visible rounded-xl border border-slate-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-800 [&>button]:shrink-0">
+      <div className="flex items-center gap-1 overflow-x-auto rounded-t-xl border-b border-slate-100 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-800 [&>button]:shrink-0">
         <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Bold className="h-4 w-4" /></button>
         <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Italic className="h-4 w-4" /></button>
         {!compact && (
