@@ -5,12 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
-import { fetchMapPoints, fetchThread, reverseGeocode, scopeParams } from "@/lib/v5";
+import { fetchMapPoints, fetchThread, reverseGeocode, searchGeoPlaces, scopeParams } from "@/lib/v5";
 import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_BLANK, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import { useToast } from "@/lib/toast";
 import { useScope } from "@/lib/scope";
+import type { Scope } from "@/lib/scope";
 import PhotoImg from "@/components/PhotoImg";
 import type { ThreadV5 } from "@/types/v5";
 
@@ -23,6 +24,16 @@ function passFilter(p: MapPt, f: Filter) {
   if (f === "Вопросы") return !p.is_offtop;
   if (f === "С фото") return p.has_photo;
   return true;
+}
+
+// прыжок камеры на глобально выбранный регион (город 12, район 13, область 9)
+async function jumpToScope(map: any, s: Scope) {
+  const label = s.district || s.city || s.region;
+  if (!label || !map) return;
+  const list = await searchGeoPlaces(label).catch(() => []);
+  const hit = list[0];
+  if (!hit) return;
+  map.setCenter([hit.lat, hit.lng], s.district ? 13 : s.city ? 12 : 9, { duration: 300 });
 }
 
 export default function MapPage() {
@@ -101,11 +112,22 @@ export default function MapPage() {
         if (!alive) return;
         setLoading(false);
         setMapReady(true);
+        // стартуем не с Москвы, а с глобально выбранного региона
+        if (!focusPlace) jumpToScope(map, scopeRef.current).catch(() => { /* ignore */ });
         map.events.add("boundschange", () => { paint().catch(() => { /* ignore */ }); });
       } catch { if (alive) { setErr("Карта не загрузилась"); setLoading(false); } }
     })();
     return () => { alive = false; try { map?.destroy(); } catch { /* ignore */ } };
   }, [key, toast]);
+
+  // смена глобального региона на открытой карте — переносим камеру следом
+  useEffect(() => {
+    if (!mapReady || focusPlace) return;
+    const map = (window as any).__ymap;
+    if (!map) return;
+    jumpToScope(map, scope).catch(() => { /* ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, scope]);
 
   // адрес под прицелом (дебаунс 600мс после остановки карты)
   useEffect(() => {
