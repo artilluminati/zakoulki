@@ -78,7 +78,7 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
         import html as _h
         return f"<p>{_h.escape(text)}</p>", {"user_ids": user_ids, "usernames": usernames, "place_ids": place_ids, "tags": tags}
 
-    html = md_lib.markdown(text, extensions=[])
+    html = md_lib.markdown(text, extensions=["nl2br"])
 
     def _outside_anchors(h: str, fn) -> str:
         """Применить fn только к тексту вне <a>…</a> (чипы не рвём)."""

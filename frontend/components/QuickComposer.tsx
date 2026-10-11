@@ -70,9 +70,9 @@ export default function QuickComposer({ placeholder, expandHref, onSubmit }: {
           ))}
         </div>
       )}
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-xs text-slate-400 dark:text-neutral-500">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
-        <div className="flex gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="mr-auto text-xs text-slate-400 dark:text-neutral-500">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
+        <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => fileRef.current?.click()} title="Прикрепить фото" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800">
             <ImagePlus className="h-4 w-4" />
           </button>
@@ -86,7 +86,7 @@ export default function QuickComposer({ placeholder, expandHref, onSubmit }: {
           />
           <PasteButton iconOnly onPaste={(imgs) => { setFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
           {expandHref && <Link href={expandHref} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold dark:border-neutral-700">Расширить</Link>}
-          <button onClick={post} disabled={(!draft.trim() && files.length === 0) || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
+          <button onClick={post} disabled={(!draft.trim() && files.length === 0) || posting} className="min-w-32 flex-1 rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300 sm:flex-none">
             {posting ? "…" : "Опубликовать"}
           </button>
         </div>
