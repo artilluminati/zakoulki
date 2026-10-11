@@ -6,7 +6,7 @@ import { MapPin, X, Search, House, History } from "lucide-react";
 import { api } from "@/lib/api";
 import { scopeLabel, getHomeCity, getRecentScopes, pushRecentScope, type Scope } from "@/lib/scope";
 
-interface SuggestItem { name: string; count: number; level: "city" | "district" | "region"; }
+interface SuggestItem { name: string; count: number; extra?: string | null; level: "city" | "district" | "region"; }
 
 /** Одно умное поле: город, район или область. Иерархию подтягивает /resolve. */
 export default function ScopePicker({ value, onChange }: {
@@ -29,8 +29,8 @@ export default function ScopePicker({ value, onChange }: {
         ]);
         const list: SuggestItem[] = [
           ...(regions.data ?? []).map((r: { name: string; count: number }) => ({ ...r, level: "region" as const })),
-          ...(cities.data ?? []).map((c: { name: string; count: number }) => ({ ...c, level: "city" as const })),
-          ...(districts.data ?? []).map((d: { name: string; count: number }) => ({ ...d, level: "district" as const })),
+          ...(cities.data ?? []).map((c: { name: string; count: number; extra?: string | null }) => ({ ...c, level: "city" as const })),
+          ...(districts.data ?? []).map((d: { name: string; count: number; extra?: string | null }) => ({ ...d, level: "district" as const })),
         ];
         setItems(list.slice(0, 10));
         setHi(0);
@@ -59,10 +59,13 @@ export default function ScopePicker({ value, onChange }: {
     apply(rest); close();
   };
 
-  const pick = async (name: string, level: "city" | "district" | "region") => {
+  const pick = async (name: string, level: "city" | "district" | "region", hint?: string | null) => {
     setResolving(true);
     try {
-      const res = await api.get("/geo-places/resolve", { params: { name } });
+      const params: Record<string, string> = { name };
+      if (hint && level === "city") params.region = hint;
+      if (hint && level === "district") params.city = hint;
+      const res = await api.get("/geo-places/resolve", { params });
       const r = res.data;
       if (!r.city && !r.region && !r.district) {
         // такого нет в базе — свободный фильтр: сработает где встретится
@@ -90,7 +93,7 @@ export default function ScopePicker({ value, onChange }: {
   const showCombo = topCity && topRegion && topCity.name !== topRegion.name;
 
   // строки меню: комби + обычные (для стрелок и Enter)
-  const rows: { key: string; label: string; sub: string; run: () => void }[] = [
+  const rows: { key: string; label: string; extra?: string | null; sub: string; run: () => void }[] = [
     ...(showCombo ? [{
       key: `combo-${topCity!.name}`,
       label: `${topCity!.name} и ${topRegion!.name}`,
@@ -98,10 +101,11 @@ export default function ScopePicker({ value, onChange }: {
       run: () => pickCombo(topCity!.name, topRegion!.name),
     }] : []),
     ...items.map((it) => ({
-      key: `${it.level}-${it.name}`,
+      key: `${it.level}-${it.name}-${it.extra ?? ""}`,
       label: it.name,
+      extra: it.extra ?? null,
       sub: it.level === "city" ? "город" : it.level === "district" ? "район" : "область",
-      run: () => pick(it.name, it.level),
+      run: () => pick(it.name, it.level, it.extra),
     })),
   ];
 
@@ -207,7 +211,10 @@ export default function ScopePicker({ value, onChange }: {
               className={`flex w-full items-center gap-2 px-3 py-2 text-left ${i + 1 === hi ? "bg-emerald-50 dark:bg-emerald-950" : ""}`}
             >
               <MapPin className="h-4 w-4 shrink-0 text-slate-300 dark:text-neutral-500" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.label}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                {r.label}
+                {r.extra && <span className="font-normal text-slate-400 dark:text-neutral-500"> · {r.extra}</span>}
+              </span>
               <span className="shrink-0 text-[11px] text-slate-400 dark:text-neutral-500">{r.sub}</span>
             </button>
           ))}

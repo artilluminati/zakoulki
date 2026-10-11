@@ -25,7 +25,7 @@ export default function ProfilePage() {
   // домашний город: подсказки региона и стартовый скоуп
   const [home, setHome] = useState<string | null>(null);
   const [homeQ, setHomeQ] = useState("");
-  const [homeFound, setHomeFound] = useState<{ name: string }[]>([]);
+  const [homeFound, setHomeFound] = useState<{ name: string; extra?: string | null }[]>([]);
   const [homeHi, setHomeHi] = useState(0);
   useEffect(() => {
     setHome(getHomeCity());
@@ -136,13 +136,14 @@ export default function ProfilePage() {
             <div className="absolute inset-x-0 top-11 z-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
               {homeFound.map((c, i) => (
                 <button
-                  key={c.name}
+                  key={`${c.name}-${c.extra ?? ""}`}
                   type="button"
                   onMouseEnter={() => setHomeHi(i)}
                   onClick={() => { setHomeCity(c.name); setHome(c.name); setHomeQ(""); setHomeFound([]); setHomeHi(0); }}
                   className={`block w-full truncate px-3 py-2 text-left text-sm font-semibold dark:text-neutral-200 ${i === homeHi ? "bg-emerald-50 dark:bg-emerald-950" : "hover:bg-slate-50 dark:hover:bg-neutral-800"}`}
                 >
                   {c.name}
+                  {c.extra && <span className="font-normal text-slate-400 dark:text-neutral-500"> · {c.extra}</span>}
                 </button>
               ))}
             </div>

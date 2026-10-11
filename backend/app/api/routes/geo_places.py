@@ -237,13 +237,31 @@ def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"
         query = query.filter((GeoPlace.region == parent) | (GeoPlace.country == parent))
     if parent and level == "region":
         query = query.filter(GeoPlace.country == parent)
-    rows = query.group_by(col).order_by(func.count(GeoPlace.id).desc()).limit(limit).all()
-    out = [{"name": name, "count": count} for name, count in rows]
+    if level in ("city", "district") and q:
+        # одноимённые города/районы — отдельными строками с контекстом
+        # (Конь в Татарстане vs Конь в Адыгее), иначе не различить
+        pair_col = GeoPlace.region if level == "city" else GeoPlace.city
+        pair_q = db.query(col, pair_col, func.count(GeoPlace.id)).filter(col.isnot(None))
+        pair_q = pair_q.filter(col.ilike(f"%{q}%"))
+        if parent and level == "district":
+            pair_q = pair_q.filter((GeoPlace.city == parent) | (GeoPlace.region == parent) | (GeoPlace.country == parent))
+        if parent and level == "city":
+            pair_q = pair_q.filter((GeoPlace.region == parent) | (GeoPlace.country == parent))
+        pair_rows = pair_q.group_by(col, pair_col).order_by(func.count(GeoPlace.id).desc()).limit(limit).all()
+        out = [{"name": nm, "count": cnt, "extra": ex} for nm, ex, cnt in pair_rows if nm]
+        if level == "city":
+            seen_pair = {(r["name"].lower(), (r.get("extra") or "").lower()) for r in out}
+        else:
+            seen_pair = {(r["name"].lower(), (r.get("extra") or "").lower()) for r in out}
+    else:
+        rows = query.group_by(col).order_by(func.count(GeoPlace.id).desc()).limit(limit).all()
+        out = [{"name": name, "count": count} for name, count in rows]
+        seen_pair = {(r["name"].lower(), "") for r in out}
     # статический справочник РФ: работает всегда, без сетевых лимитов
     if q and len(out) < limit:
         try:
             from app.services import russia_geo as _rg
-            seen = {str(n).lower() for n, _ in rows if n}
+            seen = {n for n, _ in seen_pair}
             for val in _rg.match_static(q, level, limit - len(out)):
                 if val.lower() not in seen:
                     seen.add(val.lower())
@@ -255,21 +273,29 @@ def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"
     if q and len(out) < limit:
         try:
             from app.services import citydata as _cd
-            seen = {o["name"].lower() for o in out}
+            seen = {(o["name"].lower(), (o.get("extra") or "").lower()) for o in out}
             ql = q.strip().lower()
             for g in _cd.nominatim_search(q, limit=5):
                 name = (g.get("name") or "").strip()
                 if level == "city":
                     val = g.get("city") or (name if g.get("kind") == "city" and ql in name.lower() else None)
+                    extra = g.get("region")
                 elif level == "region":
                     val = g.get("region") or (name if g.get("kind") == "region" and ql in name.lower() else None)
+                    extra = None
                 elif level == "district":
                     val = g.get("district") or (name if g.get("kind") == "district" and ql in name.lower() else None)
+                    extra = g.get("city")
                 else:
                     val = g.get("country") or (name if g.get("kind") == "country" and ql in name.lower() else None)
-                if val and val.lower() not in seen:
-                    seen.add(val.lower())
-                    out.append({"name": val, "count": 0})
+                    extra = None
+                key = ((val or "").lower(), (extra or "").lower())
+                if val and key not in seen:
+                    seen.add(key)
+                    item = {"name": val, "count": 0}
+                    if extra:
+                        item["extra"] = extra
+                    out.append(item)
                     if len(out) >= limit:
                         break
         except Exception:
@@ -278,20 +304,27 @@ def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"
 
 
 @router.get("/resolve")
-def resolve_scope(name: str = Query(min_length=2, max_length=200), db: Session = Depends(get_db)):
+def resolve_scope(name: str = Query(min_length=2, max_length=200),
+                  region: str | None = Query(None, description="подсказка для одноимённых городов"),
+                  city: str | None = Query(None, description="подсказка для одноимённых районов"),
+                  db: Session = Depends(get_db)):
     """Умное поле: по названию города/района вернуть всю иерархию.
-    Точное совпадение с городом важнее района."""
+    Точное совпадение с городом важнее района; hint разруливает одноимённые."""
     from sqlalchemy import func
     city_row = (db.query(GeoPlace.city, GeoPlace.region, GeoPlace.country, func.count(GeoPlace.id).label("c"))
-                .filter(GeoPlace.city.ilike(name))
-                .group_by(GeoPlace.city, GeoPlace.region, GeoPlace.country)
+                .filter(GeoPlace.city.ilike(name)))
+    if region:
+        city_row = city_row.filter(GeoPlace.region.ilike(region))
+    city_row = (city_row.group_by(GeoPlace.city, GeoPlace.region, GeoPlace.country)
                 .order_by(func.count(GeoPlace.id).desc()).first())
     if city_row and city_row[0]:
         return {"district": None, "city": city_row[0], "region": city_row[1], "country": city_row[2] or "Россия"}
     row = (db.query(GeoPlace.district, GeoPlace.city, GeoPlace.region, GeoPlace.country,
                     func.count(GeoPlace.id).label("c"))
-           .filter(GeoPlace.district.ilike(name))
-           .group_by(GeoPlace.district, GeoPlace.city, GeoPlace.region, GeoPlace.country)
+           .filter(GeoPlace.district.ilike(name)))
+    if city:
+        row = row.filter(GeoPlace.city.ilike(city))
+    row = (row.group_by(GeoPlace.district, GeoPlace.city, GeoPlace.region, GeoPlace.country)
            .order_by(func.count(GeoPlace.id).desc()).first())
     if not row or not row[0]:
         # статический справочник РФ — без сети и лимитов
