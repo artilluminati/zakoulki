@@ -6,6 +6,7 @@ import { ToastProvider } from "@/lib/toast";
 import { ScopeProvider } from "@/lib/scope";
 import { ThemeProvider } from "@/lib/theme";
 import AppShell from "@/components/AppShell";
+import ChunkReload from "@/components/ChunkReload";
 import Onboarding from "@/components/Onboarding";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", display: "swap" });
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
         <ThemeProvider>
+          <ChunkReload />
           <AuthProvider>
             <ToastProvider>
               <ScopeProvider>

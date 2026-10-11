@@ -10,7 +10,7 @@ import MiniMap from "@/components/MiniMap";
 import PasteButton from "@/components/PasteButton";
 import HubPicker from "@/components/HubPicker";
 import PollBuilder, { type PollDraft } from "@/components/PollBuilder";
-import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode, fetchSimilarPlaces, attachHub, fetchThread, type PickedHub } from "@/lib/v5";
+import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode, fetchSimilarPlaces, attachHub, fetchThread, createHub, type PickedHub } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import { useScope, scopeLabel } from "@/lib/scope";
@@ -260,46 +260,81 @@ export default function CreatePage() {
     fetchNearbyThreads(latitude, longitude).then(setNearby).catch(() => { /* ignore */ });
   };
 
+  const isHubMode = params.get("newhub") !== null;
+
+  // место для публикации: готовое, из раздела, территория, точка с карты, уточнение
+  const resolvePlaceId = async (): Promise<number | null> => {
+    let placeId = place && place.id > 0 && !adjust ? place.id : null;
+    if (!placeId && pickedHub) placeId = pickedHub.placeId;
+    if (!placeId && vertices.length >= 3) {
+      const c = centroid(vertices)!;
+      const r = await reverseGeocode(c.latitude, c.longitude).catch(() => null);
+      const p = await createGeoPlace({
+        name: r?.name || "Территория",
+        latitude: c.latitude, longitude: c.longitude,
+        address: r?.address || null, district: r?.district || null, street: r?.street || null,
+        city: r?.city || scope.city || null, region: r?.region || scope.region || null,
+        country: r?.country || scope.country || "Россия",
+        area: vertices,
+      });
+      placeId = p.id;
+    } else if (!placeId && pendingGeo) {
+      const r = await reverseGeocode(pendingGeo.latitude, pendingGeo.longitude).catch(() => null);
+      const p = await createGeoPlace({
+        name: pendingLabel?.name || "Точка на карте",
+        latitude: pendingGeo.latitude, longitude: pendingGeo.longitude,
+        address: (pendingAddrEdit?.trim() || pendingLabel?.address) || r?.address || null,
+        district: r?.district || null,
+        city: r?.city || scope.city || null, region: r?.region || scope.region || null,
+        country: r?.country || scope.country || "Россия",
+      });
+      placeId = p.id;
+    } else if (!placeId && place && place.id > 0 && adjust) {
+      // точку выбранного места уточнили вручную — своя копия с тем же названием
+      const p = await createGeoPlace({
+        name: place.name,
+        latitude: adjust.latitude, longitude: adjust.longitude,
+        address: place.address, district: place.district, street: place.street,
+        city: place.city || scope.city || null, region: place.region || scope.region || null,
+        country: place.country || scope.country || "Россия",
+      });
+      placeId = p.id;
+    }
+    return placeId;
+  };
+
+  const publishHub = async () => {
+    if (title.trim().length < 2 || saving) return;
+    setSaving(true); setError(null);
+    try {
+      const placeId = await resolvePlaceId();
+      if (!placeId) {
+        setError("Разделу нужно место — выберите точку или территорию ниже");
+        setSaving(false);
+        return;
+      }
+      const h = await createHub(placeId, title.trim(), body.trim() || undefined);
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+      router.push(`/hub/${h.id}`);
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number; data?: { detail?: string } } })?.response?.status;
+      if (status === 401) {
+        toast("Сессия истекла — войдите снова", "error");
+        router.push("/login");
+        setSaving(false);
+        return;
+      }
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "Не опубликовалось";
+      setError(msg); setSaving(false);
+    }
+  };
+
   const publish = async () => {
+    if (isHubMode) { publishHub(); return; }
     if ((!body.trim() && files.length === 0) || saving) return;
     setSaving(true); setError(null);
     try {
-      let placeId = place && place.id > 0 && !adjust ? place.id : null;
-      if (!placeId && pickedHub) placeId = pickedHub.placeId;
-      if (!placeId && vertices.length >= 3) {
-        const c = centroid(vertices)!;
-        const r = await reverseGeocode(c.latitude, c.longitude).catch(() => null);
-        const p = await createGeoPlace({
-          name: r?.name || "Территория",
-          latitude: c.latitude, longitude: c.longitude,
-          address: r?.address || null, district: r?.district || null, street: r?.street || null,
-          city: r?.city || scope.city || null, region: r?.region || scope.region || null,
-          country: r?.country || scope.country || "Россия",
-          area: vertices,
-        });
-        placeId = p.id;
-      } else if (!placeId && pendingGeo) {
-        const r = await reverseGeocode(pendingGeo.latitude, pendingGeo.longitude).catch(() => null);
-        const p = await createGeoPlace({
-          name: pendingLabel?.name || "Точка на карте",
-          latitude: pendingGeo.latitude, longitude: pendingGeo.longitude,
-          address: (pendingAddrEdit?.trim() || pendingLabel?.address) || r?.address || null,
-          district: r?.district || null,
-          city: r?.city || scope.city || null, region: r?.region || scope.region || null,
-          country: r?.country || scope.country || "Россия",
-        });
-        placeId = p.id;
-      } else if (!placeId && place && place.id > 0 && adjust) {
-        // точку выбранного места уточнили вручную — своя копия с тем же названием
-        const p = await createGeoPlace({
-          name: place.name,
-          latitude: adjust.latitude, longitude: adjust.longitude,
-          address: place.address, district: place.district, street: place.street,
-          city: place.city || scope.city || null, region: place.region || scope.region || null,
-          country: place.country || scope.country || "Россия",
-        });
-        placeId = p.id;
-      }
+      const placeId = await resolvePlaceId();
       const t = await createThread({
         title: title || null, body_md: body, place_id: placeId, tags,
         city: scope.city ?? null, district: scope.district ?? null,
@@ -343,7 +378,7 @@ export default function CreatePage() {
         }
       }}
     >
-      <h1 className="text-xl font-extrabold">Новый вопрос</h1>
+      <h1 className="text-xl font-extrabold">{isHubMode ? "Новый раздел" : "Новый вопрос"}</h1>
       {!authLoading && !user && (
         <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
           Войдите, чтобы задать вопрос →
@@ -354,17 +389,18 @@ export default function CreatePage() {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         maxLength={150}
-        placeholder="Заголовок (необязательно)"
+        placeholder={isHubMode ? "Название раздела" : "Заголовок (необязательно)"}
         className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500 dark:border-neutral-700 dark:bg-neutral-900"
       />
 
-      <MdEditor value={body} onChange={setBody} placeholder="Опишите вопрос… @ — человек, + — место, # — тема" />
+      <MdEditor value={body} onChange={setBody} placeholder={isHubMode ? "О чём этот раздел…" : "Опишите вопрос… @ — человек, + — место, # — тема"} />
 
-      <TagPicker value={tags} onChange={setTags} />
+      {!isHubMode && <TagPicker value={tags} onChange={setTags} />}
 
-      <PollBuilder value={poll} onChange={setPoll} />
+      {!isHubMode && <PollBuilder value={poll} onChange={setPoll} />}
 
-      {/* фото */}
+      {/* фото — вопросам; у раздела пока без фото */}
+      {!isHubMode && (
       <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
         <div className="grid grid-cols-2 gap-1.5">
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700 dark:text-neutral-400">
@@ -398,6 +434,7 @@ export default function CreatePage() {
           </div>
         )}
       </div>
+      )}
       {lightbox && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4" onClick={() => setLightbox(null)}>
           <button aria-label="Закрыть" className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white">
@@ -408,8 +445,8 @@ export default function CreatePage() {
         </div>
       )}
 
-      <HubPicker value={pickedHub} onChange={setPickedHub} />
-      {pickedHub ? (
+      {!isHubMode && <HubPicker value={pickedHub} onChange={setPickedHub} />}
+      {pickedHub && !isHubMode ? (
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900">
           <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="min-w-0 flex-1 truncate">
@@ -420,12 +457,15 @@ export default function CreatePage() {
       ) : (
         <>
       {/* выбор города/региона — можно ввести вручную, даже если там ещё нет постов */}
+      {!isHubMode && (
       <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
         <div className="mb-2 flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Город или район</div>
         <ScopePicker value={scope} onChange={setScope} />
       </div>
+      )}
 
       {/* точка / территория — одна карта, позиция не слетает при переключении */}
+      {(!pickedHub || isHubMode) && (
       <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Место</span>
@@ -564,14 +604,15 @@ export default function CreatePage() {
           </div>
         )}
       </div>
+      )}
         </>
       )}
 
       {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">{error}</div>}
 
       <div className="sticky bottom-20 flex gap-2 md:bottom-6">
-        <button onClick={publish} disabled={(!body.trim() && files.length === 0) || saving} className="flex-1 rounded-2xl bg-lime-400 py-3 text-[15px] font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
-          {saving ? "Публикуем…" : "Опубликовать"}
+        <button onClick={publish} disabled={isHubMode ? (title.trim().length < 2 || saving) : ((!body.trim() && files.length === 0) || saving)} className="flex-1 rounded-2xl bg-lime-400 py-3 text-[15px] font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
+          {saving ? "Публикуем…" : isHubMode ? "Создать раздел" : "Опубликовать"}
         </button>
       </div>
       <p className="pb-24 text-center text-xs text-slate-400 md:pb-8 dark:text-neutral-500">Черновик сохраняется автоматически</p>

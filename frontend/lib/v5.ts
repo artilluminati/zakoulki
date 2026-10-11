@@ -156,8 +156,8 @@ export async function fetchPlaceHubs(placeId: number) {
   return res.data;
 }
 
-export async function createHub(placeId: number, title: string) {
-  const res = await api.post<ThreadV5>("/threads/hubs", { place_id: placeId, title });
+export async function createHub(placeId: number, title: string, body?: string) {
+  const res = await api.post<ThreadV5>("/threads/hubs", { place_id: placeId, title, ...(body?.trim() ? { body_md: body.trim() } : {}) });
   return res.data;
 }
 

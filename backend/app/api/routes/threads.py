@@ -597,6 +597,7 @@ def _make_talk(db: Session, hub: Thread, author_id: int) -> Thread:
 class HubCreate(BaseModel):
     place_id: int
     title: str = Field(min_length=2, max_length=150)
+    body_md: str | None = Field(default=None, max_length=5000, description="текст раздела")
 
 
 @router.get("/hubs")
@@ -624,8 +625,10 @@ def create_hub(data: HubCreate, db: Session = Depends(get_db), user: User = Depe
     place = db.get(GeoPlace, data.place_id)
     if not place:
         raise HTTPException(404, "Место не найдено")
-    hub = Thread(author_id=user.id, title=data.title.strip(), body_md=data.title.strip(),
-                 body_html=data.title.strip(), is_offtop=False, place_id=place.id,
+    body = (data.body_md or "").strip() or data.title.strip()
+    html, _entities = render_markdown(body)
+    hub = Thread(author_id=user.id, title=data.title.strip(), body_md=body,
+                 body_html=html, is_offtop=False, place_id=place.id,
                  city=place.city, district=place.district, region=place.region, country=place.country,
                  is_hub=True)
     db.add(hub); db.flush()

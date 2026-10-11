@@ -3,9 +3,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, MessageCircle, MessagesSquare, Plus, Search } from "lucide-react";
-import { fetchThreads, createHub, createGeoPlace, searchGeoPlaces, reverseGeocode } from "@/lib/v5";
-import type { GeoPlaceV5, ThreadV5 } from "@/types/v5";
+import { MapPin, MessageCircle, MessagesSquare, Plus } from "lucide-react";
+import { fetchThreads } from "@/lib/v5";
+import type { ThreadV5 } from "@/types/v5";
 import { useScope, scopeLabel } from "@/lib/scope";
 import { scopeParams } from "@/lib/v5";
 
@@ -13,12 +13,6 @@ export default function HubsPage() {
   const { scope } = useScope();
   const [hubs, setHubs] = useState<ThreadV5[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formOpen, setFormOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [pq, setPq] = useState("");
-  const [pfound, setPfound] = useState<GeoPlaceV5[]>([]);
-  const [pplace, setPplace] = useState<GeoPlaceV5 | null>(null);
-  const [busy, setBusy] = useState(false);
 
   const reload = () => {
     setLoading(true);
@@ -33,39 +27,6 @@ export default function HubsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
 
-  useEffect(() => {
-    if (pq.trim().length < 3) { setPfound([]); return; }
-    const t = setTimeout(async () => {
-      try { setPfound(await searchGeoPlaces(pq.trim())); } catch { setPfound([]); }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [pq]);
-
-  const create = async () => {
-    if (title.trim().length < 2 || !pplace || busy) return;
-    setBusy(true);
-    try {
-      let pid = pplace.id;
-      if (pid <= 0) {
-        const r = await reverseGeocode(pplace.lat, pplace.lng).catch(() => null);
-        const created = await createGeoPlace({
-          name: pplace.name, latitude: pplace.lat, longitude: pplace.lng,
-          address: pplace.address || r?.address || null, district: pplace.district || r?.district || null,
-          street: pplace.street || r?.street || null,
-          city: pplace.city || r?.city || scope.city || null,
-          region: pplace.region || r?.region || scope.region || null,
-          country: pplace.country || r?.country || scope.country || "Россия",
-        });
-        pid = created.id;
-      }
-      await createHub(pid, title.trim());
-      setTitle(""); setPq(""); setPfound([]); setPplace(null);
-      setFormOpen(false);
-      reload();
-    } catch { /* ignore */ }
-    finally { setBusy(false); }
-  };
-
   return (
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       <div>
@@ -73,64 +34,12 @@ export default function HubsPage() {
         <p className="mt-0.5 text-sm text-slate-500 dark:text-neutral-400">
           Разделы мест: вопросы одного двора, парка или улицы — в одном месте. {scopeLabel(scope) !== "Вся Россия" && <>Показаны: {scopeLabel(scope)}.</>}
         </p>
-        <button
-          onClick={() => setFormOpen(!formOpen)}
-          className="mt-2 flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"
+        <Link
+          href="/create?newhub=1"
+          className="mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"
         >
           <Plus className="h-4 w-4" /> Создать новый раздел
-        </button>
-        {formOpen && (
-          <div className="mt-2 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Название раздела…"
-              maxLength={150}
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-emerald-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-            {!pplace ? (
-              <>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={pq}
-                    onChange={(e) => setPq(e.target.value)}
-                    placeholder="Место раздела: найти…"
-                    maxLength={100}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none focus:border-emerald-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-                  />
-                </div>
-                {pfound.length > 0 && (
-                  <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-neutral-700">
-                    {pfound.slice(0, 6).map((p) => (
-                      <button
-                        key={`${p.id}-${p.name}`}
-                        type="button"
-                        onClick={() => { setPplace(p); setPq(""); setPfound([]); }}
-                        className="block w-full truncate px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50 dark:hover:bg-neutral-800"
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm dark:bg-neutral-800">
-                <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span className="min-w-0 flex-1 truncate font-semibold">{pplace.name}</span>
-                <button type="button" onClick={() => setPplace(null)} className="shrink-0 text-xs font-bold text-slate-400 hover:text-red-500">сменить</button>
-              </div>
-            )}
-            <button
-              onClick={create}
-              disabled={busy || title.trim().length < 2 || !pplace}
-              className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white disabled:opacity-40"
-            >
-              Создать раздел
-            </button>
-          </div>
-        )}
+        </Link>
       </div>
       {loading ? (
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-32 animate-pulse rounded-2xl bg-white dark:bg-neutral-900" />)}</div>
