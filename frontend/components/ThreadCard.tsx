@@ -123,7 +123,26 @@ export const ThreadHtml = memo(function ThreadHtml({ html, placePreview }: { htm
   );
 });
 
-export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
+export function HubAuthorBadge() {
+  return (
+    <span title="Создатель раздела" className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white">
+      Автор раздела
+    </span>
+  );
+}
+
+export function HubModeratorBadge() {
+  return (
+    <span title="Модератор раздела" className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-bold text-teal-800 dark:bg-teal-950 dark:text-teal-300">
+      Модератор
+    </span>
+  );
+}
+
+export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: ThreadV5; hubAuthorId?: number | null; hubModIds?: number[] }) {
+  const isHubAuthor = hubAuthorId != null && t.author_id === hubAuthorId;
+  const isHubMod = !isHubAuthor && !!hubModIds?.includes(t.author_id);
+  const threadHref = t.is_hub ? `/hub/${t.id}` : `/thread/${t.id}`;
   const toast = useToast();
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(t.likes_count);
@@ -159,7 +178,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
 
   const share = async () => {
     try {
-      await navigator.clipboard.writeText(`${location.origin}/thread/${t.id}`);
+      await navigator.clipboard.writeText(`${location.origin}${threadHref}`);
       toast("Ссылка скопирована", "success");
     } catch { toast("Не скопировалось", "error"); }
     closeMenu();
@@ -175,7 +194,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
   const closeMenu = () => { setMenu(false); setReportMode(false); };
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900">
+    <article className={`rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md dark:bg-neutral-900 ${t.is_hub ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-slate-200 bg-white dark:border-neutral-700"}`}>
       <div className="flex items-center gap-2.5">
         <span className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-slate-700" style={{ background: avatarColor(t.author_username) }}>
           {(t.author_username ?? "?").slice(0, 1).toUpperCase()}
@@ -185,6 +204,8 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
             {t.author_badge === "official" && <OfficialBadge />}
             <HubBadge t={t} />
+            {isHubAuthor && <HubAuthorBadge />}
+            {isHubMod && <HubModeratorBadge />}
           </span>
           <div className="text-xs text-slate-500 dark:text-neutral-400">
             {timeAgo(t.created_at)}
@@ -229,7 +250,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
         </div>
       </div>
 
-      <Link href={`/thread/${t.id}`} className="mt-2 block">
+      <Link href={threadHref} className="mt-2 block">
         {t.title && <h3 className="text-[16px] font-extrabold leading-snug">{t.title}</h3>}
         <ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} />
       </Link>
@@ -237,7 +258,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
       {(t.tags?.length || t.hub || (!t.place && (t.district || t.city))) ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {t.hub && (
-            <Link href={`/thread/${t.hub.id}`} className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
+            <Link href={`/hub/${t.hub.id}`} className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
               Раздел: {t.hub.title}
             </Link>
           )}
@@ -254,7 +275,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
         </div>
       ) : null}
       {t.poll && (
-        <Link href={`/thread/${t.id}`} className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-slate-800 dark:text-neutral-400">
+        <Link href={threadHref} className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-slate-800 dark:text-neutral-400">
           <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Опрос: {t.poll.question} · голосов: {t.poll.total}
         </Link>
       )}
@@ -295,7 +316,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
       )}
 
       <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
-        <Link href={`/thread/${t.id}`} className="flex items-center gap-1.5 hover:text-slate-800">
+        <Link href={threadHref} className="flex items-center gap-1.5 hover:text-slate-800">
           <MessageCircle className="h-4 w-4" /> {t.comments_count}
         </Link>
         <button onClick={onLike} className={`flex items-center gap-1.5 ${liked ? "text-red-500" : "hover:text-slate-800"}`}>

@@ -140,7 +140,7 @@ export async function fetchSimilarPlaces(name: string, lat?: number, lng?: numbe
   return res.data;
 }
 
-export interface PlaceHub { id: number; title: string; author?: string | null; talk_id?: number | null; members: number; }
+export interface PlaceHub { id: number; title: string; author?: string | null; talk_id?: number | null; members: number; can_moderate?: boolean; }
 
 export interface HubListItem { id: number; title: string; place?: { id: number; name: string } | null; members: number; }
 
@@ -178,6 +178,28 @@ export async function detachHub(threadId: number) {
 
 export async function fetchAttached(hubId: number) {
   const res = await api.get<ThreadV5[]>(`/threads/${hubId}/attached`);
+  return res.data;
+}
+
+export interface HubModerator { id: number; username: string; }
+
+export async function fetchHubModerators(hubId: number) {
+  const res = await api.get<HubModerator[]>(`/threads/${hubId}/moderators`);
+  return res.data;
+}
+
+export async function addHubModerator(hubId: number, username: string) {
+  const res = await api.post<HubModerator[]>(`/threads/${hubId}/moderators`, { username });
+  return res.data;
+}
+
+export async function removeHubModerator(hubId: number, userId: number) {
+  const res = await api.delete<HubModerator[]>(`/threads/${hubId}/moderators/${userId}`);
+  return res.data;
+}
+
+export async function renameHub(hubId: number, title: string) {
+  const res = await api.patch<ThreadV5>(`/threads/${hubId}`, { title });
   return res.data;
 }
 

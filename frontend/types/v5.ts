@@ -36,9 +36,10 @@ export interface ThreadV5 {
   hub_votes?: number;
   hub_voted?: boolean;
   hub_id?: number | null;
-  hub?: { id: number; title: string } | null;
+  hub?: { id: number; title: string; author_id?: number | null } | null;
   talk_id?: number | null;
   attached_count?: number;
+  moderators?: { id: number; username: string }[];
   photos?: { id: number; url: string; preview_url?: string }[];
   poll?: PollV5 | null;
   is_offtop: boolean;

@@ -9,11 +9,12 @@ from app.models.thread_photo import ThreadPhoto
 from app.models.thread_bookmark import ThreadBookmark
 from app.models.poll import Poll, PollOption, PollVote
 from app.models.hub_vote import HubVote
+from app.models.hub_moderator import HubModerator
 from app.models.report import Report
 
 __all__ = [
     "User", "City", "Category",
     "GeoPlace", "Thread", "thread_categories", "ThreadComment",
     "Tag", "ThreadTag", "ThreadMention", "ThreadLike", "ThreadPhoto", "ThreadBookmark",
-    "Poll", "PollOption", "PollVote", "HubVote", "Report",
+    "Poll", "PollOption", "PollVote", "HubVote", "HubModerator", "Report",
 ]

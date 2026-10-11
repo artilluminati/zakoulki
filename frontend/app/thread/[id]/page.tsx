@@ -161,6 +161,11 @@ export default function ThreadPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
+  // разделы живут на своём роуте
+  useEffect(() => {
+    if (t?.is_hub) router.replace(`/hub/${t.id}`);
+  }, [t?.id, t?.is_hub, router]);
+
   // лёгкий поллинг ответов: раз в 20с, только когда вкладка видна;
   // сами не подменяем (черновик и скролл целы) — показываем пилюлю
   const [freshComments, setFreshComments] = useState(0);

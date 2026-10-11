@@ -2,21 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessagesSquare } from "lucide-react";
 import { fetchPlaceHubs, attachHub, detachHub, makeHub, type PlaceHub } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import type { ThreadV5 } from "@/types/v5";
 
-/** Панель раздела на странице треда: счётчик, обсуждение, действия. */
+/** Панель раздела на странице обычного треда: привязка, открепление, создание. */
 export default function HubSection({ t, user, reload }: {
-  t: ThreadV5 & { talk_id?: number | null; attached_count?: number };
+  t: ThreadV5;
   user: { id: number; role?: string } | null;
   reload: () => void;
 }) {
   const toast = useToast();
   const [hubs, setHubs] = useState<PlaceHub[]>([]);
   const [attaching, setAttaching] = useState(false);
-  const canMod = !!user && (user.id === t.author_id || user.role === "admin");
+  const canMod = !!user && (user.id === t.author_id || user.role === "admin" ||
+    hubs.some((h) => h.can_moderate));
 
   useEffect(() => {
     if (!t.is_hub && t.place?.id && !t.hub_id && !t.is_hub_talk) {
@@ -28,7 +28,7 @@ export default function HubSection({ t, user, reload }: {
     setAttaching(true);
     try {
       await attachHub(t.id, hubId);
-      toast("Прикреплено к уголку", "success");
+      toast("Прикреплено к разделу", "success");
       reload();
     } catch { toast("Не получилось", "error"); }
     finally { setAttaching(false); }
@@ -55,31 +55,11 @@ export default function HubSection({ t, user, reload }: {
     }
   };
 
-  if (t.is_hub) {
-    return (
-      <div className="mt-3 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/40">
-        <div className="flex items-center gap-2 px-3 py-2 text-sm font-extrabold text-emerald-800 dark:text-emerald-300">
-          <MessagesSquare className="h-4 w-4" /> Раздел · вопросов: {t.attached_count ?? 0}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 border-t border-emerald-200/60 px-3 py-2 text-[13px] dark:border-emerald-800">
-          {t.talk_id && (
-            <Link href={`/thread/${t.talk_id}`} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">
-              Общее обсуждение →
-            </Link>
-          )}
-          <Link href={`/create?hub=${t.id}`} className="ml-auto font-semibold text-slate-500 hover:text-slate-800 dark:text-neutral-400">
-            Задать вопрос здесь +
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   if (t.is_hub_talk && t.hub) {
     return (
       <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[13px] dark:border-emerald-800 dark:bg-emerald-950/40">
         <span className="text-slate-500 dark:text-neutral-400">Общее обсуждение раздела </span>
-        <Link href={`/thread/${t.hub.id}`} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">{t.hub.title}</Link>
+        <Link href={`/hub/${t.hub.id}`} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">{t.hub.title}</Link>
       </div>
     );
   }
@@ -89,7 +69,7 @@ export default function HubSection({ t, user, reload }: {
       {t.hub ? (
         <>
           <span className="text-slate-500 dark:text-neutral-400">Раздел:</span>
-          <Link href={`/thread/${t.hub.id}`} className="rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
+          <Link href={`/hub/${t.hub.id}`} className="rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
             {t.hub.title}
           </Link>
           {canMod && (
@@ -117,7 +97,7 @@ export default function HubSection({ t, user, reload }: {
           )}
           {t.place && canMod && (
             <button onClick={doMakeHub} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">
-              Сделать уголком
+              Сделать разделом
             </button>
           )}
         </>

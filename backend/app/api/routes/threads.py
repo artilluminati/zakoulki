@@ -89,6 +89,7 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "hub": _hub_brief(db, t.hub_id) if t.hub_id else None,
         "talk_id": _hub_talk_id(db, t.id) if t.is_hub else None,
         "attached_count": _attached_count(db, t.id) if t.is_hub else 0,
+        "moderators": _hub_moderators(db, t.id) if t.is_hub else [],
     }
 
 
@@ -96,7 +97,26 @@ def _hub_brief(db: Session, hub_id: int) -> dict | None:
     h = db.get(Thread, hub_id)
     if not h or not h.is_hub:
         return None
-    return {"id": h.id, "title": h.title or "Раздел"}
+    return {"id": h.id, "title": h.title or "Раздел", "author_id": h.author_id}
+
+
+def _hub_moderators(db: Session, hub_id: int) -> list[dict]:
+    from app.models.hub_moderator import HubModerator
+    rows = db.query(HubModerator).filter(HubModerator.hub_id == hub_id).all()
+    out = []
+    for m in rows:
+        u = db.get(User, m.user_id)
+        if u:
+            out.append({"id": u.id, "username": u.username})
+    return out
+
+
+def _can_moderate_hub(db: Session, hub: Thread, user: User) -> bool:
+    """Автор раздела, его модераторы или админ сайта."""
+    if user.role == "admin" or hub.author_id == user.id:
+        return True
+    from app.models.hub_moderator import HubModerator
+    return db.get(HubModerator, {"user_id": user.id, "hub_id": hub.id}) is not None
 
 
 def _hub_talk_id(db: Session, hub_id: int) -> int | None:
@@ -572,7 +592,7 @@ def attach_hub(thread_id: int, data: HubAttach, db: Session = Depends(get_db),
         raise HTTPException(400, "Это не раздел")
     if t.is_hub or t.is_hub_talk:
         raise HTTPException(400, "Раздел нельзя прикрепить")
-    if t.author_id != user.id and user.role != "admin":
+    if t.author_id != user.id and not _can_moderate_hub(db, hub, user):
         raise HTTPException(403, "Недостаточно прав")
     if t.place_id != hub.place_id:
         raise HTTPException(400, "Раздел другого места")
@@ -586,11 +606,61 @@ def detach_hub(thread_id: int, db: Session = Depends(get_db), user: User = Depen
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
-    if t.author_id != user.id and user.role != "admin":
+    hub = db.get(Thread, t.hub_id) if t.hub_id else None
+    if t.author_id != user.id and (not hub or not _can_moderate_hub(db, hub, user)):
         raise HTTPException(403, "Недостаточно прав")
     t.hub_id = None
     db.commit(); db.refresh(t)
     return _thread_out(t, db, user.id)
+
+
+class HubModeratorAdd(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
+
+
+@router.get("/{thread_id}/moderators")
+def hub_moderators(thread_id: int, db: Session = Depends(get_db)):
+    hub = db.get(Thread, thread_id)
+    if not hub or not hub.is_hub:
+        raise HTTPException(404, "Раздел не найден")
+    return _hub_moderators(db, hub.id)
+
+
+@router.post("/{thread_id}/moderators", status_code=201)
+def hub_moderator_add(thread_id: int, data: HubModeratorAdd, db: Session = Depends(get_db),
+                      user: User = Depends(get_current_user)):
+    """Назначить модератора раздела: автор раздела или админ сайта."""
+    from app.models.hub_moderator import HubModerator
+    hub = db.get(Thread, thread_id)
+    if not hub or not hub.is_hub:
+        raise HTTPException(404, "Раздел не найден")
+    if hub.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Только автор раздела")
+    target = db.query(User).filter(User.username == data.username.strip()).first()
+    if not target:
+        raise HTTPException(404, "Житель не найден")
+    if target.id == hub.author_id:
+        raise HTTPException(400, "Автор уже главный")
+    if not db.get(HubModerator, {"user_id": target.id, "hub_id": hub.id}):
+        db.add(HubModerator(user_id=target.id, hub_id=hub.id))
+        db.commit()
+    return _hub_moderators(db, hub.id)
+
+
+@router.delete("/{thread_id}/moderators/{user_id}")
+def hub_moderator_remove(thread_id: int, user_id: int, db: Session = Depends(get_db),
+                         user: User = Depends(get_current_user)):
+    from app.models.hub_moderator import HubModerator
+    hub = db.get(Thread, thread_id)
+    if not hub or not hub.is_hub:
+        raise HTTPException(404, "Раздел не найден")
+    if hub.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Только автор раздела")
+    m = db.get(HubModerator, {"user_id": user_id, "hub_id": hub.id})
+    if m:
+        db.delete(m)
+        db.commit()
+    return _hub_moderators(db, hub.id)
 
 
 @router.get("/{thread_id}/attached")

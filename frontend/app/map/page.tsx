@@ -534,7 +534,7 @@ export default function MapPage() {
                       <span className="flex shrink-0 items-center gap-1"><Heart className="h-3.5 w-3.5" />{selected.likes_count}</span>
                     </div>
                     <div className="mt-1.5 flex gap-2">
-                      <Link href={`/thread/${selected.id}`} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-bold text-white">
+                      <Link href={selected.is_hub ? `/hub/${selected.id}` : `/thread/${selected.id}`} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-bold text-white">
                         Открыть
                       </Link>
                       {selected.place && (
@@ -553,7 +553,7 @@ export default function MapPage() {
                     <X className="h-5 w-5" />
                   </button>
                 </div>
-                <Link href={`/thread/${selected.id}`} className="flex items-center justify-center gap-1.5 border-t border-slate-100 py-2 text-[13px] font-semibold text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
+                <Link href={selected.is_hub ? `/hub/${selected.id}` : `/thread/${selected.id}`} className="flex items-center justify-center gap-1.5 border-t border-slate-100 py-2 text-[13px] font-semibold text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
                   <MessageCircle className="h-4 w-4" /> Читать обсуждение →
                 </Link>
               </div>

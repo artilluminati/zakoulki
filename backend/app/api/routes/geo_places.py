@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
 from app.models.user import User
 from app.models.geo_place import GeoPlace
@@ -344,8 +344,9 @@ def get_place(place_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{place_id}/hubs")
-def place_hubs(place_id: int, db: Session = Depends(get_db)):
+def place_hubs(place_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
     """Разделы места — для прикрепления вопроса при создании."""
+    from app.api.routes.threads import _can_moderate_hub
     hubs = (db.query(Thread).filter(Thread.place_id == place_id, Thread.is_hub == True)
             .order_by(Thread.id).all())
     out = []
@@ -355,5 +356,6 @@ def place_hubs(place_id: int, db: Session = Depends(get_db)):
         author = db.get(User, h.author_id)
         out.append({"id": h.id, "title": h.title or "Раздел",
                     "author": author.username if author else None,
-                    "talk_id": talk.id if talk else None, "members": members})
+                    "talk_id": talk.id if talk else None, "members": members,
+                    "can_moderate": bool(user and _can_moderate_hub(db, h, user))})
     return out
