@@ -12,7 +12,8 @@ import PollBuilder, { type PollDraft } from "@/components/PollBuilder";
 import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode, fetchSimilarPlaces } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
-import { useScope } from "@/lib/scope";
+import { useScope, scopeLabel } from "@/lib/scope";
+import ScopePicker from "@/components/ScopePicker";
 import Link from "next/link";
 import type { GeoPlaceV5 } from "@/types/v5";
 
@@ -29,7 +30,7 @@ export default function CreatePage() {
   const params = useSearchParams();
   const toast = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { scope } = useScope();
+  const { scope, setScope } = useScope();
   const DRAFT_KEY = "zakoulki_draft_v1";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -50,7 +51,7 @@ export default function CreatePage() {
   const onMapVertex = (latitude: number, longitude: number, index?: number) => {
     if (!areaMode) return;
     if (index !== undefined) {
-      // перетаскивание вершины — обновляем существующую
+      // перетаскивание вершины — обновляем существующую по индексу
       setVertices((prev) => prev.map((v, i) => (i === index ? [latitude, longitude] as [number, number] : v)));
     } else if (vertices.length < 30) {
       // клик по карте — добавляем новую вершину
@@ -361,6 +362,12 @@ export default function CreatePage() {
           <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
         </div>
       )}
+
+      {/* выбор города/региона — можно ввести вручную, даже если там ещё нет постов */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3">
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600" /> Город или район</div>
+        <ScopePicker value={scope} onChange={setScope} />
+      </div>
 
       {/* точка / территория — одна карта, позиция не слетает при переключении */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
