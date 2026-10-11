@@ -18,6 +18,14 @@ export function scopeLabel(s: Scope): string {
   return s.anyLabel ?? s.district ?? s.city ?? s.region ?? s.country ?? "Вся Россия";
 }
 
+/** «Вся Россия» — это пустой скоуп. Старое представление {country:"Россия"}
+ * нормализуем в {}, чтобы не было двух одинаковых состояний. */
+export function normalizeScope(s: Scope): Scope {
+  const geo = [s.country, s.region, s.city, s.district].filter(Boolean);
+  if (geo.length === 1 && geo[0] === "Россия" && !s.any?.length && !s.anyLabel) return {};
+  return s;
+}
+
 interface ScopeCtx {
   scope: Scope;
   setScope: (s: Scope) => void;
@@ -27,14 +35,14 @@ interface ScopeCtx {
 const Ctx = createContext<ScopeCtx>({ scope: {}, setScope: () => {}, clearScope: () => {} });
 
 export function ScopeProvider({ children }: { children: ReactNode }) {
-  // по умолчанию — вся Россия (мира пока нет в интерфейсе)
-  const [scope, setScopeState] = useState<Scope>({ country: "Россия" });
+  // по умолчанию — вся Россия (пустой скоуп = без фильтра)
+  const [scope, setScopeState] = useState<Scope>({});
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setScopeState(JSON.parse(raw) as Scope);
-      else localStorage.setItem(KEY, JSON.stringify({ country: "Россия" }));
+      if (raw) setScopeState(normalizeScope(JSON.parse(raw) as Scope));
+      else localStorage.setItem(KEY, JSON.stringify({}));
     } catch { /* ignore */ }
   }, []);
 

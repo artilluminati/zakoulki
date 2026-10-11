@@ -87,7 +87,7 @@ export default function ScopePicker({ value, onChange }: {
     })),
   ];
 
-  const hasScope = !!(value.country || value.region || value.city || value.district);
+  const hasScope = !!(value.country || value.region || value.city || value.district || value.any?.length || value.anyLabel);
 
   return (
     <div className="space-y-2">
@@ -166,7 +166,7 @@ export default function ScopePicker({ value, onChange }: {
       <div className="grid grid-cols-1 gap-1.5">
         <button
           type="button"
-          onClick={() => onChange({ country: "Россия" })}
+          onClick={() => onChange({})}
           className="rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
         >
           Вся Россия
