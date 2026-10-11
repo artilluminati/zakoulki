@@ -217,12 +217,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* mobile bottom tabs */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-neutral-700 dark:bg-neutral-900/95">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-5">
           {[
             { href: "/", label: "Главная", Icon: Home, fab: false },
             { href: "/map", label: "Карта", Icon: MapIcon, fab: false },
             { href: "/create", label: "Создать", Icon: PlusCircle, fab: true },
-            { href: "/hubs", label: "Разделы", Icon: MessagesSquare, fab: false },
             { href: "/search", label: "Поиск", Icon: Search, fab: false },
             { href: user ? "/profile" : "/login", label: "Профиль", Icon: User, fab: false },
           ].map(({ href, label, Icon, fab }) => (

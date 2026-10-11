@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, reportThread, deleteComment, deleteThread, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode, resolveThread } from "@/lib/v5";
+import { fetchThread, commentThread, reportThread, deleteComment, deleteThread, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode, resolveThread, fetchHubModerators } from "@/lib/v5";
 import ScoreArrows from "@/components/ScoreArrows";
 import QuickComposer from "@/components/QuickComposer";
 import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge, regionLine, ResolvedBadge } from "@/components/ThreadCard";
@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { useConfirm } from "@/lib/confirm";
+import { writeScore } from "@/lib/scoreCache";
 import type { ThreadV5, GeoPlaceV5 } from "@/types/v5";
 
 export default function ThreadPage() {
@@ -160,7 +161,14 @@ export default function ThreadPage() {
   };
 
   const load = useCallback(async () => {
-    try { setT(await fetchThread(id)); } catch { setT(null); }
+    try {
+      const fresh = await fetchThread(id);
+      setT(fresh);
+      writeScore(`t${fresh.id}`, { score: fresh.score ?? 0, my_vote: fresh.my_vote ?? 0 });
+      for (const c of fresh.comments ?? []) {
+        writeScore(`c${c.id}`, { score: c.score ?? 0, my_vote: c.my_vote ?? 0 });
+      }
+    } catch { setT(null); }
     setLoading(false);
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -170,8 +178,17 @@ export default function ThreadPage() {
     if (t?.is_hub) router.replace(`/hub/${t.id}`);
   }, [t?.id, t?.is_hub, router]);
 
+  // модерация раздела: модеры видят чужие кнопки удаления/открепа
+  const [hubModIds, setHubModIds] = useState<number[]>([]);
+  const [hubAuthorId, setHubAuthorId] = useState<number | null>(null);
+  useEffect(() => {
+    const hubId = t?.is_hub ? t.id : t?.hub_id;
+    if (!hubId || !t) { setHubModIds([]); setHubAuthorId(null); return; }
+    setHubAuthorId(t.is_hub ? t.author_id : (t.hub?.author_id ?? null));
+    fetchHubModerators(hubId).then((mods) => setHubModIds(mods.map((m) => m.id))).catch(() => {});
+  }, [t?.id]);
+
   // лёгкий поллинг ответов: раз в 20с, только когда вкладка видна;
-  // сами не подменяем (черновик и скролл целы) — показываем пилюлю
   const [freshComments, setFreshComments] = useState(0);
   const knownRef = useRef<Set<number>>(new Set());
   useEffect(() => {

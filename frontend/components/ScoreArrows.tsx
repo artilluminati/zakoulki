@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { scoreThread, scoreComment } from "@/lib/v5";
+import { useScore, writeScore } from "@/lib/scoreCache";
 import { useToast } from "@/lib/toast";
 
 /** Голоса как на реддите: стрелка вверх/вниз, счёт между ними. */
@@ -14,27 +15,24 @@ export default function ScoreArrows({ id, score, myVote, vertical = false, comme
   comment?: boolean;
 }) {
   const toast = useToast();
-  const [value, setValue] = useState(score ?? 0);
-  const [mine, setMine] = useState(myVote ?? 0);
+  const key = `${comment ? "c" : "t"}${id}`;
+  const live = useScore(key, { score: score ?? 0, my_vote: myVote ?? 0 });
   const [busy, setBusy] = useState(false);
+  const mine = live.my_vote;
+  const value = live.score;
 
   const vote = async (v: 1 | -1) => {
     if (busy) return;
     setBusy(true);
-    const prevValue = value;
-    const prevMine = mine;
+    const prev = live;
     const next = mine === v ? 0 : v;
-    setMine(next);
-    setValue(prevValue + (next - prevMine));
+    writeScore(key, { score: prev.score + (next - prev.my_vote), my_vote: next });
     try {
-      const r = comment
-        ? await scoreComment(id, next === 0 ? (mine === 1 ? 1 : -1) : next)
-        : await scoreThread(id, next === 0 ? (mine === 1 ? 1 : -1) : next);
-      setValue(r.score);
-      setMine(r.my_vote);
+      const send = next === 0 ? (mine === 1 ? 1 : -1) : next;
+      const r = comment ? await scoreComment(id, send) : await scoreThread(id, send);
+      writeScore(key, { score: r.score, my_vote: r.my_vote });
     } catch (e) {
-      setValue(prevValue);
-      setMine(prevMine);
+      writeScore(key, prev);
       const status = (e as { response?: { status?: number } })?.response?.status;
       toast(status === 401 ? "Войдите, чтобы голосовать" : "Не получилось", "error");
     } finally {
@@ -51,7 +49,7 @@ export default function ScoreArrows({ id, score, myVote, vertical = false, comme
       >
         <ChevronUp className={`h-5 w-5 ${mine === 1 ? "fill-emerald-600/20" : ""}`} strokeWidth={2.5} />
       </button>
-      <span className={`min-w-6 text-center text-[13px] font-extrabold tabular-nums ${mine === 1 ? "text-emerald-600 dark:text-emerald-400" : mine === -1 ? "text-red-500" : "text-slate-500 dark:text-neutral-400"}`}>
+      <span className={`min-w-6 text-center text-[13px] font-extrabold tabular-nums ${value > 0 ? "text-emerald-600 dark:text-emerald-400" : value < 0 ? "text-red-500" : "text-slate-500 dark:text-neutral-400"}`}>
         {value}
       </span>
       <button
