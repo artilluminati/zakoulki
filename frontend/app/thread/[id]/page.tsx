@@ -514,7 +514,7 @@ export default function ThreadPage() {
                       toast(detail ?? "Не получилось", "error");
                     }
                   }}
-                  className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[13px] font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-[13px] font-semibold text-slate-500 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
                 >
                   В раздел
                 </button>
@@ -531,7 +531,7 @@ export default function ThreadPage() {
                     toast(status === 401 ? "Войдите, чтобы голосовать" : "Не получилось", "error");
                   }
                 }}
-                className={`rounded-xl border px-3 py-1.5 text-[13px] font-bold ${t.hub_voted ? "border-emerald-400 bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"}`}
+                className={`rounded-xl border px-3 py-1.5 text-[13px] font-semibold ${t.hub_voted ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"}`}
               >
                 {t.hub_voted ? "✓ В раздел" : "В раздел"} · {t.hub_votes ?? 0}/3
               </button>
