@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchPlaceHubs, attachHub, detachHub, makeHub, type PlaceHub } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
+import { useConfirm } from "@/lib/confirm";
 import type { ThreadV5 } from "@/types/v5";
 
 /** Панель раздела на странице обычного треда: привязка, открепление, создание. */
@@ -13,6 +14,7 @@ export default function HubSection({ t, user, reload }: {
   reload: () => void;
 }) {
   const toast = useToast();
+  const { prompt } = useConfirm();
   const [hubs, setHubs] = useState<PlaceHub[]>([]);
   const [attaching, setAttaching] = useState(false);
   const canMod = !!user && (user.id === t.author_id || user.role === "admin" ||
@@ -43,7 +45,11 @@ export default function HubSection({ t, user, reload }: {
   };
 
   const doMakeHub = async () => {
-    const title = window.prompt("Название раздела:", t.title || "Раздел");
+    const title = await prompt({
+      title: "Название раздела:",
+      input: { placeholder: "Например: Наш двор", initial: t.title || "Раздел" },
+      ok: "Создать",
+    });
     if (title === null) return;
     try {
       await makeHub(t.id, title.trim() || null);

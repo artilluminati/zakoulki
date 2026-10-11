@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
-import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, updateThread, resolveThread, archiveHub, createGeoPlace, type HubModerator } from "@/lib/v5";
+import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, updateThread, resolveThread, archiveHub, createGeoPlace, deleteThread, type HubModerator } from "@/lib/v5";
 import ThreadCard, { timeAgo, regionLine, ThreadHtml, HubAuthorBadge, HubModeratorBadge, ResolvedBadge } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import QuickComposer from "@/components/QuickComposer";
@@ -13,6 +13,7 @@ import MiniMap from "@/components/MiniMap";
 import PhotoImg from "@/components/PhotoImg";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
+import { useConfirm } from "@/lib/confirm";
 import type { ThreadV5 } from "@/types/v5";
 
 export default function HubPage() {
@@ -20,6 +21,7 @@ export default function HubPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
+  const { confirm } = useConfirm();
   const [t, setT] = useState<(ThreadV5 & { talk_id?: number | null; attached_count?: number; moderators?: { id: number; username: string }[] }) | null>(null);
   const [attached, setAttached] = useState<ThreadV5[]>([]);
   const [attSort, setAttSort] = useState<"new" | "top">("new");
@@ -185,6 +187,26 @@ export default function HubPage() {
                 className="shrink-0 rounded-full p-1.5 text-slate-400 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950"
               >
                 <Pencil className="h-4 w-4" />
+              </button>
+            )}
+            {(isAuthor || user?.role === "admin" || (user && mods.some((m) => m.id === user.id))) && (
+              <button
+                onClick={async () => {
+                  if (!await confirm({
+                    title: `Удалить раздел «${(t.title || "").slice(0, 60)}»?`,
+                    text: "Раздел, его обсуждение и голоса удалятся. Вопросы останутся в ленте без привязки.",
+                    ok: "Удалить", danger: true,
+                  })) return;
+                  try {
+                    await deleteThread(t.id);
+                    toast("Раздел удалён", "success");
+                    router.push("/hubs");
+                  } catch { toast("Не получилось", "error"); }
+                }}
+                aria-label="Удалить раздел"
+                className="shrink-0 rounded-full p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"
+              >
+                <Trash2 className="h-4 w-4" />
               </button>
             )}
           </h1>

@@ -598,12 +598,24 @@ def update_comment(comment_id: int, data: CommentUpdate, db: Session = Depends(g
 
 @router.delete("/comments/{comment_id}", status_code=204)
 def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.thread_photo import ThreadPhoto
     c = db.get(ThreadComment, comment_id)
     if not c:
         raise HTTPException(404, "Комментарий не найден")
-    if c.author_id != user.id and user.role != "admin":
-        raise HTTPException(403, "Недостаточно прав")
     t = db.get(Thread, c.thread_id)
+    hub_ctx = None
+    if t:
+        hub_ctx = t if t.is_hub else (db.get(Thread, t.hub_id) if t.hub_id else None)
+    allowed = (
+        user.role == "admin"
+        or c.author_id == user.id
+        or (hub_ctx is not None and _can_moderate_hub(db, hub_ctx, user))
+    )
+    if not allowed:
+        raise HTTPException(403, "Недостаточно прав")
+    photo_names = [p.file_name for p in db.query(ThreadPhoto).filter(ThreadPhoto.comment_id == c.id).all()]
+    _delete_photo_files(photo_names)
+    db.query(ThreadPhoto).filter(ThreadPhoto.comment_id == c.id).delete(synchronize_session=False)
     db.delete(c)
     if t:
         t.comments_count = max(0, t.comments_count - 1)
@@ -731,6 +743,80 @@ def attach_hub(thread_id: int, data: HubAttach, db: Session = Depends(get_db),
     t.hub_id = hub.id
     db.commit(); db.refresh(t)
     return _thread_out(t, db, user.id)
+
+
+def _delete_photo_files(file_names: list[str]) -> None:
+    import os as _os
+    for fn in file_names:
+        for cand in (fn, f"pv_{fn}"):
+            try:
+                _os.remove(_os.path.join(settings.UPLOAD_DIR, cand))
+            except OSError:
+                pass
+
+
+def _delete_thread_full(db: Session, t: Thread) -> None:
+    """Полное удаление треда: фото (строки+файлы), комменты, опросы, голоса,
+    закладки, упоминания, теги, жалобы, модераторы. У раздела: открепить вопросы,
+    удалить тред обсуждения рекурсивно."""
+    from app.models.thread_photo import ThreadPhoto
+    from app.models.thread_comment import ThreadComment
+    from app.models.hub_moderator import HubModerator
+    from app.models.hub_vote import HubVote
+    from app.models.thread_bookmark import ThreadBookmark
+    from app.models.thread_extra import ThreadLike, ThreadMention, ThreadTag
+    from app.models.poll import Poll, PollOption, PollVote
+    from app.models.report import Report
+    from app.models.thread import thread_categories
+    # вопросы раздела открепляем (остаются жить), обсуждение удаляем следом
+    members = db.query(Thread).filter(Thread.hub_id == t.id, Thread.is_hub_talk == False).all()  # noqa: E712
+    for m in members:
+        m.hub_id = None
+    talks = db.query(Thread).filter(Thread.hub_id == t.id, Thread.is_hub_talk == True).all()  # noqa: E712
+    for talk in talks:
+        _delete_thread_full(db, talk)
+    comment_ids = [c.id for c in db.query(ThreadComment.id).filter(ThreadComment.thread_id == t.id).all()]
+    photo_names = [p.file_name for p in db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).all()]
+    _delete_photo_files(photo_names)
+    db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).delete(synchronize_session=False)
+    if comment_ids:
+        db.query(ThreadMention).filter(ThreadMention.comment_id.in_(comment_ids)).delete(synchronize_session=False)
+        db.query(Report).filter(Report.comment_id.in_(comment_ids)).delete(synchronize_session=False)
+    db.query(ThreadComment).filter(ThreadComment.thread_id == t.id).delete(synchronize_session=False)
+    poll = db.query(Poll).filter(Poll.thread_id == t.id).first()
+    if poll:
+        opt_ids = [o.id for o in db.query(PollOption.id).filter(PollOption.poll_id == poll.id).all()]
+        if opt_ids:
+            db.query(PollVote).filter(PollVote.option_id.in_(opt_ids)).delete(synchronize_session=False)
+        db.query(PollOption).filter(PollOption.poll_id == poll.id).delete(synchronize_session=False)
+        db.delete(poll)
+    db.query(ThreadLike).filter(ThreadLike.thread_id == t.id).delete(synchronize_session=False)
+    db.query(HubVote).filter(HubVote.thread_id == t.id).delete(synchronize_session=False)
+    db.query(ThreadBookmark).filter(ThreadBookmark.thread_id == t.id).delete(synchronize_session=False)
+    db.query(ThreadMention).filter(ThreadMention.thread_id == t.id).delete(synchronize_session=False)
+    db.query(ThreadTag).filter(ThreadTag.thread_id == t.id).delete(synchronize_session=False)
+    db.query(Report).filter(Report.thread_id == t.id).delete(synchronize_session=False)
+    db.query(HubModerator).filter(HubModerator.hub_id == t.id).delete(synchronize_session=False)
+    db.execute(thread_categories.delete().where(thread_categories.c.thread_id == t.id))
+    db.delete(t)
+
+
+@router.delete("/{thread_id}", status_code=204)
+def delete_thread(thread_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Удалить свой вопрос (модератор раздела — вопросы своего раздела, админ — всё)."""
+    t = db.get(Thread, thread_id)
+    if not t:
+        return
+    hub_ctx = t if t.is_hub else (db.get(Thread, t.hub_id) if t.hub_id else None)
+    allowed = (
+        user.role == "admin"
+        or t.author_id == user.id
+        or (hub_ctx is not None and _can_moderate_hub(db, hub_ctx, user))
+    )
+    if not allowed:
+        raise HTTPException(403, "Недостаточно прав")
+    _delete_thread_full(db, t)
+    db.commit()
 
 
 @router.delete("/{thread_id}/attach-hub")

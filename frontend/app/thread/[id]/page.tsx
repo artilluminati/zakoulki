@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode, resolveThread } from "@/lib/v5";
+import { fetchThread, commentThread, reportThread, deleteComment, deleteThread, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode, resolveThread } from "@/lib/v5";
 import ScoreArrows from "@/components/ScoreArrows";
 import QuickComposer from "@/components/QuickComposer";
 import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge, regionLine, ResolvedBadge } from "@/components/ThreadCard";
@@ -18,6 +18,7 @@ import PollView from "@/components/PollView";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
+import { useConfirm } from "@/lib/confirm";
 import type { ThreadV5, GeoPlaceV5 } from "@/types/v5";
 
 export default function ThreadPage() {
@@ -25,6 +26,7 @@ export default function ThreadPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
+  const { confirm } = useConfirm();
   const [t, setT] = useState<Awaited<ReturnType<typeof fetchThread>> | null>(null);
   const [reply, setReply] = useState("");
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
@@ -283,7 +285,7 @@ export default function ThreadPage() {
   };
 
   const removeComment = async (cid: number) => {
-    if (!window.confirm("Удалить комментарий?")) return;
+    if (!await confirm({ title: "Удалить ответ?", text: "Ответ пропадёт у всех без возможности вернуть.", ok: "Удалить", danger: true })) return;
     try { await deleteComment(cid); load(); }
     catch { toast("Не удалилось", "error"); }
   };
@@ -294,10 +296,17 @@ export default function ThreadPage() {
     catch { toast("Не отправилось", "error"); }
   };
 
-  const adminDelete = async () => {
-    if (!t || !window.confirm(`Удалить тред #${t.id} вместе со всем содержимым?`)) return;
+  const removeThread = async () => {
+    if (!t) return;
+    const isAdmin = user?.role === "admin";
+    if (!await confirm({
+      title: isAdmin ? `Удалить тред #${t.id}?` : "Удалить свой вопрос?",
+      text: "Вопрос, ответы, фото и голоса удалятся без возможности вернуть." + (t.hub_id ? " Привязка к разделу тоже снимется." : ""),
+      ok: "Удалить", danger: true,
+    })) return;
     try {
-      await api.delete(`/admin/threads/${t.id}`);
+      if (isAdmin) await api.delete(`/admin/threads/${t.id}`);
+      else await deleteThread(t.id);
       toast("Тред удалён", "success");
       router.push("/");
     } catch {
@@ -608,8 +617,8 @@ export default function ThreadPage() {
           {canEdit && !editing && (
             <button onClick={startEdit} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">Редактировать</button>
           )}
-          {user?.role === "admin" && (
-            <button onClick={adminDelete} className="font-bold text-red-600 hover:underline dark:text-red-400">Удалить</button>
+          {user && (user.id === t.author_id || user.role === "admin") && (
+            <button onClick={removeThread} className="font-bold text-red-600 hover:underline dark:text-red-400">Удалить</button>
           )}
           <span className="relative ml-auto">
             <button onClick={() => setReportOpen(!reportOpen)} className="flex items-center gap-1 text-slate-400 hover:text-red-500 dark:text-neutral-500"><Flag className="h-4 w-4" /> Жалоба</button>

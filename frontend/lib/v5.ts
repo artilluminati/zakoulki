@@ -181,6 +181,10 @@ export async function detachHub(threadId: number) {
   return res.data;
 }
 
+export async function deleteThread(threadId: number) {
+  await api.delete(`/threads/${threadId}`);
+}
+
 export async function fetchAttached(hubId: number) {
   const res = await api.get<ThreadV5[]>(`/threads/${hubId}/attached`);
   return res.data;

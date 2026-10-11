@@ -104,10 +104,11 @@ def admin_reports(status: str | None = Query(None, pattern="^(new|reviewed|rejec
 def admin_delete_thread(thread_id: int, db: Session = Depends(get_db),
                         user: User = Depends(get_current_user)):
     require_admin(user)
+    from app.api.routes.threads import _delete_thread_full
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
-    db.delete(t)
+    _delete_thread_full(db, t)
     db.commit()
 
 

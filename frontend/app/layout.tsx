@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/lib/toast";
 import { ScopeProvider } from "@/lib/scope";
 import { ThemeProvider } from "@/lib/theme";
+import { ConfirmProvider } from "@/lib/confirm";
 import AppShell from "@/components/AppShell";
 import ChunkReload from "@/components/ChunkReload";
 import Onboarding from "@/components/Onboarding";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <ThemeProvider>
           <ChunkReload />
+          <ConfirmProvider>
           <AuthProvider>
             <ToastProvider>
               <ScopeProvider>
@@ -36,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </ScopeProvider>
             </ToastProvider>
           </AuthProvider>
+          </ConfirmProvider>
         </ThemeProvider>
       </body>
     </html>

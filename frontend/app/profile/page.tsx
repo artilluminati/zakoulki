@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { fetchThreads, fetchBookmarks } from "@/lib/v5";
 import { api } from "@/lib/api";
 import { ThemeToggle } from "@/lib/theme";
+import { useConfirm } from "@/lib/confirm";
 import { getHomeCity, setHomeCity } from "@/lib/scope";
 import ThreadCard, { timeAgo, OfficialBadge } from "@/components/ThreadCard";
 import type { ThreadV5 } from "@/types/v5";
@@ -15,6 +16,7 @@ interface Notif { id: string | number; kind: string; author?: string; author_id?
 
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
+  const { confirm } = useConfirm();
   const [mine, setMine] = useState<ThreadV5[]>([]);
   const [mineFailed, setMineFailed] = useState(false);
   const [mineHasMore, setMineHasMore] = useState(false);
@@ -60,8 +62,8 @@ export default function ProfilePage() {
     finally { setLoadingMore(false); }
   };
 
-  const logoutSafe = () => {
-    if (!window.confirm("Выйти из аккаунта?")) return;
+  const logoutSafe = async () => {
+    if (!await confirm({ title: "Выйти из аккаунта?" })) return;
     logout();
   };
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
+import { useConfirm } from "@/lib/confirm";
 import { timeAgo } from "@/components/ThreadCard";
 
 interface AdminUser { id: number; username: string; email: string; role: string; badge?: string | null; created_at: string; }
@@ -20,6 +21,7 @@ type Tab = "reports" | "users" | "threads";
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
+  const { confirm, prompt } = useConfirm();
   const [tab, setTab] = useState<Tab>("reports");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -66,7 +68,10 @@ export default function AdminPage() {
       toast("Нельзя снять админа с себя", "error");
       return;
     }
-    if (!window.confirm(`${u.role === "admin" ? "Снять админа" : "Сделать админом"} @${u.username}?`)) return;
+    if (!await confirm({
+      title: `${u.role === "admin" ? "Снять админа" : "Сделать админом"} @${u.username}?`,
+      danger: u.role !== "admin",
+    })) return;
     try {
       await api.patch(`/admin/users/${u.id}`, { role: u.role === "admin" ? "user" : "admin" });
       toast("Роль обновлена", "success");
@@ -77,7 +82,12 @@ export default function AdminPage() {
   };
 
   const resetPassword = async (u: AdminUser) => {
-    const pw = window.prompt(`Новый пароль для @${u.username} (мин. 6 символов):`);
+    const pw = await prompt({
+      title: `Новый пароль для @${u.username}`,
+      text: "Минимум 6 символов. Передайте его пользователю.",
+      input: { placeholder: "Новый пароль" },
+      ok: "Сбросить",
+    });
     if (!pw) return;
     if (pw.length < 6) { toast("Пароль короче 6 символов", "error"); return; }
     try {
@@ -108,7 +118,7 @@ export default function AdminPage() {
   };
 
   const deleteThread = async (id: number) => {
-    if (!window.confirm(`Удалить тред #${id} вместе с комментариями?`)) return;
+    if (!await confirm({ title: `Удалить тред #${id} вместе с комментариями?`, ok: "Удалить", danger: true })) return;
     try {
       await api.delete(`/admin/threads/${id}`);
       toast("Тред удалён", "success");
