@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestImportant, voteImportant } from "@/lib/v5";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestImportant, voteImportant, createGeoPlace } from "@/lib/v5";
 import { ThreadHtml, timeAgo, OfficialBadge, ImportantBadge, HubBadge } from "@/components/ThreadCard";
 import HubSection from "@/components/HubSection";
+import MiniMap from "@/components/MiniMap";
 import MdEditor from "@/components/editor/MdEditor";
 import PasteButton from "@/components/PasteButton";
 import PhotoImg from "@/components/PhotoImg";
@@ -34,6 +35,13 @@ export default function ThreadPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editPhotos, setEditPhotos] = useState<{ id: number; url: string; preview_url?: string }[]>([]);
+  // правка точки/территории: копия места создаётся при сохранении
+  const [editPin, setEditPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [editVertices, setEditVertices] = useState<[number, number][]>([]);
+  const [editAreaMode, setEditAreaMode] = useState(false);
+  const [editMapExpanded, setEditMapExpanded] = useState(false);
+  const [editView, setEditView] = useState({ lat: 55.755, lng: 37.617, nonce: 0 });
+  const [editSaving, setEditSaving] = useState(false);
   const [editCommentId, setEditCommentId] = useState<number | null>(null);
   const [editCommentBody, setEditCommentBody] = useState("");
   const canEdit = !!user && !!t && (user.id === t.author_id || user.role === "admin");
@@ -43,18 +51,57 @@ export default function ThreadPage() {
     setEditTitle(t.title ?? "");
     setEditBody(t.body_md);
     setEditPhotos(t.photos ?? []);
+    if (t.place) {
+      const hasArea = !!t.place.area && t.place.area.length >= 3;
+      setEditAreaMode(hasArea);
+      setEditVertices(hasArea ? [...t.place.area!] : []);
+      setEditPin(hasArea ? null : { lat: t.place.lat, lng: t.place.lng });
+      setEditView((v) => ({ lat: t.place!.lat, lng: t.place!.lng, nonce: v.nonce + 1 }));
+    } else {
+      setEditPin(null);
+      setEditVertices([]);
+    }
+    setEditMapExpanded(false);
     setEditing(true);
   };
 
   const saveEdit = async () => {
-    if (!t || !editBody.trim()) return;
+    if (!t || !editBody.trim() || editSaving) return;
+    setEditSaving(true);
     try {
-      await updateThread(t.id, { title: editTitle || null, body_md: editBody });
+      let placeId: number | null | undefined;
+      if (t.place) {
+        if (!editAreaMode && editPin && (editPin.lat !== t.place.lat || editPin.lng !== t.place.lng)) {
+          const p = await createGeoPlace({
+            name: t.place.name, latitude: editPin.lat, longitude: editPin.lng,
+            address: t.place.address, district: t.place.district, street: t.place.street,
+            city: t.place.city, region: t.place.region, country: t.place.country,
+          });
+          placeId = p.id;
+        } else if (editAreaMode && editVertices.length >= 3) {
+          const same = editVertices.length === (t.place.area?.length ?? -1) &&
+            editVertices.every((v, i) => t.place!.area![i]?.[0] === v[0] && t.place!.area![i]?.[1] === v[1]);
+          if (!same) {
+            const cLat = editVertices.reduce((s, v) => s + v[0], 0) / editVertices.length;
+            const cLng = editVertices.reduce((s, v) => s + v[1], 0) / editVertices.length;
+            const p = await createGeoPlace({
+              name: t.place.name, latitude: cLat, longitude: cLng,
+              address: t.place.address, district: t.place.district, street: t.place.street,
+              city: t.place.city, region: t.place.region, country: t.place.country,
+              area: editVertices,
+            });
+            placeId = p.id;
+          }
+        }
+      }
+      await updateThread(t.id, { title: editTitle || null, body_md: editBody, ...(placeId ? { place_id: placeId } : {}) });
       toast("Сохранено", "success");
       setEditing(false);
       load();
     } catch {
       toast("Не сохранилось", "error");
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -195,6 +242,63 @@ export default function ThreadPage() {
                 ))}
               </div>
             )}
+            {t.place && (
+              <div className="mt-2 rounded-xl border border-slate-200 p-2.5 dark:border-neutral-700">
+                <div className="mb-1.5 flex items-center gap-2 text-[13px] font-bold">
+                  <MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> {t.place.name}
+                  <span className="ml-auto flex gap-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => { setEditAreaMode(false); setEditPin({ lat: t.place!.lat, lng: t.place!.lng }); }}
+                      className={`rounded-lg px-2 py-1 font-bold ${!editAreaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-neutral-400"}`}
+                    >
+                      Точка
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditAreaMode(true); setEditMapExpanded(true); }}
+                      className={`rounded-lg px-2 py-1 font-bold ${editAreaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-neutral-400"}`}
+                    >
+                      Территория
+                    </button>
+                  </span>
+                </div>
+                {editAreaMode && (
+                  <div className="mb-1.5 text-xs text-slate-500 dark:text-neutral-400">
+                    Кликайте по карте — точки соединятся. Вершину можно таскать, повторный клик убирает её.
+                    {editVertices.length > 0 ? ` · Точек: ${editVertices.length}` : ""}
+                  </div>
+                )}
+                {!editAreaMode && (
+                  <div className="mb-1.5 text-xs text-slate-500 dark:text-neutral-400">
+                    Перетащите метку, чтобы уточнить точку.
+                  </div>
+                )}
+                <div className="h-44 w-full">
+                  <MiniMap
+                    center={editView}
+                    pin={editAreaMode ? null : (editPin ?? { lat: t.place.lat, lng: t.place.lng })}
+                    onMove={(la, ln) => {
+                      setEditPin({ lat: la, lng: ln });
+                      setEditView((v) => ({ lat: la, lng: ln, nonce: v.nonce }));
+                    }}
+                    areaMode={editAreaMode}
+                    vertices={editVertices}
+                    onVertex={(la, ln, idx) => {
+                      if (!editAreaMode) return;
+                      if (idx !== undefined) {
+                        setEditVertices((prev) => prev.map((v, i) => (i === idx ? [la, ln] as [number, number] : v)));
+                      } else if (editVertices.length < 30) {
+                        setEditVertices((prev) => [...prev, [la, ln] as [number, number]]);
+                      }
+                    }}
+                    onRemoveVertex={(i) => setEditVertices((prev) => prev.filter((_, j) => j !== i))}
+                    expanded={editMapExpanded}
+                    onExpandedChange={setEditMapExpanded}
+                  />
+                </div>
+              </div>
+            )}
             <div className="mt-2 flex flex-wrap gap-2">
               <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800">
                 <ImagePlus className="h-4 w-4" /> Добавить фото
@@ -213,7 +317,7 @@ export default function ThreadPage() {
                   }}
                 />
               </label>
-              <button onClick={saveEdit} disabled={!editBody.trim()} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Сохранить</button>
+              <button onClick={saveEdit} disabled={!editBody.trim() || editSaving} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">{editSaving ? "Сохраняем…" : "Сохранить"}</button>
               <button onClick={() => setEditing(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-neutral-700">Отмена</button>
             </div>
           </>

@@ -58,7 +58,7 @@ export async function commentThread(id: number, body_md: string, parent_id?: num
   return res.data;
 }
 
-export async function updateThread(id: number, payload: { title?: string | null; body_md?: string }) {
+export async function updateThread(id: number, payload: { title?: string | null; body_md?: string; place_id?: number | null }) {
   const res = await api.patch(`/threads/${id}`, payload);
   return res.data;
 }
@@ -75,9 +75,9 @@ export async function deleteComment(commentId: number) {
 export async function uploadCommentPhoto(commentId: number, file: File) {
   const form = new FormData();
   form.append("file", file);
-  const res = await api.post(`/threads/comments/${commentId}/photos`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  // Content-Type НЕ ставим вручную: axios добавит boundary сам,
+  // иначе FastAPI не распарсит multipart и вернёт ошибку
+  const res = await api.post(`/threads/comments/${commentId}/photos`, form);
   return res.data as { id: number; url: string };
 }
 
@@ -175,8 +175,8 @@ export async function fetchAttached(hubId: number) {
 export async function uploadThreadPhoto(threadId: number, file: File) {
   const form = new FormData();
   form.append("file", file);
-  const res = await api.post(`/threads/${threadId}/photos`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  // Content-Type НЕ ставим вручную: axios добавит boundary сам,
+  // иначе FastAPI не распарсит multipart и вернёт ошибку
+  const res = await api.post(`/threads/${threadId}/photos`, form);
   return res.data as { id: number; url: string };
 }

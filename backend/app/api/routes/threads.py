@@ -387,6 +387,7 @@ class ThreadUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=150)
     body_md: str | None = Field(default=None, min_length=1, max_length=5000)
     tags: list[str] | None = None
+    place_id: int | None = Field(default=None, description="смена точки/территории (копия места создаётся фронтом)")
 
 
 @router.patch("/{thread_id}")
@@ -399,6 +400,13 @@ def update_thread(thread_id: int, data: ThreadUpdate, db: Session = Depends(get_
         raise HTTPException(403, "Недостаточно прав")
     if data.title is not None:
         t.title = data.title or None
+    if data.place_id is not None:
+        if data.place_id == 0:
+            t.place_id = None
+        else:
+            if not db.get(GeoPlace, data.place_id):
+                raise HTTPException(404, "Место не найдено")
+            t.place_id = data.place_id
     if data.body_md is not None:
         html, entities = render_markdown(data.body_md)
         t.body_md = data.body_md
