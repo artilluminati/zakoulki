@@ -527,7 +527,7 @@ export default function ThreadPage() {
                   }}
                   className="rounded-xl border border-slate-200 px-3 py-1.5 text-[13px] font-semibold text-slate-500 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
                 >
-                  В раздел
+                  Выдвинуть в раздел
                 </button>
               )
             ) : (

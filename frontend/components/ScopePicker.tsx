@@ -88,8 +88,23 @@ export default function ScopePicker({ value, onChange }: {
     close();
   };
 
-  const topCity = items.find((i) => i.level === "city");
-  const topRegion = items.find((i) => i.level === "region");
+  const topCityRaw = items.find((i) => i.level === "city");
+  const topRegionRaw = items.find((i) => i.level === "region");
+  // Москва-город и Москва-область с одним названием — одна строка (иначе дубли).
+  // Городу отдаём приоритет, hint тянем из записи с контекстом.
+  const cityByName = new Map<string, SuggestItem>();
+  for (const c of items.filter((i) => i.level === "city")) {
+    const k = c.name.toLowerCase();
+    const cur = cityByName.get(k);
+    if (!cur || (!cur.extra && c.extra)) cityByName.set(k, c);
+    else if (!!cur.extra === !!c.extra && c.count > cur.count) cityByName.set(k, c);
+  }
+  const cityItems = [...cityByName.values()];
+  const cityNames = new Set(cityItems.map((c) => c.name.toLowerCase()));
+  const shownRegions = items.filter((i) => i.level === "region" && !cityNames.has(i.name.toLowerCase()));
+  const districtItems = items.filter((i) => i.level === "district");
+  const topCity = cityItems[0] ?? topCityRaw;
+  const topRegion = shownRegions[0] ?? topRegionRaw;
   const showCombo = topCity && topRegion && topCity.name !== topRegion.name;
 
   // строки меню: комби + обычные (для стрелок и Enter)
@@ -100,12 +115,26 @@ export default function ScopePicker({ value, onChange }: {
       sub: "город и область",
       run: () => pickCombo(topCity!.name, topRegion!.name),
     }] : []),
-    ...items.map((it) => ({
-      key: `${it.level}-${it.name}-${it.extra ?? ""}`,
+    ...cityItems.map((it) => ({
+      key: `city-${it.name}-${it.extra ?? ""}`,
       label: it.name,
       extra: it.extra ?? null,
-      sub: it.level === "city" ? "город" : it.level === "district" ? "район" : "область",
-      run: () => pick(it.name, it.level, it.extra),
+      sub: "город",
+      run: () => pick(it.name, "city", it.extra),
+    })),
+    ...shownRegions.map((it) => ({
+      key: `region-${it.name}`,
+      label: it.name,
+      extra: null,
+      sub: "область",
+      run: () => pick(it.name, "region"),
+    })),
+    ...districtItems.map((it) => ({
+      key: `district-${it.name}-${it.extra ?? ""}`,
+      label: it.name,
+      extra: it.extra ?? null,
+      sub: "район",
+      run: () => pick(it.name, "district", it.extra),
     })),
   ];
 

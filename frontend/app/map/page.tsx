@@ -36,6 +36,27 @@ async function jumpToScope(map: any, s: Scope) {
   map.setCenter([hit.lat, hit.lng], s.district ? 13 : s.city ? 12 : 9, { duration: 300 });
 }
 
+const MAP_VIEW_KEY = "zakoulki_map_view";
+
+function loadSavedView(): { center: [number, number]; zoom: number } | null {
+  try {
+    const raw = sessionStorage.getItem(MAP_VIEW_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    if (!Array.isArray(v.center) || !Number.isFinite(v.zoom)) return null;
+    return v;
+  } catch { return null; }
+}
+
+// центр так, чтобы пин оказался выше нижнего шита, а не под ним
+function centerAboveSheet(map: any, ll: [number, number]) {
+  try {
+    map.setCenter(ll);
+    const px = map.getGlobalPixelCenter();
+    map.setGlobalPixelCenter([px[0], px[1] - 110]);
+  } catch { /* ignore */ }
+}
+
 export default function MapPage() {
   const params = useSearchParams();
   const router = useRouter();
@@ -95,8 +116,10 @@ export default function MapPage() {
       try {
         const ymaps = await loadYandex(key);
         if (!alive || !ref.current) return;
+        // возвращаемся туда, где были (назад из треда), иначе дефолт
+        const saved = loadSavedView();
         map = new ymaps.Map(ref.current, {
-          center: [55.755, 37.617], zoom: 11,
+          center: saved?.center ?? [55.755, 37.617], zoom: saved?.zoom ?? 11,
           controls: ["zoomControl", "geolocationControl"],
         });
         (window as any).__ymap = map;
@@ -121,8 +144,15 @@ export default function MapPage() {
         setLoading(false);
         setMapReady(true);
         // стартуем не с Москвы, а с глобально выбранного региона
-        if (!focusPlace) jumpToScope(map, scopeRef.current).catch(() => { /* ignore */ });
-        map.events.add("boundschange", () => { paint().catch(() => { /* ignore */ }); });
+        // (но если вернулись назад — остаёмся где были)
+        if (!focusPlace && !loadSavedView()) jumpToScope(map, scopeRef.current).catch(() => { /* ignore */ });
+        const saveView = () => {
+          try {
+            const c = map.getCenter();
+            sessionStorage.setItem(MAP_VIEW_KEY, JSON.stringify({ center: c, zoom: map.getZoom() }));
+          } catch { /* ignore */ }
+        };
+        map.events.add("boundschange", () => { saveView(); paint().catch(() => { /* ignore */ }); });
       } catch { if (alive) { setErr("Карта не загрузилась"); setLoading(false); } }
     })();
     return () => {
@@ -145,8 +175,14 @@ export default function MapPage() {
   }, [key, toast]);
 
   // смена глобального региона на открытой карте — переносим камеру следом
+  // (первый запуск пропускаем, если вернулись на сохранённый вид)
+  const skipFirstScopeJump = useRef(true);
   useEffect(() => {
     if (!mapReady || focusPlace) return;
+    if (skipFirstScopeJump.current) {
+      skipFirstScopeJump.current = false;
+      if (loadSavedView()) return;
+    }
     const map = (window as any).__ymap;
     if (!map) return;
     jumpToScope(map, scope).catch(() => { /* ignore */ });
@@ -363,6 +399,7 @@ export default function MapPage() {
       m.events.add("click", async () => {
         try { setSelected(await fetchThread(p.id)); }
         catch { toast("Не получилось открыть вопрос", "error"); }
+        centerAboveSheet(map, [cx, cy]);
       });
       clusterer.add(m);
     }
@@ -383,6 +420,9 @@ export default function MapPage() {
       poly.events.add("click", async () => {
         try { setSelected(await fetchThread(p.id)); }
         catch { toast("Не получилось открыть вопрос", "error"); }
+        const lats = (p.area ?? []).map((a) => a[0]);
+        const lngs = (p.area ?? []).map((a) => a[1]);
+        if (lats.length > 0) centerAboveSheet(map, [(Math.min(...lats) + Math.max(...lats)) / 2, (Math.min(...lngs) + Math.max(...lngs)) / 2]);
       });
       map.geoObjects.add(poly);
       areasRef.current.push(poly);

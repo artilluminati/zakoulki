@@ -71,6 +71,21 @@ export default function AboutPage() {
       </div>
 
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
+        <div className="flex items-center gap-2 font-extrabold text-emerald-900 dark:text-emerald-100">
+          <MessagesSquare className="h-5 w-5" /> Разделы мест
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">
+          У двора, парка или улицы может быть свой раздел: все его вопросы —
+          в одном месте, а общее обсуждение — в отдельном треде.
+          Три голоса жителей превращают вопрос с точкой в раздел.
+          У раздела есть автор и модераторы.
+        </p>
+        <Link href="/hubs" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
+          Все разделы <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
         <div className="flex items-center gap-2 font-extrabold text-emerald-900">
           <Landmark className="h-5 w-5" /> Администрациям и организациям
         </div>

@@ -88,7 +88,7 @@ export default function HubSection({ t, user, reload }: {
         <>
           {t.place && hubs.length > 0 && canMod && (
             <span className="flex flex-wrap items-center gap-1.5">
-              <span className="text-slate-500 dark:text-neutral-400">В раздел:</span>
+              <span className="text-slate-500 dark:text-neutral-400">Прикрепить:</span>
               {hubs.map((h) => (
                 <button
                   key={h.id}
