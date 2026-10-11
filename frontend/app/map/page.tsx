@@ -65,8 +65,6 @@ export default function MapPage() {
   const [pickAddr, setPickAddr] = useState<{ name: string; address?: string | null } | null>(null);
   // полигон места из ?place= — рисуем отдельно от кластера
   const [placePoly, setPlacePoly] = useState<{ area: [number, number][]; id: number; threadId?: number } | null>(null);
-  // точка внутри территории (в центре по умолчанию, перетаскиваемая)
-  const [innerPt, setInnerPt] = useState<{ lat: number; lng: number; placeId: number } | null>(null);
   // свайп вниз по шиту = закрыть (мобайл)
   const swipeY = useRef<number | null>(null);
   const [sheetDy, setSheetDy] = useState(0);
@@ -186,9 +184,8 @@ export default function MapPage() {
     const map = (window as any).__ymap;
     if (!mapReady || !map) return;
     if (!focusPlace) {
-      // ушли с фокуса — гасим полигон и точку, чтобы не висели чужие метки
+      // ушли с фокуса — гасим полигон, чтобы не висел чужой
       setPlacePoly(null);
-      setInnerPt(null);
       return;
     }
     let alive = true;
@@ -199,20 +196,16 @@ export default function MapPage() {
         const ym = (window as any).ymaps;
         if (p.area && p.area.length >= 3) {
           // сохраняем полигон в состояние — эффект перерисовки будет рисовать его
+          setPlacePoly({ area: p.area as [number, number][], id: p.id });
+          // setBounds ожидает [[south,west],[north,east]]
           const lats = p.area.map((a: number[]) => a[0]);
           const lngs = p.area.map((a: number[]) => a[1]);
-          const cLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-          const cLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
-          setPlacePoly({ area: p.area as [number, number][], id: p.id });
-          setInnerPt({ lat: cLat, lng: cLng, placeId: p.id });
-          // setBounds ожидает [[south,west],[north,east]]
           map.setBounds([
             [Math.min(...lats), Math.min(...lngs)],
             [Math.max(...lats), Math.max(...lngs)],
           ], { checkZoomRange: true, duration: 250 });
         } else {
           setPlacePoly(null);
-          setInnerPt(null);
           map.setCenter([p.lat, p.lng], 15);
         }
         const at = await api.get("/threads", { params: { place_id: p.id, limit: 1 } });
@@ -255,29 +248,7 @@ export default function MapPage() {
     });
     map.geoObjects.add(poly);
     focusRef.current.push(poly);
-    if (innerPt && innerPt.placeId === placePoly.id) {
-      const pt = new ymaps.Placemark([innerPt.lat, innerPt.lng], {
-        isInnerPt: true,
-        placeId: placePoly.id,
-      }, {
-        iconLayout: "default#image",
-        iconImageHref: makePin({ color: "#059669", glyph: "q", photoUrl: null, selected: false }),
-        iconImageSize: PIN_SIZE,
-        iconImageOffset: PIN_OFFSET,
-        draggable: true,
-      });
-      pt.events.add("dragend", (e: any) => {
-        const c = e.get("target").geometry.getCoordinates();
-        setInnerPt({ lat: c[0], lng: c[1], placeId: placePoly.id });
-      });
-      pt.events.add("click", async () => {
-        try { setSelected(await fetchThread(threadId)); }
-        catch { toast("Не получилось открыть вопрос", "error"); }
-      });
-      map.geoObjects.add(pt);
-      focusRef.current.push(pt);
-    }
-  }, [placePoly, innerPt, mapReady, toast]);
+  }, [placePoly, mapReady, toast]);
 
   // фокус на месте из ?place= — отдельным эффектом, чтобы работал и при смене параметра
   useEffect(() => {
@@ -333,19 +304,28 @@ export default function MapPage() {
       ),
     });
     clusterRef.current = clusterer;
-    // тап по кластеру на крупном зуме — список тредов, а не бесконечный зум
+    // тап по кластеру: всегда управляем сами — дефолтный зум Яндекса
+    // на совпадающих точках улетает в максимум и списка не даёт
     clusterer.events.add("click", async (e: any) => {
       const target = e.get("target");
       if (!target || typeof target.getGeoObjects !== "function") return;
-      const objs: any[] = target.getGeoObjects();
-      // маленький кластер (1-3) на зуме < 17 — зумим к нему, чтобы точки разошлись
-      if (objs.length <= 3 && map.getZoom() < 17) {
-        const c = target.geometry?.getCoordinates?.();
-        if (c) map.setCenter(c, Math.min(17, map.getZoom() + 3), { duration: 250 });
-        return;
-      }
-      if (map.getZoom() < 15 && objs.length > 5) return; // иначе пусть зумит
       e.preventDefault();
+      const objs: any[] = target.getGeoObjects();
+      const z = map.getZoom();
+      const coords: [number, number][] = objs
+        .map((o) => { try { return o.geometry?.getCoordinates?.(); } catch { return null; } })
+        .filter((c): c is [number, number] => Array.isArray(c));
+      const sameSpot = coords.length > 0 && coords.every((c) =>
+        Math.abs(c[0] - coords[0][0]) < 1e-6 && Math.abs(c[1] - coords[0][1]) < 1e-6);
+      if (!sameSpot) {
+        // маленький кластер — разлетаемся зумом, большой — приближаем на 2
+        if ((objs.length <= 3 && z < 17) || (z < 15 && objs.length > 5)) {
+          const c = target.geometry?.getCoordinates?.();
+          if (c) map.setCenter(c, Math.min(17, z + (objs.length <= 3 ? 3 : 2)), { duration: 250 });
+          return;
+        }
+      }
+      // иначе (совпадающие точки или крупный зум) — сразу список тредов
       setClusterLoading(true);
       setClusterList([]);
       try {
