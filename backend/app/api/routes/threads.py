@@ -78,6 +78,8 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "place": _place_out(t.place) if t.place else None,
         "views": t.views, "likes_count": t.likes_count, "comments_count": t.comments_count,
         "score": t.score, "my_vote": _my_vote(db, t.id, user_id),
+        "is_resolved": t.is_resolved,
+        "is_archived": t.is_archived,
         "created_at": t.created_at,
         "city": t.city, "district": t.district, "region": t.region, "country": t.country,
         "poll": _poll_out(db, t.id, user_id),
@@ -113,6 +115,68 @@ def _hub_moderators(db: Session, hub_id: int) -> list[dict]:
 
 
 def _can_moderate_hub(db: Session, hub: Thread, user: User) -> bool:
+    """Автор раздела, его модераторы или админ сайта."""
+    if user.role == "admin" or hub.author_id == user.id:
+        return True
+    from app.models.hub_moderator import HubModerator
+    return db.get(HubModerator, {"user_id": user.id, "hub_id": hub.id}) is not None
+
+
+def _can_resolve(db: Session, t: Thread, user: User) -> bool:
+    """Решить вопрос могут: автор, админ, официальный аккаунт,
+    автор/модераторы раздела (для раздела и его вопросов)."""
+    if user.role == "admin" or t.author_id == user.id:
+        return True
+    if (user.badge or "") == "official":
+        return True
+    if t.is_hub and _can_moderate_hub(db, t, user):
+        return True
+    if t.hub_id:
+        hub = db.get(Thread, t.hub_id)
+        if hub and _can_moderate_hub(db, hub, user):
+            return True
+    return False
+
+
+class ResolveUpdate(BaseModel):
+    resolved: bool
+
+
+@router.post("/{thread_id}/resolve")
+def resolve_thread(thread_id: int, data: ResolveUpdate, db: Session = Depends(get_db),
+                   user: User = Depends(get_current_user)):
+    """Пометить вопрос решённым (или снять)."""
+    t = db.get(Thread, thread_id)
+    if not t:
+        raise HTTPException(404, "Тред не найден")
+    if not _can_resolve(db, t, user):
+        raise HTTPException(403, "Недостаточно прав")
+    t.is_resolved = data.resolved
+    db.commit()
+    return _thread_out(t, db, user.id)
+
+
+class ArchiveUpdate(BaseModel):
+    archived: bool
+
+
+@router.post("/{thread_id}/archive")
+def archive_hub(thread_id: int, data: ArchiveUpdate, db: Session = Depends(get_db),
+                user: User = Depends(get_current_user)):
+    """Убрать раздел в архив: пропадает из активных и с карты,
+    остаётся в общем списке, разделах и решённых."""
+    hub = db.get(Thread, thread_id)
+    if not hub or not hub.is_hub:
+        raise HTTPException(404, "Раздел не найден")
+    if hub.author_id != user.id and user.role != "admin" and not _can_moderate_hub(db, hub, user):
+        raise HTTPException(403, "Только автор раздела")
+    hub.is_archived = data.archived
+    db.commit()
+    return _thread_out(hub, db, user.id)
+
+
+def _archived_hub_ids(db: Session) -> list[int]:
+    return [r[0] for r in db.query(Thread.id).filter(Thread.is_hub == True, Thread.is_archived == True).all()]  # noqa: E712
     """Автор раздела, его модераторы или админ сайта."""
     if user.role == "admin" or hub.author_id == user.id:
         return True
@@ -236,6 +300,7 @@ def list_threads(
     place_id: int | None = Query(None),
     has_geo: bool | None = Query(None),
     is_hub: bool | None = Query(None, description="только разделы"),
+    is_resolved: bool | None = Query(None, description="только решённые"),
     is_offtop: bool | None = Query(None),
     district: str | None = Query(None, description="район"),
     city: str | None = Query(None, description="город/округ"),
@@ -289,6 +354,8 @@ def list_threads(
         q = q.filter(Thread.place_id.is_(None))
     if is_hub is not None:
         q = q.filter(Thread.is_hub == is_hub)
+    if is_resolved is not None:
+        q = q.filter(Thread.is_resolved == is_resolved)
     if is_offtop is not None:
         q = q.filter(Thread.is_offtop == is_offtop)
     if sort == "near" and lat is not None and lng is not None and radius:
@@ -297,6 +364,11 @@ def list_threads(
         q = q.filter(GeoPlace.latitude.between(lat - delta, lat + delta))
         q = q.filter(GeoPlace.longitude.between(lng - delta, lng + delta))
     if sort == "top":
+        # активные обсуждения: архивные разделы и их вопросы не показываем
+        archived = _archived_hub_ids(db)
+        q = q.filter(Thread.is_archived == False)  # noqa: E712
+        if archived:
+            q = q.filter(~Thread.hub_id.in_(archived))
         q = q.order_by(Thread.score.desc(), Thread.id.desc())
     q = q.distinct()
     items = q.limit(limit).all()

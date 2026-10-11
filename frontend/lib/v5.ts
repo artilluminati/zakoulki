@@ -203,6 +203,16 @@ export async function renameHub(hubId: number, title: string) {
   return res.data;
 }
 
+export async function resolveThread(threadId: number, resolved: boolean) {
+  const res = await api.post<ThreadV5>(`/threads/${threadId}/resolve`, { resolved });
+  return res.data;
+}
+
+export async function archiveHub(hubId: number, archived: boolean) {
+  const res = await api.post<ThreadV5>(`/threads/${hubId}/archive`, { archived });
+  return res.data;
+}
+
 export async function uploadThreadPhoto(threadId: number, file: File) {
   const form = new FormData();
   form.append("file", file);

@@ -5,8 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
-import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, type HubModerator } from "@/lib/v5";
-import ThreadCard, { timeAgo, regionLine, ThreadHtml, HubAuthorBadge, HubModeratorBadge } from "@/components/ThreadCard";
+import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, updateThread, resolveThread, archiveHub, type HubModerator } from "@/lib/v5";
+import ThreadCard, { timeAgo, regionLine, ThreadHtml, HubAuthorBadge, HubModeratorBadge, ResolvedBadge } from "@/components/ThreadCard";
+import MdEditor from "@/components/editor/MdEditor";
 import QuickComposer from "@/components/QuickComposer";
 import PhotoImg from "@/components/PhotoImg";
 import { useAuth } from "@/lib/auth";
@@ -24,6 +25,8 @@ export default function HubPage() {
   const [loading, setLoading] = useState(true);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  const [editingBody, setEditingBody] = useState(false);
+  const [bodyDraft, setBodyDraft] = useState("");
   const [mods, setMods] = useState<HubModerator[]>([]);
   const [modName, setModName] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
@@ -94,6 +97,10 @@ export default function HubPage() {
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
           <span>Раздел #{t.id} · @{t.author_username} · {timeAgo(t.created_at)}{regionLine(t) ? ` · ${regionLine(t)}` : ""}</span>
           <HubAuthorBadge />
+          {t.is_resolved && <ResolvedBadge />}
+          {t.is_archived && (
+            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-600 dark:bg-neutral-700 dark:text-neutral-300">В архиве</span>
+          )}
         </div>
         {editingTitle ? (
           <div className="mt-2 flex gap-2">
@@ -121,6 +128,38 @@ export default function HubPage() {
           </h1>
         )}
         <div className="mt-2"><ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} /></div>
+        {(isAuthor || user?.role === "admin") && (
+          editingBody ? (
+            <div className="mt-2">
+              <MdEditor value={bodyDraft} onChange={setBodyDraft} />
+              <div className="mt-1.5 flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (!bodyDraft.trim()) return;
+                    try {
+                      const u = await updateThread(t.id, { body_md: bodyDraft });
+                      setT({ ...t, body_md: u.body_md, body_html: u.body_html });
+                      setEditingBody(false);
+                      toast("Сохранено", "success");
+                    } catch { toast("Не сохранилось", "error"); }
+                  }}
+                  disabled={!bodyDraft.trim()}
+                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40"
+                >
+                  Сохранить
+                </button>
+                <button onClick={() => setEditingBody(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-neutral-700">Отмена</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setBodyDraft(t.body_md); setEditingBody(true); }}
+              className="mt-1.5 text-[13px] font-bold text-emerald-700 hover:underline dark:text-emerald-300"
+            >
+              Редактировать текст
+            </button>
+          )
+        )}
         {t.place && (
           <div className="mt-3 overflow-hidden rounded-xl border border-emerald-200/60 dark:border-emerald-800">
             {t.place.map_preview && <PhotoImg src={t.place.map_preview} className="h-28 w-full" />}
@@ -135,6 +174,34 @@ export default function HubPage() {
             <Link href={`/thread/${t.talk_id}`} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">
               Общее обсуждение →
             </Link>
+          )}
+          {(isAuthor || user?.role === "admin" || user?.badge === "official" || (user && mods.some((m) => m.id === user.id))) && (
+            <button
+              onClick={async () => {
+                try {
+                  const u = await resolveThread(t.id, !t.is_resolved);
+                  setT({ ...t, is_resolved: u.is_resolved });
+                  toast(u.is_resolved ? "Вопрос решён" : "Снова открыт", "success");
+                } catch { toast("Не получилось", "error"); }
+              }}
+              className="rounded-xl border border-slate-200 px-3 py-1.5 font-semibold text-slate-500 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            >
+              {t.is_resolved ? "✓ Решён — открыть заново" : "Вопрос решён"}
+            </button>
+          )}
+          {(isAuthor || user?.role === "admin" || (user && mods.some((m) => m.id === user.id))) && (
+            <button
+              onClick={async () => {
+                try {
+                  const u = await archiveHub(t.id, !t.is_archived);
+                  setT({ ...t, is_archived: u.is_archived });
+                  toast(u.is_archived ? "Раздел в архиве" : "Раздел снова активен", "success");
+                } catch { toast("Не получилось", "error"); }
+              }}
+              className="rounded-xl border border-slate-200 px-3 py-1.5 font-semibold text-slate-500 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            >
+              {t.is_archived ? "Вернуть из архива" : "В архив"}
+            </button>
           )}
           <button
             onClick={async () => {

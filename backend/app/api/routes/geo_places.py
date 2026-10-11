@@ -163,6 +163,8 @@ def map_points(north: float, south: float, east: float, west: float,
     # прикреплённые к разделам вопросы и треды обсуждений — не отдельные пины:
     # раздел представляет их всех, в кружке цифра по пинам (раздел = 1)
     items = items.filter(Thread.hub_id.is_(None))
+    # архивные разделы на карте не показываем (видны в общем списке и разделах)
+    items = items.filter(Thread.is_archived == False)  # noqa: E712
     if geo_any:
         vals = [v for v in geo_any if v]
         items = items.filter(_or2(GeoPlace.city.in_(vals), GeoPlace.district.in_(vals), GeoPlace.region.in_(vals)))

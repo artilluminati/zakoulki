@@ -31,7 +31,7 @@ export default function FeedPage() {
   const [loadError, setLoadError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [sort, setSort] = useState<Sort>("new");
-  const [filter, setFilter] = useState<"all" | "hubs" | "offtop">("all");
+  const [filter, setFilter] = useState<"all" | "hubs" | "offtop" | "resolved">("all");
   const scopeRef = useRef<HTMLDivElement>(null);
 
   // закрытие поповера региона по клику вне
@@ -89,6 +89,7 @@ export default function FeedPage() {
             sort: "new",
             has_geo: filter === "offtop" ? false : undefined,
         is_hub: filter === "hubs" ? true : undefined,
+        is_resolved: filter === "resolved" ? true : undefined,
             is_offtop: filter === "offtop" ? true : undefined,
             ...scopeParams(scope),
             limit: PAGE,
@@ -125,6 +126,7 @@ export default function FeedPage() {
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "offtop" ? false : undefined,
         is_hub: filter === "hubs" ? true : undefined,
+        is_resolved: filter === "resolved" ? true : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
         ...scopeParams(scope),
         limit: PAGE,
@@ -150,6 +152,7 @@ export default function FeedPage() {
         ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
         has_geo: filter === "offtop" ? false : undefined,
         is_hub: filter === "hubs" ? true : undefined,
+        is_resolved: filter === "resolved" ? true : undefined,
         is_offtop: filter === "offtop" ? true : undefined,
         ...scopeParams(scope),
         limit: PAGE,
@@ -227,9 +230,9 @@ export default function FeedPage() {
           ))}
         </div>
         <div className="flex gap-1.5 text-[13px]">
-          {(["all", "hubs", "offtop"] as const).map((f) => (
+          {(["all", "hubs", "offtop", "resolved"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)} className={`rounded-full border px-3 py-1.5 font-semibold ${filter === f ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-200 bg-white text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400"}`}>
-              {f === "all" ? "Все" : f === "hubs" ? "Разделы" : "Оффтоп"}
+              {f === "all" ? "Все" : f === "hubs" ? "Разделы" : f === "resolved" ? "Решённые" : "Оффтоп"}
             </button>
           ))}
         </div>

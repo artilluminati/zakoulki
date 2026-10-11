@@ -34,6 +34,9 @@ class Thread(Base):
     place_id: Mapped[int | None] = mapped_column(ForeignKey("geo_places.id"), nullable=True)
     # reddit-счёт: плюсы минус минусы; сортировка «обсуждают» идёт по нему
     score: Mapped[int] = mapped_column(Integer, default=0)
+    # решён (бейдж, ищется в «решённых»); архив раздела (скрыт из активных)
+    is_resolved: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
     # выдвижение в разделы голосами: requested + votes, порог -> авто-раздел
     hub_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     hub_votes: Mapped[int] = mapped_column(Integer, default=0)

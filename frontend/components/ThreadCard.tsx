@@ -154,6 +154,14 @@ export function HubModeratorBadge() {
   );
 }
 
+export function ResolvedBadge() {
+  return (
+    <span title="Вопрос решён" className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white">
+      ✓ Решён
+    </span>
+  );
+}
+
 export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: ThreadV5; hubAuthorId?: number | null; hubModIds?: number[] }) {
   const isHubAuthor = hubAuthorId != null && t.author_id === hubAuthorId;
   const isHubMod = !isHubAuthor && !!hubModIds?.includes(t.author_id);
@@ -206,6 +214,7 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
             {t.author_badge === "official" && <OfficialBadge />}
             <HubBadge t={t} />
+            {t.is_resolved && <ResolvedBadge />}
             {isHubAuthor && <HubAuthorBadge />}
             {isHubMod && <HubModeratorBadge />}
           </span>

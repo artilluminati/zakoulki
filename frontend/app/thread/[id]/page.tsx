@@ -5,10 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode } from "@/lib/v5";
+import { fetchThread, commentThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode, resolveThread } from "@/lib/v5";
 import ScoreArrows from "@/components/ScoreArrows";
 import QuickComposer from "@/components/QuickComposer";
-import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge, regionLine } from "@/components/ThreadCard";
+import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge, regionLine, ResolvedBadge } from "@/components/ThreadCard";
 import HubSection from "@/components/HubSection";
 import MiniMap from "@/components/MiniMap";
 import MdEditor from "@/components/editor/MdEditor";
@@ -501,6 +501,7 @@ export default function ThreadPage() {
           <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}{regionLine(t) ? ` · ${regionLine(t)}` : ""}</span>
           {t.author_badge === "official" && <OfficialBadge />}
           <HubBadge t={t} />
+          {t.is_resolved && <ResolvedBadge />}
         </div>
         {!t.is_hub && !t.is_hub_talk && t.place && user && (
           <div className="mt-2">
@@ -536,6 +537,22 @@ export default function ThreadPage() {
                 {t.hub_voted ? "✓ В раздел" : "В раздел"} · {t.hub_votes ?? 0}/3
               </button>
             )}
+          </div>
+        )}
+        {user && !t.is_hub_talk && (user.id === t.author_id || user.role === "admin" || user.badge === "official") && (
+          <div className="mt-2">
+            <button
+              onClick={async () => {
+                try {
+                  const u = await resolveThread(t.id, !t.is_resolved);
+                  setT({ ...t, is_resolved: u.is_resolved });
+                  toast(u.is_resolved ? "Вопрос решён" : "Снова открыт", "success");
+                } catch { toast("Не получилось", "error"); }
+              }}
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-[13px] font-semibold text-slate-500 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            >
+              {t.is_resolved ? "✓ Решён — открыть заново" : "Вопрос решён"}
+            </button>
           </div>
         )}
         {t.tags && t.tags.length > 0 && (

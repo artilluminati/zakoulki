@@ -35,6 +35,8 @@ export interface ThreadV5 {
   hub_requested?: boolean;
   hub_votes?: number;
   hub_voted?: boolean;
+  is_resolved?: boolean;
+  is_archived?: boolean;
   hub_id?: number | null;
   hub?: { id: number; title: string; author_id?: number | null } | null;
   talk_id?: number | null;
