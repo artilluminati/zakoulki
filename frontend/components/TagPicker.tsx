@@ -30,7 +30,7 @@ export default function TagPicker({ value, onChange }: { value: string[]; onChan
       {value.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {value.map((t) => (
-            <span key={t} className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[13px] font-semibold text-emerald-800 dark:text-emerald-300">
+            <span key={t} className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[13px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
               {t}
               <button type="button" onClick={() => onChange(value.filter((x) => x !== t))} aria-label={`Убрать ${t}`}>
                 <X className="h-3.5 w-3.5" />

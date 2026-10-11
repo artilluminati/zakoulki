@@ -378,7 +378,7 @@ export default function MapPage() {
                     key={f}
                     onClick={() => setFilter(f)}
                     className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-bold shadow-md backdrop-blur transition ${
-                      filter === f ? "bg-slate-900 text-white" : "bg-white/95 text-slate-600 dark:text-neutral-300"
+                      filter === f ? "bg-slate-900 text-white" : "bg-white/95 text-slate-600 dark:bg-neutral-900/95 dark:text-neutral-300"
                     }`}
                   >
                     {f}
@@ -472,7 +472,7 @@ export default function MapPage() {
                     onClick={() => { setSelected(ct); setClusterList(null); }}
                     className="flex w-full items-center gap-2.5 border-b border-slate-50 px-3.5 py-2.5 text-left last:border-0 hover:bg-slate-50 dark:border-neutral-800 dark:hover:bg-neutral-800"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[13px] font-extrabold text-emerald-700 dark:text-emerald-300">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[13px] font-extrabold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                       {(ct.author_username ?? "?").slice(0, 1).toUpperCase()}
                     </span>
                     <span className="min-w-0">

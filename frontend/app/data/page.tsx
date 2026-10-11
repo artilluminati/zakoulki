@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 interface Source { id: string; name: string; kind: string; status: string; desc: string; }
 
 const STATUS: Record<string, { label: string; cls: string; Icon: typeof CheckCircle2 }> = {
-  live: { label: "Подключено", cls: "bg-emerald-100 text-emerald-700 dark:text-emerald-300", Icon: CheckCircle2 },
+  live: { label: "Подключено", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300", Icon: CheckCircle2 },
   needs_key: { label: "Нужен ключ", cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300", Icon: KeyRound },
   planned: { label: "Запланировано", cls: "bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-neutral-400", Icon: CalendarClock },
 };

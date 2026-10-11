@@ -178,7 +178,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </footer>
 
       {/* mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-neutral-700">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-neutral-700 dark:bg-neutral-900/95">
         <div className="grid grid-cols-5">
           {[
             { href: "/", label: "Главная", Icon: Home, fab: false },

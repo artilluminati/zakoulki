@@ -68,7 +68,7 @@ export default function AuthPanel({ initialMode = "login", onSuccess }: Props) {
         </Link>
         <button
           onClick={() => { logout(); toast("Вы вышли", "info"); }}
-          className="flex w-fit items-center gap-1.5 rounded-xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400"
+          className="flex w-fit items-center gap-1.5 rounded-xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
         >
           <LogOut className="h-3.5 w-3.5" /> Выйти
         </button>

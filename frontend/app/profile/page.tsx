@@ -52,7 +52,7 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-lime-200 text-2xl font-extrabold">{user.username.slice(0, 1).toUpperCase()}</span>
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-lime-200 text-2xl font-extrabold text-slate-900">{user.username.slice(0, 1).toUpperCase()}</span>
           <div>
             <div className="flex flex-wrap items-center gap-2 text-lg font-extrabold">
               <span>@{user.username}</span>
