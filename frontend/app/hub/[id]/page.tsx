@@ -5,10 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
-import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, updateThread, resolveThread, archiveHub, type HubModerator } from "@/lib/v5";
+import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, updateThread, resolveThread, archiveHub, createGeoPlace, type HubModerator } from "@/lib/v5";
 import ThreadCard, { timeAgo, regionLine, ThreadHtml, HubAuthorBadge, HubModeratorBadge, ResolvedBadge } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import QuickComposer from "@/components/QuickComposer";
+import MiniMap from "@/components/MiniMap";
 import PhotoImg from "@/components/PhotoImg";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -27,6 +28,14 @@ export default function HubPage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [editingBody, setEditingBody] = useState(false);
   const [bodyDraft, setBodyDraft] = useState("");
+  // правка места раздела: точка/территория, сохраняется копией
+  const [placeEditing, setPlaceEditing] = useState(false);
+  const [editPin, setEditPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [editVertices, setEditVertices] = useState<[number, number][]>([]);
+  const [editAreaMode, setEditAreaMode] = useState(false);
+  const [editMapExpanded, setEditMapExpanded] = useState(false);
+  const [editView, setEditView] = useState({ lat: 55.755, lng: 37.617, nonce: 0 });
+  const [placeSaving, setPlaceSaving] = useState(false);
   const [mods, setMods] = useState<HubModerator[]>([]);
   const [modName, setModName] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
@@ -67,6 +76,59 @@ export default function HubPage() {
       setEditingTitle(false);
       toast("Название обновлено", "success");
     } catch { toast("Не сохранилось", "error"); }
+  };
+
+  const openPlaceEditor = () => {
+    if (!t?.place) return;
+    const hasArea = !!t.place.area && t.place.area.length >= 3;
+    setEditAreaMode(hasArea);
+    setEditVertices(hasArea ? [...t.place.area!] : []);
+    setEditPin(hasArea ? null : { lat: t.place.lat, lng: t.place.lng });
+    setEditView((v) => ({ lat: t.place!.lat, lng: t.place!.lng, nonce: v.nonce + 1 }));
+    setEditMapExpanded(false);
+    setPlaceEditing(true);
+  };
+
+  const savePlace = async () => {
+    if (!t?.place || placeSaving) return;
+    setPlaceSaving(true);
+    try {
+      let placeId: number | undefined;
+      if (!editAreaMode && editPin && (editPin.lat !== t.place.lat || editPin.lng !== t.place.lng)) {
+        const p = await createGeoPlace({
+          name: t.place.name, latitude: editPin.lat, longitude: editPin.lng,
+          address: t.place.address, district: t.place.district, street: t.place.street,
+          city: t.place.city, region: t.place.region, country: t.place.country,
+        });
+        placeId = p.id;
+      } else if (editAreaMode && editVertices.length >= 3) {
+        const same = editVertices.length === (t.place.area?.length ?? -1) &&
+          editVertices.every((v, i) => t.place!.area![i]?.[0] === v[0] && t.place!.area![i]?.[1] === v[1]);
+        if (!same) {
+          const cLat = editVertices.reduce((s, v) => s + v[0], 0) / editVertices.length;
+          const cLng = editVertices.reduce((s, v) => s + v[1], 0) / editVertices.length;
+          const p = await createGeoPlace({
+            name: t.place.name, latitude: cLat, longitude: cLng,
+            address: t.place.address, district: t.place.district, street: t.place.street,
+            city: t.place.city, region: t.place.region, country: t.place.country,
+            area: editVertices,
+          });
+          placeId = p.id;
+        }
+      }
+      if (placeId) {
+        await updateThread(t.id, { place_id: placeId });
+        toast("Место раздела обновлено", "success");
+        setPlaceEditing(false);
+        load();
+      } else {
+        setPlaceEditing(false);
+      }
+    } catch {
+      toast("Не сохранилось", "error");
+    } finally {
+      setPlaceSaving(false);
+    }
   };
 
   const postToHub = async (body: string, files: File[]) => {
@@ -165,8 +227,69 @@ export default function HubPage() {
             {t.place.map_preview && <PhotoImg src={t.place.map_preview} className="h-28 w-full" />}
             <div className="flex items-center gap-2 bg-white/60 px-3 py-2 text-sm font-bold text-emerald-800 dark:bg-neutral-900/60 dark:text-emerald-300">
               <MapPin className="h-4 w-4" /> {t.place.name}
+              {(isAuthor || user?.role === "admin") && !placeEditing && (
+                <button onClick={openPlaceEditor} className="ml-auto text-xs font-bold text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300">
+                  Изменить место
+                </button>
+              )}
             </div>
             <Link href={`/map?place=${t.place.id}`} className="block bg-white/40 px-3 py-1.5 text-[13px] font-bold text-emerald-700 dark:text-emerald-300">Открыть на карте →</Link>
+            {placeEditing && (
+              <div className="space-y-1.5 bg-white/60 p-2.5 dark:bg-neutral-900/60">
+                <div className="flex gap-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setEditAreaMode(false); if (t.place) setEditPin({ lat: t.place.lat, lng: t.place.lng }); }}
+                    className={`rounded-lg px-2 py-1 font-bold ${!editAreaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+                  >
+                    Точка
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditAreaMode(true); setEditMapExpanded(true); }}
+                    className={`rounded-lg px-2 py-1 font-bold ${editAreaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+                  >
+                    Территория
+                  </button>
+                  <span className="ml-auto self-center text-[11px] text-slate-400">
+                    {editAreaMode ? "кликайте по карте, вершину можно таскать" : "тащите метку"}
+                  </span>
+                </div>
+                <div className="h-44 w-full overflow-hidden rounded-xl">
+                  <MiniMap
+                    center={editView}
+                    pin={editAreaMode || !t.place ? null : (editPin ?? { lat: t.place.lat, lng: t.place.lng })}
+                    onMove={(la, ln) => {
+                      setEditPin({ lat: la, lng: ln });
+                      setEditView((v) => ({ lat: la, lng: ln, nonce: v.nonce }));
+                    }}
+                    areaMode={editAreaMode}
+                    vertices={editVertices}
+                    onVertex={(la, ln, idx) => {
+                      if (!editAreaMode) return;
+                      if (idx !== undefined) {
+                        setEditVertices((prev) => prev.map((v, i) => (i === idx ? [la, ln] as [number, number] : v)));
+                      } else if (editVertices.length < 30) {
+                        setEditVertices((prev) => [...prev, [la, ln] as [number, number]]);
+                      }
+                    }}
+                    onRemoveVertex={(i) => setEditVertices((prev) => prev.filter((_, j) => j !== i))}
+                    expanded={editMapExpanded}
+                    onExpandedChange={setEditMapExpanded}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={savePlace}
+                    disabled={placeSaving || (editAreaMode && editVertices.length < 3)}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40"
+                  >
+                    {placeSaving ? "Сохраняем…" : "Сохранить место"}
+                  </button>
+                  <button onClick={() => setPlaceEditing(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-neutral-700">Отмена</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
