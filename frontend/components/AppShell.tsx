@@ -18,12 +18,36 @@ function BellButton() {
   const [items, setItems] = useState<{ id: string | number; kind: string; author?: string; author_id?: number; thread_id?: number | null; comment_id?: number | null; title?: string | null; snippet?: string; created_at?: string }[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
+  // прочитанные в хедере: вчерашнее не всплывает снова; в профиле всё видно как было
+  const seenKey = user ? `zakoulki_notif_seen_${user.id}` : "";
+  const getSeen = (): Set<string> => {
+    try {
+      const raw = seenKey ? localStorage.getItem(seenKey) : null;
+      const arr = raw ? (JSON.parse(raw) as (string | number)[]) : [];
+      return new Set(arr.map(String));
+    } catch { return new Set(); }
+  };
+  const saveSeen = (ids: Set<string>) => {
+    try {
+      if (seenKey) localStorage.setItem(seenKey, JSON.stringify([...ids].slice(-200)));
+    } catch { /* ignore */ }
+  };
+  const markSeen = (ids: (string | number)[]) => {
+    const seen = getSeen();
+    ids.forEach((id) => seen.add(String(id)));
+    saveSeen(seen);
+  };
+
   useEffect(() => {
     if (!user) return;
     api.get("/threads/notifications/mine").then((r) => {
-      setItems(r.data ?? []);
-      setCount((r.data ?? []).length);
+      const data = r.data ?? [];
+      const seen = getSeen();
+      const fresh = data.filter((n: { id: string | number }) => !seen.has(String(n.id)));
+      setItems(fresh);
+      setCount(fresh.length);
     }).catch(() => { /* ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // закрытие по клику вне (backdrop-blur ломает fixed, поэтому через document)
@@ -40,14 +64,20 @@ function BellButton() {
     const next = !open;
     setOpen(next);
     if (next) {
-      // обновляем при каждом открытии
+      // обновляем при каждом открытии, показываем только непросмотренные
       api.get("/threads/notifications/mine").then((r) => {
-        setItems(r.data ?? []);
+        const data = r.data ?? [];
+        const seen = getSeen();
+        setItems(data.filter((n: { id: string | number }) => !seen.has(String(n.id))));
         setCount(0);
       }).catch(() => { /* ignore */ });
-    } else {
-      setCount(0);
     }
+  };
+
+  const clearAll = () => {
+    markSeen(items.map((n) => n.id));
+    setItems([]);
+    setCount(0);
   };
 
   if (!user) return null;
@@ -59,10 +89,17 @@ function BellButton() {
       </button>
       {open && (
         <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
-          <div className="border-b border-slate-100 px-3 py-2 text-[13px] font-bold dark:border-neutral-800">Уведомления</div>
+          <div className="flex items-center border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+            <span className="text-[13px] font-bold">Уведомления</span>
+            {items.length > 0 && (
+              <button onClick={clearAll} className="ml-auto text-xs font-semibold text-slate-400 hover:text-slate-700 dark:hover:text-neutral-300">
+                Убрать все
+              </button>
+            )}
+          </div>
           {items.length === 0 && <div className="px-3 py-4 text-center text-[13px] text-slate-400 dark:text-neutral-500">Пока тихо</div>}
           {items.map((n) => (
-            <Link key={String(n.id)} href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"} className="block border-b border-slate-50 px-3 py-2.5 last:border-0 hover:bg-slate-50 dark:border-neutral-800 dark:hover:bg-neutral-800">
+            <Link key={String(n.id)} href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"} onClick={() => markSeen([n.id])} className="block border-b border-slate-50 px-3 py-2.5 last:border-0 hover:bg-slate-50 dark:border-neutral-800 dark:hover:bg-neutral-800">
               <div className="text-sm">
                 <span className="font-bold">{n.author ?? "Кто-то"}</span>
                 <span className="text-slate-500 dark:text-neutral-400"> {n.kind === "mention" ? "упомянул(а) вас" : "ответил(а) в вашем треде"}</span>
