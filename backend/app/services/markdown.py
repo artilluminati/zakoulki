@@ -21,10 +21,20 @@ INTERNAL_HOSTS = {"zakoulki.serveousercontent.com"}
 INTERNAL_LINK_RE = re.compile(
     r'<a href="(?:https?://([^/"\s]+))?/(thread|hub)/(\d+)[^"]*">([^<]*)</a>'
 )
+_hosts_alt = "|".join(sorted(h.replace(".", r"\.") for h in INTERNAL_HOSTS))
+# голые ссылки на своё (markdown без extensions их не автолин кует):
+# заворачиваем в [Вопрос #N](url) до рендера, дальше сработает INTERNAL_LINK_RE
+BARE_INTERNAL_RE = re.compile(
+    rf"(?<![\(\]\"'=])https?://(?:{_hosts_alt})/((?:thread|hub))/(\d+)(?![\w/-])",
+    re.IGNORECASE,
+)
 USER_RE = re.compile(r"@\[(\d+):([^\]]+)\]")  # legacy, для старых записей
 PLAIN_USER_RE = re.compile(r"(?<![\wа-яА-ЯёЁ@\[])@([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
 PLACE_RE = re.compile(r"\+\[(\d+):([^\]]+)\]")
 TAG_RE = re.compile(r"(?<![\wа-яА-ЯёЁ])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
+# та же маска тега, но только после пробела/скобки (не ломаем заголовки);
+# применяется к тексту ВНЕ ссылок через _outside_anchors
+TAG_SUB = re.compile(r"(?<=[\s(])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
 
 # словарь авто-тегов: слово -> тег
 AUTO_TAGS = {
@@ -55,6 +65,13 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
     text = USER_RE.sub(r"@\2", raw_md)
     # место -> ссылка-чип с data-атрибутом (обработаем после md)
     text = PLACE_RE.sub(r"[\2](place:\1)", text)
+    # голые ссылки на свои посты/разделы -> markdown-ссылки (иначе чипа не будет)
+    def _barelink(m: "re.Match") -> str:
+        kind, tid = m.group(1).lower(), m.group(2)
+        label = "Раздел" if kind == "hub" else "Вопрос"
+        return f"[{label} #{tid}]({m.group(0)})"
+
+    text = BARE_INTERNAL_RE.sub(_barelink, text)
 
     if not HAS_LIBS:
         # без либ — escape + параграфы, чтобы не падать
@@ -62,6 +79,17 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
         return f"<p>{_h.escape(text)}</p>", {"user_ids": user_ids, "usernames": usernames, "place_ids": place_ids, "tags": tags}
 
     html = md_lib.markdown(text, extensions=[])
+
+    def _outside_anchors(h: str, fn) -> str:
+        """Применить fn только к тексту вне <a>…</a> (чипы не рвём)."""
+        parts = re.split(r"(<a\b[^>]*>.*?</a>)", h, flags=re.DOTALL)
+        for i in range(0, len(parts), 2):
+            parts[i] = fn(parts[i])
+        return "".join(parts)
+
+    def _tagify(s: str) -> str:
+        return TAG_SUB.sub(r'<a class="tag" href="/tag/\1">#\1</a>', s)
+
     # place:123 ссылки -> чипы мест
     html = re.sub(
         r'<a href="place:(\d+)">([^<]+)</a>',
@@ -75,11 +103,8 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
         html,
     )
     # теги #слово (кириллица и латиница) — только внутри текста, не в начале строки (там заголовок)
-    html = re.sub(
-        r"(?<=[\s(])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})",
-        r'<a class="tag" href="/tag/\1">#\1</a>',
-        html,
-    )
+    # и никогда внутри ссылок (иначе рвём чипы вида «Вопрос #52»)
+    html = _outside_anchors(html, _tagify)
 
     def _postlink(m: "re.Match") -> str:
         host, kind, tid, text = m.group(1), m.group(2), m.group(3), m.group(4)
