@@ -38,9 +38,9 @@ export async function createThread(payload: { title?: string | null; body_md: st
   return res.data;
 }
 
-export async function likeThread(id: number) {
-  const res = await api.post(`/threads/${id}/like`);
-  return res.data as { liked: boolean };
+export async function scoreThread(id: number, value: 1 | -1) {
+  const res = await api.post(`/threads/${id}/score`, { value });
+  return res.data as { score: number; my_vote: number };
 }
 
 export async function bookmarkThread(id: number) {

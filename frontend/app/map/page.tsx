@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapPin, Plus, X, MessageCircle, Heart, Navigation } from "lucide-react";
+import { MapPin, Plus, X, MessageCircle, Navigation, ChevronUp } from "lucide-react";
 import { fetchMapPoints, fetchThread, reverseGeocode, searchGeoPlaces, scopeParams } from "@/lib/v5";
 import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
@@ -502,7 +502,7 @@ export default function MapPage() {
                       <span className="flex items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
                         <span className="truncate">{ct.author_username}</span>
                         <span className="flex shrink-0 items-center gap-0.5"><MessageCircle className="h-3 w-3" />{ct.comments_count}</span>
-                        <span className="flex shrink-0 items-center gap-0.5"><Heart className="h-3 w-3" />{ct.likes_count}</span>
+                        <span className="flex shrink-0 items-center gap-0.5"><ChevronUp className="h-3 w-3" />{ct.score ?? 0}</span>
                       </span>
                     </span>
                   </button>
@@ -531,7 +531,7 @@ export default function MapPage() {
                     <div className="flex items-center gap-3 truncate text-[13px] text-slate-500 dark:text-neutral-400">
                       <span className="truncate">{selected.place?.name ?? "Без точки"}</span>
                       <span className="flex shrink-0 items-center gap-1"><MessageCircle className="h-3.5 w-3.5" />{selected.comments_count}</span>
-                      <span className="flex shrink-0 items-center gap-1"><Heart className="h-3.5 w-3.5" />{selected.likes_count}</span>
+                      <span className="flex shrink-0 items-center gap-1"><ChevronUp className="h-3.5 w-3.5" />{selected.score ?? 0}</span>
                     </div>
                     <div className="mt-1.5 flex gap-2">
                       <Link href={selected.is_hub ? `/hub/${selected.id}` : `/thread/${selected.id}`} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-bold text-white">

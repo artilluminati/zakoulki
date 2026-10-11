@@ -4,10 +4,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode } from "@/lib/v5";
+import { MapPin, Eye, Flag, ImagePlus, X } from "lucide-react";
+import { fetchThread, commentThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode } from "@/lib/v5";
+import ScoreArrows from "@/components/ScoreArrows";
 import QuickComposer from "@/components/QuickComposer";
-import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge } from "@/components/ThreadCard";
+import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge, regionLine } from "@/components/ThreadCard";
 import HubSection from "@/components/HubSection";
 import MiniMap from "@/components/MiniMap";
 import MdEditor from "@/components/editor/MdEditor";
@@ -497,7 +498,7 @@ export default function ThreadPage() {
           <>
         {t.title && <h1 className="text-xl font-extrabold leading-tight">{t.title}</h1>}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-neutral-400">
-          <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}</span>
+          <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}{regionLine(t) ? ` · ${regionLine(t)}` : ""}</span>
           {t.author_badge === "official" && <OfficialBadge />}
           <HubBadge t={t} />
         </div>
@@ -584,7 +585,7 @@ export default function ThreadPage() {
         )}
         <HubSection t={t} user={user} reload={load} />
         <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
-          <button onClick={() => likeThread(t.id).then(load).catch(() => toast("Не получилось", "error"))} className="flex items-center gap-1.5 hover:text-slate-800"><Heart className="h-4 w-4" /> {t.likes_count}</button>
+          <ScoreArrows key={`${t.id}-${t.score ?? 0}`} id={t.id} score={t.score ?? 0} myVote={t.my_vote} />
           <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
           {canEdit && !editing && (
             <button onClick={startEdit} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">Редактировать</button>

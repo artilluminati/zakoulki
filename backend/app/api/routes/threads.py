@@ -77,6 +77,7 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "is_offtop": t.is_offtop,
         "place": _place_out(t.place) if t.place else None,
         "views": t.views, "likes_count": t.likes_count, "comments_count": t.comments_count,
+        "score": t.score, "my_vote": _my_vote(db, t.id, user_id),
         "created_at": t.created_at,
         "city": t.city, "district": t.district, "region": t.region, "country": t.country,
         "poll": _poll_out(db, t.id, user_id),
@@ -296,7 +297,7 @@ def list_threads(
         q = q.filter(GeoPlace.latitude.between(lat - delta, lat + delta))
         q = q.filter(GeoPlace.longitude.between(lng - delta, lng + delta))
     if sort == "top":
-        q = q.order_by(Thread.likes_count.desc(), Thread.id.desc())
+        q = q.order_by(Thread.score.desc(), Thread.id.desc())
     q = q.distinct()
     items = q.limit(limit).all()
     return [_thread_out(t, db) for t in items]
@@ -339,6 +340,14 @@ def create_thread(data: ThreadCreate, db: Session = Depends(get_db), user: User 
 
 
 HUB_THRESHOLD = 3
+
+
+def _my_vote(db: Session, thread_id: int, user_id: int | None) -> int:
+    if not user_id:
+        return 0
+    from app.models.thread_extra import ThreadLike
+    row = db.get(ThreadLike, {"user_id": user_id, "thread_id": thread_id})
+    return row.value if row else 0
 
 
 def _hub_voted(db: Session, thread_id: int, user_id: int | None) -> bool:
@@ -702,18 +711,42 @@ def vote_poll(thread_id: int, data: dict, db: Session = Depends(get_db),
     return _poll_out(db, thread_id, user.id)
 
 
-@router.post("/{thread_id}/like")
-def like_thread(thread_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+class ThreadVote(BaseModel):
+    value: int = Field(ge=-1, le=1, description="+1 вверх, -1 вниз, 0 снять")
+
+
+@router.post("/{thread_id}/score")
+def score_thread(thread_id: int, data: ThreadVote, db: Session = Depends(get_db),
+                 user: User = Depends(get_current_user)):
+    """Голос стрелкой как на реддите: повторный клик снимает, смена — переворачивает."""
+    from app.models.thread_extra import ThreadLike
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
+    if data.value == 0:
+        ex = db.get(ThreadLike, {"user_id": user.id, "thread_id": thread_id})
+        if ex:
+            t.score -= ex.value
+            db.delete(ex)
+            db.commit()
+        return {"score": t.score, "my_vote": 0}
+    if data.value not in (1, -1):
+        raise HTTPException(400, "Голос: +1 или -1")
     ex = db.get(ThreadLike, {"user_id": user.id, "thread_id": thread_id})
-    if ex:
-        db.delete(ex); t.likes_count = max(0, t.likes_count - 1); db.commit()
-        return {"liked": False}
-    db.add(ThreadLike(user_id=user.id, thread_id=thread_id))
-    t.likes_count += 1; db.commit()
-    return {"liked": True}
+    if ex and ex.value == data.value:
+        t.score -= ex.value
+        db.delete(ex)
+        my_vote = 0
+    elif ex:
+        t.score += 2 * data.value
+        ex.value = data.value
+        my_vote = data.value
+    else:
+        db.add(ThreadLike(user_id=user.id, thread_id=thread_id, value=data.value))
+        t.score += data.value
+        my_vote = data.value
+    db.commit()
+    return {"score": t.score, "my_vote": my_vote}
 
 
 @router.post("/{thread_id}/request-hub", status_code=201)

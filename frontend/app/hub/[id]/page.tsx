@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, type HubModerator } from "@/lib/v5";
-import ThreadCard, { timeAgo, HubAuthorBadge, HubModeratorBadge } from "@/components/ThreadCard";
+import ThreadCard, { timeAgo, regionLine, HubAuthorBadge, HubModeratorBadge } from "@/components/ThreadCard";
 import QuickComposer from "@/components/QuickComposer";
 import PhotoImg from "@/components/PhotoImg";
 import { useAuth } from "@/lib/auth";
@@ -92,7 +92,7 @@ export default function HubPage() {
       {/* шапка раздела */}
       <article className="rounded-2xl border border-emerald-300 bg-emerald-50/50 p-4 shadow-sm md:p-5 dark:border-emerald-800 dark:bg-emerald-950/30">
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
-          <span>Раздел #{t.id} · @{t.author_username} · {timeAgo(t.created_at)}</span>
+          <span>Раздел #{t.id} · @{t.author_username} · {timeAgo(t.created_at)}{regionLine(t) ? ` · ${regionLine(t)}` : ""}</span>
           <HubAuthorBadge />
         </div>
         {editingTitle ? (

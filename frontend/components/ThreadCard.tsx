@@ -3,9 +3,10 @@
 import { memo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, Flame, MessagesSquare } from "lucide-react";
+import { MapPin, MessageCircle, Eye, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, MessagesSquare } from "lucide-react";
+import ScoreArrows from "@/components/ScoreArrows";
 import type { ThreadV5 } from "@/types/v5";
-import { likeThread, reportThread, bookmarkThread } from "@/lib/v5";
+import { reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import PhotoImg from "@/components/PhotoImg";
 
@@ -25,6 +26,20 @@ function avatarColor(name?: string | null) {
   let h = 0;
   for (const c of name ?? "?") h = (h * 31 + c.charCodeAt(0)) % 360;
   return `hsl(${h} 60% 88%)`;
+}
+
+/** Подпись региона сверху: своя привязка, иначе из места. Видна всегда, даже с точкой. */
+export function regionLine(t: {
+  district?: string | null; city?: string | null; region?: string | null;
+  place?: { district?: string | null; city?: string | null; region?: string | null } | null;
+}): string | null {
+  const parts = [
+    t.district ?? t.place?.district,
+    t.city ?? t.place?.city,
+    t.region ?? t.place?.region,
+  ].filter(Boolean) as string[];
+  const uniq = [...new Set(parts)];
+  return uniq.length > 0 ? uniq.join(", ") : null;
 }
 
 export function OfficialBadge() {
@@ -144,8 +159,6 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
   const isHubMod = !isHubAuthor && !!hubModIds?.includes(t.author_id);
   const threadHref = t.is_hub ? `/hub/${t.id}` : `/thread/${t.id}`;
   const toast = useToast();
-  const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(t.likes_count);
   const [bookmarked, setBookmarked] = useState(false);
   const [menu, setMenu] = useState(false);
   const [reportMode, setReportMode] = useState(false);
@@ -162,17 +175,6 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
     } catch (e) {
       setBookmarked(bookmarked);
       toast(needAuth(e) ? "Войдите, чтобы сохранять" : "Не получилось", "error");
-    }
-  };
-
-  const onLike = async () => {
-    setLiked(!liked);
-    setLikes((v) => (liked ? v - 1 : v + 1));
-    try { await likeThread(t.id); }
-    catch (e) {
-      setLiked(liked);
-      setLikes((v) => (liked ? v + 1 : v - 1));
-      toast(needAuth(e) ? "Войдите, чтобы оценить" : "Не получилось", "error");
     }
   };
 
@@ -210,9 +212,7 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
           <div className="text-xs text-slate-500 dark:text-neutral-400">
             {timeAgo(t.created_at)}
             {t.is_offtop ? " · оффтоп" : " · вопрос"}
-            {!t.place && (t.district || t.city) && (
-              <span> · {[t.district, t.city].filter(Boolean).join(", ")}</span>
-            )}
+            {regionLine(t) && <span> · {regionLine(t)}</span>}
           </div>
         </div>
         <div className="relative">
@@ -319,9 +319,7 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
         <Link href={threadHref} className="flex items-center gap-1.5 hover:text-slate-800">
           <MessageCircle className="h-4 w-4" /> {t.comments_count}
         </Link>
-        <button onClick={onLike} className={`flex items-center gap-1.5 ${liked ? "text-red-500" : "hover:text-slate-800"}`}>
-          <Heart className={`h-4 w-4 ${liked ? "fill-red-500" : ""}`} /> {likes}
-        </button>
+        <ScoreArrows id={t.id} score={t.score ?? 0} myVote={t.my_vote} />
         <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
         <button onClick={onBookmark} className={`ml-auto flex items-center gap-1.5 ${bookmarked ? "text-emerald-600 dark:text-emerald-400" : "hover:text-slate-800"}`}>
           <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-emerald-600" : ""}`} />

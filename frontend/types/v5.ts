@@ -46,6 +46,8 @@ export interface ThreadV5 {
   place?: GeoPlaceV5 | null;
   views: number;
   likes_count: number;
+  score?: number;
+  my_vote?: number | null;
   comments_count: number;
   created_at: string;
   comments?: ThreadCommentV5[];
