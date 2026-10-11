@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached } from "@/lib/v5";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub } from "@/lib/v5";
+import QuickComposer from "@/components/QuickComposer";
 import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge } from "@/components/ThreadCard";
 import HubSection from "@/components/HubSection";
 import MiniMap from "@/components/MiniMap";
@@ -177,6 +178,27 @@ export default function ThreadPage() {
   }, [t?.id, t?.is_hub]);
   const sortedAttached = [...attached].sort((a, b) =>
     attSort === "top" ? (b.comments_count - a.comments_count || b.id - a.id) : b.id - a.id);
+
+  // быстрый вопрос прямо в раздел: создаём с местом раздела и прикрепляем
+  const postToHub = async (body: string, files: File[]) => {
+    if (!t?.is_hub || !t.place) return;
+    try {
+      const nt = await createThread({
+        body_md: body, place_id: t.place.id,
+        city: t.place.city ?? t.city ?? null, district: t.place.district ?? t.district ?? null,
+        region: t.place.region ?? t.region ?? null, country: t.place.country ?? t.country ?? "Россия",
+      });
+      for (const f of files) {
+        try { await uploadThreadPhoto(nt.id, f); } catch { /* ignore */ }
+      }
+      try { await attachHub(nt.id, t.id); } catch { /* ignore */ }
+      toast("Опубликовано в разделе", "success");
+      setAttached(await fetchAttached(t.id));
+      load();
+    } catch {
+      toast("Не опубликовалось — попробуйте ещё раз", "error");
+    }
+  };
 
   // подсветка коммента из уведомления (#comment-123)
   useEffect(() => {
@@ -479,6 +501,13 @@ export default function ThreadPage() {
 
       {t.is_hub && (
         <section className="space-y-3">
+          {user ? (
+            <QuickComposer expandHref={`/create?hub=${t.id}`} onSubmit={postToHub} />
+          ) : (
+            <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
+              Войдите, чтобы спросить в разделе →
+            </Link>
+          )}
           <div className="flex items-center gap-1.5">
             <h2 className="text-[15px] font-extrabold dark:text-neutral-100">Вопросы раздела · {attached.length}</h2>
             <span className="ml-auto flex gap-1 text-xs">

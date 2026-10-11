@@ -6,10 +6,9 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
-import MdEditor from "@/components/editor/MdEditor";
-import PasteButton from "@/components/PasteButton";
+import QuickComposer from "@/components/QuickComposer";
 import { fetchThreads, createThread, uploadThreadPhoto, scopeParams } from "@/lib/v5";
-import { MessagesSquare, CheckCircle2, ImagePlus, X } from "lucide-react";
+import { MessagesSquare, CheckCircle2 } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -33,11 +32,6 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [sort, setSort] = useState<Sort>("new");
   const [filter, setFilter] = useState<"all" | "hubs" | "offtop">("all");
-  const [draft, setDraft] = useState("");
-  const [draftFiles, setDraftFiles] = useState<File[]>([]);
-  const [draftThumbs, setDraftThumbs] = useState<string[]>([]);
-  const [posting, setPosting] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const scopeRef = useRef<HTMLDivElement>(null);
 
   // закрытие поповера региона по клику вне
@@ -50,13 +44,6 @@ export default function FeedPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [scopeOpen]);
 
-  const pickFiles = () => fileRef.current?.click();
-
-  useEffect(() => {
-    const urls = draftFiles.map((f) => URL.createObjectURL(f));
-    setDraftThumbs(urls);
-    return () => urls.forEach((u) => URL.revokeObjectURL(u));
-  }, [draftFiles]);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState(false);
   const [geoPending, setGeoPending] = useState(false);
@@ -182,84 +169,28 @@ export default function FeedPage() {
     setSort(s);
   };
 
-  const post = async () => {
-    if ((!draft.trim() && draftFiles.length === 0) || posting) return;
-    setPosting(true);
+  const post = async (body: string, files: File[]) => {
     try {
       const t = await createThread({
-        body_md: draft,
+        body_md: body,
         city: scope.city ?? null, district: scope.district ?? null,
         region: scope.region ?? null, country: scope.country ?? null,
       });
-      for (const f of draftFiles) {
+      for (const f of files) {
         try { await uploadThreadPhoto(t.id, f); } catch { /* ignore */ }
       }
-      setDraft("");
-      setDraftFiles([]);
       toast("Опубликовано", "success");
       load();
     } catch {
       toast("Не опубликовалось — попробуйте ещё раз", "error");
     }
-    setPosting(false);
   };
 
   return (
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       {/* композер */}
       {user ? (
-        <div
-          className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-neutral-700 dark:bg-neutral-900"
-          onPaste={(e) => {
-            const imgs = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
-            if (imgs.length > 0) {
-              e.preventDefault();
-              setDraftFiles((prev) => [...prev, ...imgs]);
-              toast(`Фото добавлено: ${imgs.length}`, "success");
-            }
-          }}
-        >
-          <MdEditor value={draft} onChange={setDraft} compact placeholder="О чем хотите спросить? @ — человек, + — место" />
-          {draftFiles.length > 0 && (
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
-              {draftThumbs.map((src, i) => (
-                <span key={`${draftFiles[i]?.name}-${draftFiles[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-neutral-800">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="h-20 w-full object-contain" />
-                  <button
-                    type="button"
-                    onClick={() => setDraftFiles(draftFiles.filter((_, j) => j !== i))}
-                    aria-label="Убрать фото"
-                    className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-0.5 text-white"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-slate-400 dark:text-neutral-500">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
-            <div className="flex gap-2">
-              <button type="button" onClick={pickFiles} title="Прикрепить фото" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800">
-                <ImagePlus className="h-4 w-4" />
-              </button>
-              <input
-                ref={fileRef}
-                type="file" accept="image/*" multiple className="hidden" tabIndex={-1}
-                onChange={(e) => {
-                  setDraftFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
-                  e.target.value = "";
-                }}
-              />
-              <PasteButton iconOnly onPaste={(imgs) => { setDraftFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
-              <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold dark:border-neutral-700">Расширить</Link>
-              <button onClick={post} disabled={(!draft.trim() && draftFiles.length === 0) || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
-                {posting ? "…" : "Опубликовать"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <QuickComposer expandHref="/create" onSubmit={post} />
       ) : (
         <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
           Войдите, чтобы спросить город →
