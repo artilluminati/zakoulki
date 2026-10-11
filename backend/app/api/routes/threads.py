@@ -314,6 +314,8 @@ def list_threads(
     db: Session = Depends(get_db),
 ):
     q = db.query(Thread).options(joinedload(Thread.place)).order_by(Thread.id.desc())
+    # треды общего обсуждения — только внутри разделов, в общей ленте их не дублируем
+    q = q.filter(Thread.is_hub_talk == False)  # noqa: E712
     if district or city or region or country or geo_any:
         # место треда ИЛИ его собственная привязка (оффтоп)
         from sqlalchemy import or_ as _loc_or
