@@ -85,6 +85,27 @@ def create_place(data: GeoPlaceCreate, background: BackgroundTasks, db: Session 
         if len(pts) >= 3:
             area = _json.dumps(pts)
     payload = data.model_dump(exclude={"area"})
+    # если иерархия не передана — достраиваем из реверс-геокодера,
+    # иначе места без city/region не находятся в выборе региона
+    if not payload.get("city") or not payload.get("region"):
+        try:
+            from app.services import citydata as _cd
+            r = _cd.nominatim_reverse(float(data.latitude), float(data.longitude))
+            if r:
+                payload.setdefault("city", None)
+                payload.setdefault("region", None)
+                payload.setdefault("country", None)
+                payload.setdefault("district", None)
+                if not payload.get("city"):
+                    payload["city"] = r.get("city")
+                if not payload.get("region"):
+                    payload["region"] = r.get("region")
+                if not payload.get("country"):
+                    payload["country"] = r.get("country")
+                if not payload.get("district"):
+                    payload["district"] = r.get("district")
+        except Exception:
+            pass
     p = GeoPlace(**payload, area_json=area, created_by=user.id)
     db.add(p); db.commit(); db.refresh(p)
     # превью карты — фоном, чтобы не тормозить ответ
@@ -212,7 +233,32 @@ def suggest_places(level: str = Query(pattern="^(district|city|region|country)$"
     if parent and level == "region":
         query = query.filter(GeoPlace.country == parent)
     rows = query.group_by(col).order_by(func.count(GeoPlace.id).desc()).limit(limit).all()
-    return [{"name": name, "count": count} for name, count in rows]
+    out = [{"name": name, "count": count} for name, count in rows]
+    # fallback: города/регионы, которых ещё нет в базе (например Саяногорск) —
+    # подтягиваем из бесплатного Nominatim, чтобы выбор региона работал везде
+    if q and len(out) < limit:
+        try:
+            from app.services import citydata as _cd
+            seen = {str(n).lower() for n, _ in rows if n}
+            ql = q.strip().lower()
+            for g in _cd.nominatim_search(q, limit=5):
+                name = (g.get("name") or "").strip()
+                if level == "city":
+                    val = g.get("city") or (name if g.get("kind") == "city" and ql in name.lower() else None)
+                elif level == "region":
+                    val = g.get("region") or (name if g.get("kind") == "region" and ql in name.lower() else None)
+                elif level == "district":
+                    val = g.get("district") or (name if g.get("kind") == "district" and ql in name.lower() else None)
+                else:
+                    val = g.get("country") or (name if g.get("kind") == "country" and ql in name.lower() else None)
+                if val and val.lower() not in seen:
+                    seen.add(val.lower())
+                    out.append({"name": val, "count": 0})
+                    if len(out) >= limit:
+                        break
+        except Exception:
+            pass
+    return out
 
 
 @router.get("/resolve")
@@ -232,6 +278,34 @@ def resolve_scope(name: str = Query(min_length=2, max_length=200), db: Session =
            .group_by(GeoPlace.district, GeoPlace.city, GeoPlace.region, GeoPlace.country)
            .order_by(func.count(GeoPlace.id).desc()).first())
     if not row or not row[0]:
+        # такого нет в базе — пробуем бесплатный Nominatim (города без постов)
+        try:
+            from app.services import citydata as _cd
+            results = _cd.nominatim_search(name, limit=3)
+            ql = name.strip().lower()
+            for g in results:
+                gname = (g.get("name") or "").strip()
+                if not gname or gname.lower() != ql:
+                    continue
+                kind = g.get("kind")
+                if kind == "city":
+                    return {"district": g.get("district"), "city": gname,
+                            "region": g.get("region"), "country": g.get("country") or "Россия"}
+                if kind == "region":
+                    return {"district": None, "city": None,
+                            "region": gname, "country": g.get("country") or "Россия"}
+                if kind == "district":
+                    return {"district": gname, "city": g.get("city"),
+                            "region": g.get("region"), "country": g.get("country") or "Россия"}
+                if kind == "country":
+                    return {"district": None, "city": None,
+                            "region": None, "country": gname}
+            for g in results:
+                if g.get("city") or g.get("region"):
+                    return {"district": g.get("district"), "city": g.get("city"),
+                            "region": g.get("region"), "country": g.get("country") or "Россия"}
+        except Exception:
+            pass
         return {"district": None, "city": None, "region": None, "country": "Россия"}
     return {"district": row[0], "city": row[1], "region": row[2], "country": row[3] or "Россия"}
 

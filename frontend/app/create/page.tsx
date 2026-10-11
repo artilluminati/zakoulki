@@ -146,7 +146,7 @@ export default function CreatePage() {
     setError(null);
     try {
       const picked = p.id === 0
-        ? await createGeoPlace({ name: p.name, latitude: p.lat, longitude: p.lng, address: p.address, district: p.district, street: p.street })
+        ? await createGeoPlace({ name: p.name, latitude: p.lat, longitude: p.lng, address: p.address, district: p.district, street: p.street, city: p.city || scope.city || null, region: p.region || scope.region || null, country: p.country || scope.country || "Россия" })
         : p;
       setPlace(picked);
       setAdjust(null);
@@ -239,14 +239,20 @@ export default function CreatePage() {
           name: r?.name || "Территория",
           latitude: c.latitude, longitude: c.longitude,
           address: r?.address || null, district: r?.district || null, street: r?.street || null,
+          city: r?.city || scope.city || null, region: r?.region || scope.region || null,
+          country: r?.country || scope.country || "Россия",
           area: vertices,
         });
         placeId = p.id;
       } else if (!placeId && pendingGeo) {
+        const r = await reverseGeocode(pendingGeo.latitude, pendingGeo.longitude).catch(() => null);
         const p = await createGeoPlace({
           name: pendingLabel?.name || "Точка на карте",
           latitude: pendingGeo.latitude, longitude: pendingGeo.longitude,
-          address: (pendingAddrEdit?.trim() || pendingLabel?.address) || null,
+          address: (pendingAddrEdit?.trim() || pendingLabel?.address) || r?.address || null,
+          district: r?.district || null,
+          city: r?.city || scope.city || null, region: r?.region || scope.region || null,
+          country: r?.country || scope.country || "Россия",
         });
         placeId = p.id;
       } else if (!placeId && place && place.id > 0 && adjust) {
@@ -255,6 +261,8 @@ export default function CreatePage() {
           name: place.name,
           latitude: adjust.latitude, longitude: adjust.longitude,
           address: place.address, district: place.district, street: place.street,
+          city: place.city || scope.city || null, region: place.region || scope.region || null,
+          country: place.country || scope.country || "Россия",
         });
         placeId = p.id;
       }

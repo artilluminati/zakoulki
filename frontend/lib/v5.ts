@@ -125,14 +125,14 @@ export async function fetchMapPoints(bbox: { north: number; south: number; east:
   return res.data as { id: number; lat: number; lng: number; is_offtop: boolean; comments: number; has_photo: boolean; cover_url?: string | null; area?: [number, number][] | null }[];
 }
 
-export async function createGeoPlace(p: { name: string; latitude: number; longitude: number; address?: string | null; district?: string | null; street?: string | null; area?: [number, number][] | null }) {
+export async function createGeoPlace(p: { name: string; latitude: number; longitude: number; address?: string | null; district?: string | null; street?: string | null; city?: string | null; region?: string | null; country?: string | null; area?: [number, number][] | null }) {
   const res = await api.post("/geo-places", { ...p, yandex_kind: "self" });
   return res.data as GeoPlaceV5;
 }
 
 export async function reverseGeocode(lat: number, lng: number) {
   const res = await api.get("/geo-places/reverse", { params: { lat, lng } });
-  return res.data as { name: string; address?: string | null; district?: string | null; street?: string | null; lat: number; lng: number };
+  return res.data as { name: string; address?: string | null; district?: string | null; street?: string | null; city?: string | null; region?: string | null; country?: string | null; lat: number; lng: number };
 }
 
 export async function fetchSimilarPlaces(name: string, lat?: number, lng?: number) {

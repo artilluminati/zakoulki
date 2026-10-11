@@ -5,6 +5,9 @@ export interface GeoPlaceV5 {
   address?: string | null;
   district?: string | null;
   street?: string | null;
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
   lat: number;
   lng: number;
   area?: [number, number][] | null;

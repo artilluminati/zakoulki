@@ -15,6 +15,22 @@ from app.core.config import settings
 UA = {"User-Agent": "zakoulki-app/1.0"}
 
 
+def _nominatim_kind(item: dict) -> str | None:
+    """Уровень объекта по addresstype/type Nominatim -> наш уровень."""
+    t = (item.get("addresstype") or item.get("type") or "").lower()
+    if t in ("state", "province"):
+        return "region"
+    if t in ("county",):
+        return "district"
+    if t in ("city", "town", "village", "hamlet", "municipality", "borough", "locality"):
+        return "city"
+    if t in ("country",):
+        return "country"
+    if t in ("suburb", "neighbourhood", "district", "quarter"):
+        return "district"
+    return None
+
+
 def nominatim_search(q: str, limit: int = 5) -> list[dict]:
     params = urllib.parse.urlencode({
         "q": q, "format": "json", "limit": limit,
@@ -25,7 +41,7 @@ def nominatim_search(q: str, limit: int = 5) -> list[dict]:
         data = _json.load(r)
     out = []
     for item in data:
-        addr = item.get("address", {})
+        addr = item.get("address", {}) or {}
         out.append({
             "name": item.get("display_name", q).split(",")[0],
             "address": item.get("display_name"),
@@ -34,6 +50,7 @@ def nominatim_search(q: str, limit: int = 5) -> list[dict]:
             "city": addr.get("city") or addr.get("town") or addr.get("village") or addr.get("municipality"),
             "region": addr.get("state"),
             "country": addr.get("country"),
+            "kind": _nominatim_kind(item),
             "lat": float(item.get("lat", 0)), "lng": float(item.get("lon", 0)),
         })
     return out
