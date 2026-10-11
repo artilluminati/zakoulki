@@ -19,18 +19,26 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* режим территории: прицел вместо grab-руки поверх тайлов Яндекса (кроме полей и кнопок) */
-.minimap-area,
-.minimap-area *:not(input):not(textarea):not(select):not(button):not(a):not([role="button"]) {
+/* режим территории: прицел только на самой карте, не на UI поверх неё */
+.minimap-area > div:first-child {
   cursor: crosshair !important;
 }
+.minimap-area .ymap-container {
+  cursor: crosshair !important;
+}
+/* UI поверх карты в режиме территории: обычные курсоры */
 .minimap-area input,
 .minimap-area textarea {
   cursor: text !important;
 }
 .minimap-area button,
-.minimap-area a {
+.minimap-area a,
+.minimap-area [role="button"] {
   cursor: pointer !important;
+}
+/* перетаскивание карты — рука, а не прицел */
+.minimap-area > div:first-child:active {
+  cursor: grabbing !important;
 }
 
 * { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,.2) transparent; }

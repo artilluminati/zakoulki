@@ -18,7 +18,7 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
   onMove: (lat: number, lng: number) => void;
   areaMode?: boolean;
   vertices?: [number, number][];
-  onVertex?: (lat: number, lng: number) => void;
+  onVertex?: (lat: number, lng: number, index?: number) => void;
   onRemoveVertex?: (index: number) => void;
   expanded: boolean;
   onExpandedChange: (v: boolean) => void;
@@ -112,12 +112,12 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
     try {
       const map = mapRef.current;
       if (!map || !(window as any).ymaps) return;
+      const ymaps = (window as any).ymaps;
       if (polyRef.current) {
         try { map.geoObjects.remove(polyRef.current); } catch { /* ignore */ }
         polyRef.current = null;
       }
       if (vertices.length >= 2) {
-        const ymaps = (window as any).ymaps;
         const pts = vertices.map(([la, ln]) => [la, ln]);
         if (pts.length >= 3) pts.push(pts[0]);
         const poly = new ymaps.Polyline(pts, {}, {
@@ -126,18 +126,23 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
         map.geoObjects.add(poly);
         polyRef.current = poly;
       }
+      // точки-вершины: перетаскиваемые, dragend обновляет координаты
       const dots = (map as any).__dots as Array<{ remove?: unknown }> | undefined;
       dots?.forEach((d) => { try { map.geoObjects.remove(d); } catch { /* ignore */ } });
       const fresh: any[] = [];
       if (areaMode) {
-        const ymaps = (window as any).ymaps;
         vertices.forEach(([la, ln], i) => {
-          const d = new ymaps.Placemark([la, ln], {}, {
+          const d = new ymaps.Placemark([la, ln], { vertexIndex: i }, {
             iconLayout: "default#image",
             iconImageHref: makeDot("#059669", String(i + 1)),
             iconImageSize: [...DOT_SIZE],
             iconImageOffset: [...DOT_OFFSET],
-            cursor: "pointer",
+            cursor: "grab",
+            draggable: true,
+          });
+          d.events.add("dragend", () => {
+            const c = d.geometry.getCoordinates();
+            onVertexRef.current?.(c[0], c[1], i);
           });
           map.geoObjects.add(d);
           fresh.push(d);
@@ -185,7 +190,7 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
           : "relative h-full w-full overflow-hidden rounded-xl"}${areaMode ? " minimap-area" : ""}`}
         onClick={expanded ? (e) => e.stopPropagation() : undefined}
       >
-        <div ref={ref} className={`absolute inset-0 overflow-hidden bg-slate-100 ${areaMode ? "cursor-crosshair" : ""}`} />
+        <div ref={ref} className={`ymap-container absolute inset-0 overflow-hidden bg-slate-100 ${areaMode ? "cursor-crosshair" : ""}`} />
         {expanded && (
           <div className="absolute left-2 right-12 top-2 z-10">
             <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-lg">

@@ -47,6 +47,10 @@ export default function MapPage() {
   // режим прицела: точка берется из центра экрана, видно адрес до перехода
   const [pickMode, setPickMode] = useState(false);
   const [pickAddr, setPickAddr] = useState<{ name: string; address?: string | null } | null>(null);
+  // полигон места из ?place= — рисуем отдельно от кластера
+  const [placePoly, setPlacePoly] = useState<{ area: [number, number][]; id: number } | null>(null);
+  // точка внутри территории (в центре по умолчанию, перетаскиваемая)
+  const [innerPt, setInnerPt] = useState<{ lat: number; lng: number; placeId: number } | null>(null);
   // свайп вниз по шиту = закрыть (мобайл)
   const swipeY = useRef<number | null>(null);
   const [sheetDy, setSheetDy] = useState(0);
@@ -138,19 +142,20 @@ export default function MapPage() {
       try {
         const p = (await api.get(`/geo-places/${focusPlace}`)).data;
         if (!alive) return;
-        // если у места есть территория — рисуем её и центрируем по полигону
+        const ym = (window as any).ymaps;
         if (p.area && p.area.length >= 3) {
-          const ym = (window as any).ymaps;
-          const poly = new ym.Polygon([[...p.area, p.area[0]]], {}, {
-            fillColor: "#05966966",
-            strokeColor: "#059669",
-            strokeWidth: 3,
-            strokeOpacity: 0.9,
-          });
-          map.geoObjects.add(poly);
-          const bounds = poly.geometry.getBounds();
-          map.setBounds(bounds, { checkZoomRange: true, duration: 250 });
+          // сохраняем полигон в состояние — эффект перерисовки будет рисовать его
+          setPlacePoly({ area: p.area as [number, number][], id: p.id });
+          // точка внутри территории — в центре полигона
+          const lats = p.area.map((a: number[]) => a[0]);
+          const lngs = p.area.map((a: number[]) => a[1]);
+          const cLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+          const cLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+          setInnerPt({ lat: cLat, lng: cLng, placeId: p.id });
+          map.setBounds(p.area, { checkZoomRange: true, duration: 250 });
         } else {
+          setPlacePoly(null);
+          setInnerPt(null);
           map.setCenter([p.lat, p.lng], 15);
         }
         const at = await api.get("/threads", { params: { place_id: p.id, limit: 1 } });
@@ -162,6 +167,55 @@ export default function MapPage() {
     })();
     return () => { alive = false; };
   }, [mapReady, focusPlace, toast]);
+
+  // отрисовка полигона места и точки внутри территории
+  useEffect(() => {
+    const map = (window as any).__ymap;
+    if (!mapReady || !map || !(window as any).ymaps) return;
+    const ymaps = (window as any).ymaps;
+    // удаляем старые полигоны/точки
+    map.geoObjects.each((obj: any) => {
+      if (obj.properties?.get?.("isPlacePoly") || obj.properties?.get?.("isInnerPt")) {
+        map.geoObjects.remove(obj);
+      }
+    });
+    if (!placePoly) return;
+    const poly = new ymaps.Polygon([[...placePoly.area, placePoly.area[0]]], {
+      isPlacePoly: true,
+      threadId: placePoly.id,
+    }, {
+      fillColor: "#05966966",
+      strokeColor: "#059669",
+      strokeWidth: 3,
+      strokeOpacity: 0.9,
+    });
+    poly.events.add("click", async () => {
+      try { setSelected(await fetchThread(placePoly.id)); }
+      catch { toast("Не получилось открыть вопрос", "error"); }
+    });
+    map.geoObjects.add(poly);
+    if (innerPt && innerPt.placeId === placePoly.id) {
+      const pt = new ymaps.Placemark([innerPt.lat, innerPt.lng], {
+        isInnerPt: true,
+        placeId: placePoly.id,
+      }, {
+        iconLayout: "default#image",
+        iconImageHref: makePin({ color: "#059669", glyph: "q", photoUrl: null, selected: false }),
+        iconImageSize: PIN_SIZE,
+        iconImageOffset: PIN_OFFSET,
+        draggable: true,
+      });
+      pt.events.add("dragend", (e: any) => {
+        const c = e.get("target").geometry.getCoordinates();
+        setInnerPt({ lat: c[0], lng: c[1], placeId: placePoly.id });
+      });
+      pt.events.add("click", async () => {
+        try { setSelected(await fetchThread(placePoly.id)); }
+        catch { toast("Не получилось открыть вопрос", "error"); }
+      });
+      map.geoObjects.add(pt);
+    }
+  }, [placePoly, innerPt, mapReady, toast]);
 
   // перерисовка точек при смене региона
   useEffect(() => {
@@ -184,7 +238,10 @@ export default function MapPage() {
     const map = (window as any).__ymap;
     if (!map || !(window as any).ymaps) return;
     const ymaps = (window as any).ymaps;
-    map.geoObjects.removeAll();
+    // удаляем только старые кластеры, оставляя полигоны места и внутренние точки
+    map.geoObjects.each((obj: any) => {
+      if (obj.properties?.get?.("isCluster")) map.geoObjects.remove(obj);
+    });
     const visible = (filter === "Обсуждают"
       ? [...pts].sort((a, b) => b.comments - a.comments)
       : pts
@@ -204,6 +261,7 @@ export default function MapPage() {
         '<div style="width:64px;height:64px;border-radius:50%;background:#0f172a;border:4px solid #a3e635;box-shadow:0 4px 14px rgba(2,6,23,.35);display:flex;align-items:center;justify-content:center;color:#a3e635;font-weight:800;font-size:18px;font-family:system-ui,sans-serif;">{{ properties.geoObjects.length }}</div>'
       ),
     });
+    clusterer.properties.set("isCluster", true);
     // тап по кластеру на крупном зуме — список тредов, а не бесконечный зум
     clusterer.events.add("click", async (e: any) => {
       const target = e.get("target");
@@ -229,24 +287,9 @@ export default function MapPage() {
       }
     });
     for (const p of visible) {
+      // полигоны рисуем отдельно от кластера — чтобы видеть территорию
+      if (p.area && p.area.length >= 3) continue;
       const isSel = selected?.id === p.id;
-      if (p.area && p.area.length >= 3) {
-        const poly = new ymaps.Polygon([[...p.area, p.area[0]]], { threadId: p.id }, {
-          fillColor: "#05966955",
-          strokeColor: "#059669",
-          strokeWidth: 3,
-          strokeOpacity: 0.9,
-        });
-        poly.events.add("click", async () => {
-          try { setSelected(await fetchThread(p.id)); }
-          catch { toast("Не получилось открыть вопрос", "error"); }
-        });
-        if (isSel) {
-          try { poly.options.set("strokeWidth", 5); } catch { /* ignore */ }
-        }
-        clusterer.add(poly);
-        continue;
-      }
       const href = makePin({
         color: p.is_offtop ? "#64748b" : "#059669",
         glyph: p.is_offtop ? "chat" : "q",
@@ -265,6 +308,29 @@ export default function MapPage() {
       clusterer.add(m);
     }
     map.geoObjects.add(clusterer);
+
+    // полигоны из map-points — отдельно от кластера
+    map.geoObjects.each((obj: any) => {
+      if (obj.properties?.get?.("isMapArea")) map.geoObjects.remove(obj);
+    });
+    for (const p of visible) {
+      if (!p.area || p.area.length < 3) continue;
+      const isSel = selected?.id === p.id;
+      const poly = new ymaps.Polygon([[...p.area, p.area[0]]], {
+        isMapArea: true,
+        threadId: p.id,
+      }, {
+        fillColor: isSel ? "#05966988" : "#05966955",
+        strokeColor: "#059669",
+        strokeWidth: isSel ? 5 : 3,
+        strokeOpacity: 0.9,
+      });
+      poly.events.add("click", async () => {
+        try { setSelected(await fetchThread(p.id)); }
+        catch { toast("Не получилось открыть вопрос", "error"); }
+      });
+      map.geoObjects.add(poly);
+    }
   }, [pts, filter, selected, toast]);
 
   return (

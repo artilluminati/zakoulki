@@ -47,9 +47,15 @@ export default function CreatePage() {
       ? { latitude: vs.reduce((s, v) => s + v[0], 0) / vs.length, longitude: vs.reduce((s, v) => s + v[1], 0) / vs.length }
       : null;
 
-  const onMapVertex = (latitude: number, longitude: number) => {
+  const onMapVertex = (latitude: number, longitude: number, index?: number) => {
     if (!areaMode) return;
-    setVertices((prev) => (prev.length >= 30 ? prev : [...prev, [latitude, longitude]]));
+    if (index !== undefined) {
+      // перетаскивание вершины — обновляем существующую
+      setVertices((prev) => prev.map((v, i) => (i === index ? [latitude, longitude] as [number, number] : v)));
+    } else if (vertices.length < 30) {
+      // клик по карте — добавляем новую вершину
+      setVertices((prev) => [...prev, [latitude, longitude] as [number, number]]);
+    }
   };
 
   // вид карты (центр держится при переключении режимов)
