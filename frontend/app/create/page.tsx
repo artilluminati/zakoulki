@@ -325,7 +325,7 @@ export default function CreatePage() {
     >
       <h1 className="text-xl font-extrabold">Новый вопрос</h1>
       {!authLoading && !user && (
-        <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+        <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
           Войдите, чтобы задать вопрос →
         </Link>
       )}
@@ -335,7 +335,7 @@ export default function CreatePage() {
         onChange={(e) => setTitle(e.target.value)}
         maxLength={150}
         placeholder="Заголовок (необязательно — для важного)"
-        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500 dark:border-slate-700 dark:bg-slate-900"
+        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500 dark:border-neutral-700 dark:bg-neutral-900"
       />
 
       <MdEditor value={body} onChange={setBody} placeholder="Опишите вопрос… @ — человек, + — место, # — тема" />
@@ -345,9 +345,9 @@ export default function CreatePage() {
       <PollBuilder value={poll} onChange={setPoll} />
 
       {/* фото */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
         <div className="grid grid-cols-2 gap-1.5">
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700 dark:text-slate-400">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700 dark:text-neutral-400">
             <ImagePlus className="h-5 w-5" /> Выбрать{files.length > 0 ? ` (${files.length})` : ""}
             <input
               type="file" accept="image/*" multiple className="hidden"
@@ -362,7 +362,7 @@ export default function CreatePage() {
         {files.length > 0 && (
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {thumbs.map((src, i) => (
-              <span key={`${files[i]?.name}-${files[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+              <span key={`${files[i]?.name}-${files[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-neutral-800">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt="" onClick={() => setLightbox(src)} className="h-24 w-full cursor-zoom-in object-contain" />
                 <button
@@ -389,37 +389,37 @@ export default function CreatePage() {
       )}
 
       {/* выбор города/региона — можно ввести вручную, даже если там ещё нет постов */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
         <div className="mb-2 flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Город или район</div>
         <ScopePicker value={scope} onChange={setScope} />
       </div>
 
       {/* точка / территория — одна карта, позиция не слетает при переключении */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Место</span>
           <span className="flex gap-1 text-xs">
             <button
               type="button"
               onClick={() => setAreaMode(false)}
-              className={`rounded-lg px-2 py-1 font-bold ${!areaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-slate-400"}`}
+              className={`rounded-lg px-2 py-1 font-bold ${!areaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-neutral-400"}`}
             >
               Точка
             </button>
             <button
               type="button"
               onClick={() => { setAreaMode(true); setMapExpanded(true); }}
-              className={`rounded-lg px-2 py-1 font-bold ${areaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-slate-400"}`}
+              className={`rounded-lg px-2 py-1 font-bold ${areaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-neutral-400"}`}
             >
               Территория
             </button>
           </span>
           {(place || pendingGeo || vertices.length > 0) && (
-            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); setVertices([]); setAdjust(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 dark:text-slate-500"><X className="h-4 w-4" /> убрать</button>
+            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); setVertices([]); setAdjust(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 dark:text-neutral-500"><X className="h-4 w-4" /> убрать</button>
           )}
         </div>
         {areaMode && (
-          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          <div className="mt-2 text-xs text-slate-500 dark:text-neutral-400">
             Кликайте по карте — точки соединятся в территорию. Повторный клик по точке убирает её.
             {vertices.length > 0 ? ` · Точек: ${vertices.length}` : ""}
             {vertices.length > 0 && vertices.length < 3 && (
@@ -428,11 +428,11 @@ export default function CreatePage() {
             {vertices.length > 0 && (
               <>
                 {" · "}
-                <button type="button" onClick={() => setVertices((p) => p.slice(0, -1))} className="font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400">
+                <button type="button" onClick={() => setVertices((p) => p.slice(0, -1))} className="font-semibold text-slate-500 hover:text-slate-800 dark:text-neutral-400">
                   отменить последнюю
                 </button>
                 {" · "}
-                <button type="button" onClick={() => setVertices([])} className="font-semibold text-slate-400 hover:text-red-500 dark:text-slate-500">
+                <button type="button" onClick={() => setVertices([])} className="font-semibold text-slate-400 hover:text-red-500 dark:text-neutral-500">
                   заново
                 </button>
               </>
@@ -446,16 +446,16 @@ export default function CreatePage() {
                 value={addr}
                 onChange={(e) => setAddr(e.target.value)}
                 placeholder="Найти адрес или организацию…"
-                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
               />
-              <button onClick={useGeolocation} disabled={geoLocating} className="shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold text-emerald-700 disabled:opacity-50 dark:border-slate-700 dark:text-emerald-300">
+              <button onClick={useGeolocation} disabled={geoLocating} className="shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold text-emerald-700 disabled:opacity-50 dark:border-neutral-700 dark:text-emerald-300">
                 {geoLocating ? "…" : "Найти меня"}
               </button>
             </div>
             {found.map((p) => (
-              <button key={`${p.id}-${p.name}`} disabled={picking} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 disabled:opacity-50 dark:hover:bg-slate-800">
+              <button key={`${p.id}-${p.name}`} disabled={picking} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 disabled:opacity-50 dark:hover:bg-neutral-800">
                 <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                <span className="min-w-0"><span className="block truncate text-sm font-bold">{p.name}</span><span className="block truncate text-xs text-slate-500 dark:text-slate-400">{p.address}</span></span>
+                <span className="min-w-0"><span className="block truncate text-sm font-bold">{p.name}</span><span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{p.address}</span></span>
               </button>
             ))}
           </>
@@ -472,7 +472,7 @@ export default function CreatePage() {
                 value={pendingAddrEdit ?? ""}
                 onChange={(e) => setPendingAddrEdit(e.target.value)}
                 placeholder="Уточните адрес…"
-                className="mt-1 h-8 w-full rounded-lg border border-emerald-200 bg-white px-2 text-xs outline-none focus:border-emerald-500 dark:border-emerald-800 dark:bg-slate-900"
+                className="mt-1 h-8 w-full rounded-lg border border-emerald-200 bg-white px-2 text-xs outline-none focus:border-emerald-500 dark:border-emerald-800 dark:bg-neutral-900"
               />
             )}
             {place && (
@@ -511,12 +511,12 @@ export default function CreatePage() {
                 type="button"
                 disabled={picking}
                 onClick={() => pickFound(p)}
-                className="mt-1 flex w-full items-center gap-2 rounded-xl bg-white/70 px-2 py-1.5 text-left hover:bg-white disabled:opacity-50 dark:bg-slate-800/70 dark:hover:bg-slate-800"
+                className="mt-1 flex w-full items-center gap-2 rounded-xl bg-white/70 px-2 py-1.5 text-left hover:bg-white disabled:opacity-50 dark:bg-neutral-800/70 dark:hover:bg-neutral-800"
               >
                 <MapPin className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-300" />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold">{p.name}</span>
-                  <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{[p.address, p.district].filter(Boolean).join(" · ")}</span>
+                  <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{[p.address, p.district].filter(Boolean).join(" · ")}</span>
                 </span>
               </button>
             ))}
@@ -541,7 +541,7 @@ export default function CreatePage() {
           {saving ? "Публикуем…" : "Опубликовать"}
         </button>
       </div>
-      <p className="pb-24 text-center text-xs text-slate-400 md:pb-8 dark:text-slate-500">Черновик сохраняется автоматически</p>
+      <p className="pb-24 text-center text-xs text-slate-400 md:pb-8 dark:text-neutral-500">Черновик сохраняется автоматически</p>
     </div>
   );
 }

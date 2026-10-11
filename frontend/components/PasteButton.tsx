@@ -48,10 +48,10 @@ export default function PasteButton({ onPaste, small = false, iconOnly = false }
         }
       }}
       className={iconOnly
-        ? "flex items-center rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        ? "flex items-center rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
         : small
-          ? "flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-          : "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700 dark:text-slate-400"}
+          ? "flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          : "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700 dark:text-neutral-400"}
     >
       <ClipboardPaste className={small || iconOnly ? "h-4 w-4" : "h-5 w-5"} />
       {!iconOnly && (small ? "Из буфера" : "Вставить из буфера")}

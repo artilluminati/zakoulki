@@ -190,29 +190,29 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
           : "relative h-full w-full overflow-hidden rounded-xl"}${areaMode ? " minimap-area" : ""}`}
         onClick={expanded ? (e) => e.stopPropagation() : undefined}
       >
-        <div ref={ref} className={`ymap-container absolute inset-0 overflow-hidden bg-slate-100 dark:bg-slate-800 ${areaMode ? "cursor-crosshair" : ""}`} />
+        <div ref={ref} className={`ymap-container absolute inset-0 overflow-hidden bg-slate-100 dark:bg-neutral-800 ${areaMode ? "cursor-crosshair" : ""}`} />
         {expanded && (
           <div className="absolute left-2 right-12 top-2 z-10">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900/95">
-              <Search className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-900/95">
+              <Search className="h-4 w-4 shrink-0 text-slate-400 dark:text-neutral-500" />
               <input
                 value={q}
                 onChange={(e) => { setQ(e.target.value); if (e.target.value.trim().length < 3) setFound([]); }}
                 placeholder="Найти место…"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400 dark:placeholder:text-neutral-500"
               />
             </div>
             {found.length > 0 && (
-              <div className="mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+              <div className="mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
                 {found.map((p) => (
                   <button
                     key={`${p.id}-${p.name}`}
                     type="button"
                     onClick={() => pickSearch(p)}
-                    className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+                    className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-neutral-800"
                   >
                     <span className="font-bold">{p.name}</span>
-                    {p.address && <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{p.address}</span>}
+                    {p.address && <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{p.address}</span>}
                   </button>
                 ))}
               </div>
@@ -224,7 +224,7 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
           onClick={(e) => { e.stopPropagation(); toggleExpand(); }}
           aria-label={expanded ? "Свернуть карту" : "Развернуть карту"}
           title={expanded ? "Свернуть карту" : "Развернуть карту"}
-          className="absolute right-2 top-2 z-10 rounded-full bg-white/95 p-2 text-slate-600 shadow-md hover:bg-white dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="absolute right-2 top-2 z-10 rounded-full bg-white/95 p-2 text-slate-600 shadow-md hover:bg-white dark:bg-neutral-900/95 dark:text-neutral-300 dark:hover:bg-neutral-800"
         >
           {expanded ? <X className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>

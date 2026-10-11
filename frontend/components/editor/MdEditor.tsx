@@ -222,24 +222,24 @@ export default function MdEditor({
   };
 
   return (
-    <div ref={boxRef} className="relative overflow-visible rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50 px-2 py-1.5 dark:border-slate-800 dark:bg-slate-800 [&>button]:shrink-0">
-        <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><Bold className="h-4 w-4" /></button>
-        <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><Italic className="h-4 w-4" /></button>
+    <div ref={boxRef} className="relative overflow-visible rounded-xl border border-slate-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-800 [&>button]:shrink-0">
+        <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Bold className="h-4 w-4" /></button>
+        <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Italic className="h-4 w-4" /></button>
         {!compact && (
           <>
-            <button type="button" title="Цитата" onClick={() => wrap("> ")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><Quote className="h-4 w-4" /></button>
-            <button type="button" title="Список" onClick={() => wrap("- ")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><List className="h-4 w-4" /></button>
-            <button type="button" title="Ссылка (Ctrl+K)" onClick={() => wrap("[", "](https://)")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><Link2 className="h-4 w-4" /></button>
+            <button type="button" title="Цитата" onClick={() => wrap("> ")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Quote className="h-4 w-4" /></button>
+            <button type="button" title="Список" onClick={() => wrap("- ")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><List className="h-4 w-4" /></button>
+            <button type="button" title="Ссылка (Ctrl+K)" onClick={() => wrap("[", "](https://)")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Link2 className="h-4 w-4" /></button>
           </>
         )}
-        <button type="button" title="Упомянуть человека" onClick={() => insertToken("@")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><AtSign className="h-4 w-4" /></button>
-        <button type="button" title="Прикрепить место" onClick={() => insertToken("+")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><MapPin className="h-4 w-4" /></button>
-        <button type="button" title="Тег" onClick={() => insertToken("#")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700"><Hash className="h-4 w-4" /></button>
-        <button type="button" title={copied ? "Скопировано" : "Скопировать весь текст"} onClick={copyAll} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700">
+        <button type="button" title="Упомянуть человека" onClick={() => insertToken("@")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><AtSign className="h-4 w-4" /></button>
+        <button type="button" title="Прикрепить место" onClick={() => insertToken("+")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><MapPin className="h-4 w-4" /></button>
+        <button type="button" title="Тег" onClick={() => insertToken("#")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Hash className="h-4 w-4" /></button>
+        <button type="button" title={copied ? "Скопировано" : "Скопировать весь текст"} onClick={copyAll} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700">
           {copied ? <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-4 w-4" />}
         </button>
-        <div className="ml-auto flex shrink-0 items-center px-1 text-[11px] text-slate-400 dark:text-slate-500">
+        <div className="ml-auto flex shrink-0 items-center px-1 text-[11px] text-slate-400 dark:text-neutral-500">
           поддерживается markdown
         </div>
       </div>
@@ -247,7 +247,7 @@ export default function MdEditor({
         {lines.length === 1 && lines[0] === "" && safeActive === null ? (
           <div
             onClick={() => focusActive(0, 0)}
-            className="cursor-text text-[15px] leading-6 text-slate-400 dark:text-slate-500"
+            className="cursor-text text-[15px] leading-6 text-slate-400 dark:text-neutral-500"
           >
             {placeholder ?? "О чем хотите спросить? @ — человек, + — место, # — тема"}
           </div>
@@ -268,7 +268,7 @@ export default function MdEditor({
                     setUserQuery(null);
                   }
                 }}
-                className="block w-full resize-none overflow-hidden bg-transparent text-[15px] leading-6 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="block w-full resize-none overflow-hidden bg-transparent text-[15px] leading-6 outline-none placeholder:text-slate-400 dark:placeholder:text-neutral-500"
               />
             ) : (
               <div

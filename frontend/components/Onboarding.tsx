@@ -36,32 +36,32 @@ export default function Onboarding() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 md:items-center">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-neutral-900">
         <div className="flex items-start justify-between">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-100">
             <s.Icon className="h-7 w-7 text-lime-700 dark:text-lime-300" />
           </span>
-          <button onClick={close} aria-label="Пропустить" className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800">
+          <button onClick={close} aria-label="Пропустить" className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:text-neutral-500 dark:hover:bg-neutral-800">
             <X className="h-5 w-5" />
           </button>
         </div>
         <h2 className="mt-3 text-xl font-extrabold">{s.title}</h2>
-        <p className="mt-1 text-[15px] text-slate-600 dark:text-slate-300">{s.text}</p>
+        <p className="mt-1 text-[15px] text-slate-600 dark:text-neutral-300">{s.text}</p>
         {"location" in s && s.location && (
-          <div className="mt-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-800">
+          <div className="mt-3 rounded-2xl bg-slate-50 p-3 dark:bg-neutral-800">
             <ScopePicker value={scope} onChange={setScope} />
-            <div className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">Сейчас: {scopeLabel(scope)}</div>
+            <div className="mt-2 text-center text-xs text-slate-400 dark:text-neutral-500">Сейчас: {scopeLabel(scope)}</div>
           </div>
         )}
         <div className="mt-3 flex gap-1.5">
           {STEPS.map((_, i) => (
-            <div key={i} className={`h-1.5 flex-1 rounded-full ${i === step ? "bg-lime-500" : "bg-slate-200 dark:bg-slate-700"}`} />
+            <div key={i} className={`h-1.5 flex-1 rounded-full ${i === step ? "bg-lime-500" : "bg-slate-200 dark:bg-neutral-700"}`} />
           ))}
         </div>
         <div className="mt-4 flex gap-2">
           {step < STEPS.length - 1 ? (
             <>
-              <button onClick={close} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold dark:border-slate-700">Пропустить</button>
+              <button onClick={close} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold dark:border-neutral-700">Пропустить</button>
               <button onClick={() => setStep(step + 1)} className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white">Далее</button>
             </>
           ) : (

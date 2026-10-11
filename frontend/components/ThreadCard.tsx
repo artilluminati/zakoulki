@@ -45,7 +45,7 @@ export function ImportantBadge({ t }: { t: { is_important?: boolean; important_r
   }
   if (t.important_requested) {
     return (
-      <span title="На рассмотрении: жители решают, важный ли это вопрос" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+      <span title="На рассмотрении: жители решают, важный ли это вопрос" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">
         На рассмотрении · {t.important_votes ?? 0}/3
       </span>
     );
@@ -96,13 +96,13 @@ export const ThreadHtml = memo(function ThreadHtml({ html, placePreview }: { htm
                 {(info?.preview_url || info?.map_preview) ? (
                   <PhotoImg src={(info?.preview_url ?? info?.map_preview) as string} className="h-24 w-full" />
                 ) : (
-                  <span className="flex h-16 items-center justify-center bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                  <span className="flex h-16 items-center justify-center bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-neutral-500">
                     <MapPin className="h-6 w-6" />
                   </span>
                 )}
                 <span className="block p-2.5">
-                  <span className="block text-[13px] font-bold text-slate-900 dark:text-slate-100">{info?.name ?? label}</span>
-                  <span className="block text-xs text-slate-500 dark:text-slate-400">
+                  <span className="block text-[13px] font-bold text-slate-900 dark:text-neutral-100">{info?.name ?? label}</span>
+                  <span className="block text-xs text-slate-500 dark:text-neutral-400">
                     {info ? ([info.address, info.district].filter(Boolean).join(" · ") || "Рядом") : "Точка на карте"}
                   </span>
                   <Link href={`/map?place=${id}`} className="mt-1 block text-xs font-semibold text-emerald-700 dark:text-emerald-300">Открыть на карте →</Link>
@@ -168,7 +168,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
   const closeMenu = () => { setMenu(false); setReportMode(false); };
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900">
       <div className="flex items-center gap-2.5">
         <span className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-slate-700" style={{ background: avatarColor(t.author_username) }}>
           {(t.author_username ?? "?").slice(0, 1).toUpperCase()}
@@ -179,7 +179,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
             {t.author_badge === "official" && <OfficialBadge />}
             <ImportantBadge t={t} />
           </span>
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="text-xs text-slate-500 dark:text-neutral-400">
             {timeAgo(t.created_at)}
             {t.is_offtop ? " · оффтоп" : " · вопрос"}
             {!t.place && (t.district || t.city) && (
@@ -188,30 +188,30 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
           </div>
         </div>
         <div className="relative">
-          <button onClick={() => setMenu(!menu)} aria-label="Ещё" className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800">
+          <button onClick={() => setMenu(!menu)} aria-label="Ещё" className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:text-neutral-500 dark:hover:bg-neutral-800">
             <MoreHorizontal className="h-5 w-5" />
           </button>
           {menu && (
             <>
               <button aria-hidden tabIndex={-1} onClick={closeMenu} className="fixed inset-0 z-10 cursor-default" />
-              <div className="absolute right-0 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+              <div className="absolute right-0 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
                 {!reportMode ? (
                   <>
-                    <button className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800" onClick={share}>
+                    <button className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-neutral-800" onClick={share}>
                       Поделиться
                     </button>
-                    <button className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-slate-800" onClick={() => setReportMode(true)}>
+                    <button className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-neutral-800" onClick={() => setReportMode(true)}>
                       Пожаловаться
                     </button>
                   </>
                 ) : (
                   <>
                     {[["spam", "Спам"], ["abuse", "Оскорбления"], ["offtopic", "Не по теме"], ["other", "Другое"]].map(([v, label]) => (
-                      <button key={v} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800" onClick={() => report(v)}>
+                      <button key={v} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-neutral-800" onClick={() => report(v)}>
                         {label}
                       </button>
                     ))}
-                    <button className="block w-full border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-500 dark:hover:bg-slate-800" onClick={() => setReportMode(false)}>
+                    <button className="block w-full border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-50 dark:border-neutral-800 dark:text-neutral-500 dark:hover:bg-neutral-800" onClick={() => setReportMode(false)}>
                       ← Назад
                     </button>
                   </>
@@ -230,19 +230,19 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
       {(t.tags?.length || (!t.place && (t.district || t.city))) ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {(t.tags ?? []).map((tag) => (
-            <Link key={tag} href={`/tag/${encodeURIComponent(tag)}`} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+            <Link key={tag} href={`/tag/${encodeURIComponent(tag)}`} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700">
               {tag}
             </Link>
           ))}
           {!t.place && (t.district || t.city) && (
-            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">
               {[t.district, t.city].filter(Boolean).join(", ")}
             </span>
           )}
         </div>
       ) : null}
       {t.poll && (
-        <Link href={`/thread/${t.id}`} className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400">
+        <Link href={`/thread/${t.id}`} className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-slate-800 dark:text-neutral-400">
           <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Опрос: {t.poll.question} · голосов: {t.poll.total}
         </Link>
       )}
@@ -282,7 +282,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
         </Link>
       )}
 
-      <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
         <Link href={`/thread/${t.id}`} className="flex items-center gap-1.5 hover:text-slate-800">
           <MessageCircle className="h-4 w-4" /> {t.comments_count}
         </Link>

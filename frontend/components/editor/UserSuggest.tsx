@@ -62,8 +62,8 @@ export default function UserSuggest({ query, onPick, onClose, ctlRef }: {
   if (query.length < 2) return null;
 
   return (
-    <div className="absolute z-50 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
-      <div className="border-b border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+    <div className="absolute z-50 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="border-b border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-neutral-800 dark:text-neutral-500">
         {loading ? "Ищем людей…" : items.length ? `Люди: ${items.length}` : "Никого не нашли"}
       </div>
       {items.map((u, i) => (
@@ -82,7 +82,7 @@ export default function UserSuggest({ query, onPick, onClose, ctlRef }: {
           </span>
         </button>
       ))}
-      <button type="button" onClick={onClose} className="block w-full px-3 py-1.5 text-center text-xs text-slate-400 hover:bg-slate-50 dark:text-slate-500 dark:hover:bg-slate-800">
+      <button type="button" onClick={onClose} className="block w-full px-3 py-1.5 text-center text-xs text-slate-400 hover:bg-slate-50 dark:text-neutral-500 dark:hover:bg-neutral-800">
         Esc — закрыть
       </button>
     </div>

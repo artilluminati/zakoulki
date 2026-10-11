@@ -349,12 +349,12 @@ export default function MapPage() {
   return (
     <div className="-mx-3 md:mx-0 md:pt-4">
       <div className="relative h-[calc(100svh-3.5rem-3.75rem)] overflow-hidden md:h-[calc(100svh-3.5rem-2rem)] md:rounded-3xl md:border md:border-slate-200 md:shadow-sm">
-        <div ref={ref} className="absolute inset-0 bg-slate-100 dark:bg-slate-800" />
+        <div ref={ref} className="absolute inset-0 bg-slate-100 dark:bg-neutral-800" />
 
         {loading && <div className="absolute inset-0 z-10 animate-pulse bg-slate-200/70" />}
 
         {err ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-50 p-6 dark:bg-slate-800">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-50 p-6 dark:bg-neutral-800">
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm dark:border-amber-800 dark:bg-amber-950">
               {err}. Лента работает — <Link href="/" className="font-bold underline">перейти →</Link>
             </div>
@@ -362,14 +362,14 @@ export default function MapPage() {
         ) : (
           <>
             <div className="absolute left-3 right-3 top-3 z-10 md:left-4 md:right-auto md:w-[380px]">
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-lg backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
                 <MapPin className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <input
                   placeholder="Адрес, место, вопрос…"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") router.push(`/search?q=${encodeURIComponent((e.target as HTMLInputElement).value)}`);
                   }}
-                  className="w-full bg-transparent text-[15px] outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  className="w-full bg-transparent text-[15px] outline-none placeholder:text-slate-400 dark:placeholder:text-neutral-500"
                 />
               </div>
               <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
@@ -378,7 +378,7 @@ export default function MapPage() {
                     key={f}
                     onClick={() => setFilter(f)}
                     className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-bold shadow-md backdrop-blur transition ${
-                      filter === f ? "bg-slate-900 text-white" : "bg-white/95 text-slate-600 dark:text-slate-300"
+                      filter === f ? "bg-slate-900 text-white" : "bg-white/95 text-slate-600 dark:text-neutral-300"
                     }`}
                   >
                     {f}
@@ -413,19 +413,19 @@ export default function MapPage() {
                     </span>
                   </span>
                 </div>
-                <div className="absolute inset-x-3 bottom-20 z-20 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px] dark:border-slate-700 dark:bg-slate-900">
-                  <div className="text-[13px] text-slate-400 dark:text-slate-500">Точка вопроса — двигайте карту</div>
+                <div className="absolute inset-x-3 bottom-20 z-20 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px] dark:border-neutral-700 dark:bg-neutral-900">
+                  <div className="text-[13px] text-slate-400 dark:text-neutral-500">Точка вопроса — двигайте карту</div>
                   <div className="mt-0.5 truncate text-[15px] font-extrabold">
                     {pickAddr?.name ?? "Определяем адрес…"}
                   </div>
                   {pickAddr?.address && (
-                    <div className="truncate text-xs text-slate-500 dark:text-slate-400">{pickAddr.address}</div>
+                    <div className="truncate text-xs text-slate-500 dark:text-neutral-400">{pickAddr.address}</div>
                   )}
                   <div className="mt-2.5 flex gap-2">
                     <button
                       type="button"
                       onClick={() => setPickMode(false)}
-                      className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                      className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-600 dark:border-neutral-700 dark:text-neutral-300"
                     >
                       Отмена
                     </button>
@@ -455,14 +455,14 @@ export default function MapPage() {
               <div
                 {...swipeHandlers(() => setClusterList(null))}
                 style={sheetStyle}
-                className="absolute inset-x-3 bottom-20 z-20 max-h-[45%] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px] dark:border-slate-700 dark:bg-slate-900"
+                className="absolute inset-x-3 bottom-20 z-20 max-h-[45%] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[380px] dark:border-neutral-700 dark:bg-neutral-900"
               >
-                <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
-                <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+                <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200 dark:bg-neutral-700" />
+                <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-3.5 py-2.5 dark:border-neutral-800 dark:bg-neutral-900">
                   <span className="text-sm font-extrabold">
                     {clusterLoading ? "Загружаем…" : `Здесь обсуждают · ${clusterList.length}`}
                   </span>
-                  <button onClick={() => setClusterList(null)} aria-label="Закрыть" className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800">
+                  <button onClick={() => setClusterList(null)} aria-label="Закрыть" className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:text-neutral-500 dark:hover:bg-neutral-800">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
@@ -470,14 +470,14 @@ export default function MapPage() {
                   <button
                     key={ct.id}
                     onClick={() => { setSelected(ct); setClusterList(null); }}
-                    className="flex w-full items-center gap-2.5 border-b border-slate-50 px-3.5 py-2.5 text-left last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                    className="flex w-full items-center gap-2.5 border-b border-slate-50 px-3.5 py-2.5 text-left last:border-0 hover:bg-slate-50 dark:border-neutral-800 dark:hover:bg-neutral-800"
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[13px] font-extrabold text-emerald-700 dark:text-emerald-300">
                       {(ct.author_username ?? "?").slice(0, 1).toUpperCase()}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-bold">{ct.title || ct.body_md.slice(0, 60)}</span>
-                      <span className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
                         <span className="truncate">{ct.author_username}</span>
                         <span className="flex shrink-0 items-center gap-0.5"><MessageCircle className="h-3 w-3" />{ct.comments_count}</span>
                         <span className="flex shrink-0 items-center gap-0.5"><Heart className="h-3 w-3" />{ct.likes_count}</span>
@@ -492,9 +492,9 @@ export default function MapPage() {
               <div
                 {...swipeHandlers(() => setSelected(null))}
                 style={sheetStyle}
-                className="absolute inset-x-3 bottom-20 z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[400px] dark:border-slate-700 dark:bg-slate-900"
+                className="absolute inset-x-3 bottom-20 z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-[400px] dark:border-neutral-700 dark:bg-neutral-900"
               >
-                <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
+                <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200 dark:bg-neutral-700" />
                 <div className="flex items-start gap-3.5 p-4">
                   {selected.photos?.[0] ? (
                     <PhotoImg src={selected.photos[0].preview_url ?? selected.photos[0].url} onClick={() => {}} className="h-20 w-20 shrink-0 rounded-xl" />
@@ -505,8 +505,8 @@ export default function MapPage() {
                   )}
                   <div className="min-w-0 flex-1">
                     {selected.title && <div className="truncate text-base font-extrabold">{selected.title}</div>}
-                    <div className="truncate text-[13px] text-slate-500 dark:text-slate-400">@{selected.author_username}</div>
-                    <div className="flex items-center gap-3 truncate text-[13px] text-slate-500 dark:text-slate-400">
+                    <div className="truncate text-[13px] text-slate-500 dark:text-neutral-400">@{selected.author_username}</div>
+                    <div className="flex items-center gap-3 truncate text-[13px] text-slate-500 dark:text-neutral-400">
                       <span className="truncate">{selected.place?.name ?? "Без точки"}</span>
                       <span className="flex shrink-0 items-center gap-1"><MessageCircle className="h-3.5 w-3.5" />{selected.comments_count}</span>
                       <span className="flex shrink-0 items-center gap-1"><Heart className="h-3.5 w-3.5" />{selected.likes_count}</span>
@@ -520,18 +520,18 @@ export default function MapPage() {
                           href={`https://yandex.ru/maps/?rtext=~${selected.place.lat},${selected.place.lng}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                          className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-bold text-slate-600 dark:border-neutral-700 dark:text-neutral-300"
                         >
                           <Navigation className="h-3.5 w-3.5" /> Маршрут
                         </a>
                       )}
                     </div>
                   </div>
-                  <button onClick={() => setSelected(null)} aria-label="Закрыть" className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800">
+                  <button onClick={() => setSelected(null)} aria-label="Закрыть" className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:text-neutral-500 dark:hover:bg-neutral-800">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
-                <Link href={`/thread/${selected.id}`} className="flex items-center justify-center gap-1.5 border-t border-slate-100 py-2 text-[13px] font-semibold text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                <Link href={`/thread/${selected.id}`} className="flex items-center justify-center gap-1.5 border-t border-slate-100 py-2 text-[13px] font-semibold text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
                   <MessageCircle className="h-4 w-4" /> Читать обсуждение →
                 </Link>
               </div>
@@ -539,7 +539,7 @@ export default function MapPage() {
           </>
         )}
       </div>
-      <p className="hidden px-1 pt-2 text-xs text-slate-400 md:block dark:text-slate-500">
+      <p className="hidden px-1 pt-2 text-xs text-slate-400 md:block dark:text-neutral-500">
         Зеленые — вопросы, серые — оффтоп, с фото — круглые. Кластеры цифрами.
       </p>
     </div>

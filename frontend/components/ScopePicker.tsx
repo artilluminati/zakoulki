@@ -130,20 +130,20 @@ export default function ScopePicker({ value, onChange }: {
         }}
         placeholder="Город, район или область…"
         maxLength={100}
-        className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800"
+        className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
       />
-      {resolving && <div className="text-center text-xs text-slate-400 dark:text-slate-500">Определяем…</div>}
+      {resolving && <div className="text-center text-xs text-slate-400 dark:text-neutral-500">Определяем…</div>}
       {q.trim().length >= 2 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-neutral-700">
           <button
             type="button"
             onMouseEnter={() => setHi(0)}
             onClick={() => pick(q.trim(), "region")}
-            className={`flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left dark:border-slate-800 ${hi === 0 ? "bg-emerald-50 dark:bg-emerald-950" : "bg-slate-50 dark:bg-slate-800"}`}
+            className={`flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left dark:border-neutral-800 ${hi === 0 ? "bg-emerald-50 dark:bg-emerald-950" : "bg-slate-50 dark:bg-neutral-800"}`}
           >
             <Search className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <span className="min-w-0 flex-1 truncate text-sm font-bold">Показать «{q.trim().slice(0, 40)}»</span>
-            <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">как есть</span>
+            <span className="shrink-0 text-[11px] text-slate-400 dark:text-neutral-500">как есть</span>
           </button>
           {rows.map((r, i) => (
             <button
@@ -153,12 +153,12 @@ export default function ScopePicker({ value, onChange }: {
               onClick={r.run}
               className={`flex w-full items-center gap-2 px-3 py-2 text-left ${i + 1 === hi ? "bg-emerald-50 dark:bg-emerald-950" : ""}`}
             >
-              <MapPin className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-500" />
+              <MapPin className="h-4 w-4 shrink-0 text-slate-300 dark:text-neutral-500" />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.label}</span>
-              <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">{r.sub}</span>
+              <span className="shrink-0 text-[11px] text-slate-400 dark:text-neutral-500">{r.sub}</span>
             </button>
           ))}
-          <div className="border-t border-slate-100 px-3 py-1.5 text-center text-[11px] text-slate-300 dark:border-slate-800 dark:text-slate-500">
+          <div className="border-t border-slate-100 px-3 py-1.5 text-center text-[11px] text-slate-300 dark:border-neutral-800 dark:text-neutral-500">
             ↓ ↑ выбор · Enter — взять · Esc — закрыть
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function ScopePicker({ value, onChange }: {
         <button
           type="button"
           onClick={() => onChange({})}
-          className="rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
         >
           Вся Россия
         </button>
