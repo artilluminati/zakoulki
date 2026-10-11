@@ -76,7 +76,7 @@ export default function AuthPanel({ initialMode = "login", onSuccess }: Props) {
     );
   }
 
-  const input = "h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800";
+  const input = "h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800";
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 text-sm">

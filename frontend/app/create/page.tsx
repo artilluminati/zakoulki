@@ -476,7 +476,7 @@ export default function CreatePage() {
                 value={addr}
                 onChange={(e) => setAddr(e.target.value)}
                 placeholder="Найти адрес или организацию…"
-                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800"
               />
               <button onClick={useGeolocation} disabled={geoLocating} className="shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold text-emerald-700 disabled:opacity-50 dark:border-neutral-700 dark:text-emerald-300">
                 {geoLocating ? "…" : "Найти меня"}

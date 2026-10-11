@@ -130,7 +130,7 @@ export default function ScopePicker({ value, onChange }: {
         }}
         placeholder="Город, район или область…"
         maxLength={100}
-        className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
+        className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800"
       />
       {resolving && <div className="text-center text-xs text-slate-400 dark:text-neutral-500">Определяем…</div>}
       {q.trim().length >= 2 && (

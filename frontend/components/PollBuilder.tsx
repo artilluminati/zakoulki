@@ -49,7 +49,7 @@ export default function PollBuilder({ value, onChange }: {
         onChange={(e) => set({ question: e.target.value })}
         maxLength={300}
         placeholder="Вопрос опроса"
-        className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
+        className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800"
       />
       <div className="mt-2 space-y-1.5">
         {v.options.map((o, i) => (
@@ -59,7 +59,7 @@ export default function PollBuilder({ value, onChange }: {
               onChange={(e) => setOpt(i, e.target.value)}
               maxLength={150}
               placeholder={`Вариант ${i + 1}`}
-              className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800"
             />
             {v.options.length > 2 && (
               <button

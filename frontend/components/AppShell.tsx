@@ -120,7 +120,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <input
               name="q"
               placeholder="Поиск по вопросам и местам"
-              className="h-10 w-full rounded-full border border-slate-200 bg-slate-100 px-4 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="h-10 w-full rounded-full border border-slate-200 bg-slate-100 px-4 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800"
             />
           </form>
           <Link href="/create" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">

@@ -46,7 +46,7 @@ export default function TagPicker({ value, onChange }: { value: string[]; onChan
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(q); } }}
           placeholder="Найти или вписать свой…"
           maxLength={50}
-          className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800"
+          className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800"
         />
         <button type="button" onClick={() => add(q)} disabled={!q.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white disabled:opacity-40">
           <Plus className="h-5 w-5" />
