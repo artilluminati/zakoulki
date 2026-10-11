@@ -601,7 +601,7 @@ export default function ThreadPage() {
           </div>
         )}
         <HubSection t={t} user={user} reload={load} />
-        <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
           <ScoreArrows key={`${t.id}-${t.score ?? 0}`} id={t.id} score={t.score ?? 0} myVote={t.my_vote} />
           <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
           {canEdit && !editing && (

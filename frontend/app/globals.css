@@ -59,6 +59,11 @@ button:disabled {
 ::-webkit-scrollbar-thumb { background: rgba(15,23,42,.18); border-radius: 999px; }
 ::selection { background: rgba(132,204,22,.35); }
 
+/* мобайл: инпуты не меньше 16px, иначе iOS зумит экран при фокусе */
+@media (max-width: 768px) {
+  input, textarea, select { font-size: 16px !important; }
+}
+
 /* рендер тредов: чипы мест с иконкой (не эмодзи) */
 .thread-html a.place {
   display: inline-flex; align-items: center; gap: 4px;
