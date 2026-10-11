@@ -3,7 +3,7 @@
 import { memo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, Flame } from "lucide-react";
+import { MapPin, MessageCircle, Eye, Heart, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, Flame, MessagesSquare } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { likeThread, reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
@@ -47,6 +47,24 @@ export function ImportantBadge({ t }: { t: { is_important?: boolean; important_r
     return (
       <span title="На рассмотрении: жители решают, важный ли это вопрос" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">
         На рассмотрении · {t.important_votes ?? 0}/3
+      </span>
+    );
+  }
+  return null;
+}
+
+export function HubBadge({ t }: { t: { is_hub?: boolean; is_hub_talk?: boolean } }) {
+  if (t.is_hub) {
+    return (
+      <span title="Уголок — раздел места" className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+        <MessagesSquare className="h-3 w-3" /> Уголок
+      </span>
+    );
+  }
+  if (t.is_hub_talk) {
+    return (
+      <span title="Общее обсуждение уголка" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+        Обсуждение
       </span>
     );
   }
@@ -178,6 +196,7 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
             {t.author_badge === "official" && <OfficialBadge />}
             <ImportantBadge t={t} />
+            <HubBadge t={t} />
           </span>
           <div className="text-xs text-slate-500 dark:text-neutral-400">
             {timeAgo(t.created_at)}
@@ -227,8 +246,13 @@ export default memo(function ThreadCard({ t }: { t: ThreadV5 }) {
         <ThreadHtml html={t.body_html} placePreview={t.place ? { [t.place.id]: t.place } : {}} />
       </Link>
 
-      {(t.tags?.length || (!t.place && (t.district || t.city))) ? (
+      {(t.tags?.length || t.hub || (!t.place && (t.district || t.city))) ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
+          {t.hub && (
+            <Link href={`/thread/${t.hub.id}`} className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
+              Уголок: {t.hub.title}
+            </Link>
+          )}
           {(t.tags ?? []).map((tag) => (
             <Link key={tag} href={`/tag/${encodeURIComponent(tag)}`} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700">
               {tag}

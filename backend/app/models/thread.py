@@ -36,6 +36,11 @@ class Thread(Base):
     important_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     important_votes: Mapped[int] = mapped_column(Integer, default=0)
     place_id: Mapped[int | None] = mapped_column(ForeignKey("geo_places.id"), nullable=True)
+    # уголки: is_hub — тред-раздел территории/точки; hub_id — привязка
+    # вопроса или треда обсуждения (is_hub_talk) к уголку
+    is_hub: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_hub_talk: Mapped[bool] = mapped_column(Boolean, default=False)
+    hub_id: Mapped[int | None] = mapped_column(ForeignKey("threads.id", ondelete="SET NULL"), nullable=True, index=True)
     views: Mapped[int] = mapped_column(Integer, default=0)
     likes_count: Mapped[int] = mapped_column(Integer, default=0)
     comments_count: Mapped[int] = mapped_column(Integer, default=0)

@@ -85,7 +85,30 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
         "important_pinned": t.important_pinned,
         "important_votes": t.important_votes,
         "important_voted": _important_voted(db, t.id, user_id),
+        "is_hub": t.is_hub,
+        "is_hub_talk": t.is_hub_talk,
+        "hub_id": t.hub_id,
+        "hub": _hub_brief(db, t.hub_id) if t.hub_id else None,
+        "talk_id": _hub_talk_id(db, t.id) if t.is_hub else None,
+        "attached_count": _attached_count(db, t.id) if t.is_hub else 0,
     }
+
+
+def _hub_brief(db: Session, hub_id: int) -> dict | None:
+    h = db.get(Thread, hub_id)
+    if not h or not h.is_hub:
+        return None
+    return {"id": h.id, "title": h.title or "Уголок"}
+
+
+def _hub_talk_id(db: Session, hub_id: int) -> int | None:
+    talk = (db.query(Thread).filter(Thread.hub_id == hub_id, Thread.is_hub_talk)
+            .order_by(Thread.id).first())
+    return talk.id if talk else None
+
+
+def _attached_count(db: Session, hub_id: int) -> int:
+    return (db.query(Thread).filter(Thread.hub_id == hub_id, Thread.is_hub_talk == False).count())
 
 
 def _attach_tags(db: Session, thread_id: int, explicit: list[str], auto: list[str]) -> None:
@@ -344,6 +367,9 @@ def add_comment(thread_id: int, data: CommentCreate, db: Session = Depends(get_d
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
+    if t.is_hub and not t.is_hub_talk:
+        talk_id = _hub_talk_id(db, t.id)
+        raise HTTPException(400, f"Уголок не обсуждают здесь — общее обсуждение в треде #{talk_id}" if talk_id else "Уголок не обсуждают здесь")
     html, entities = render_markdown(data.body_md, comments_mode=True)
     c = ThreadComment(thread_id=thread_id, parent_id=data.parent_id, author_id=user.id,
                       body_md=data.body_md, body_html=html)
@@ -431,6 +457,121 @@ def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = 
     if t:
         t.comments_count = max(0, t.comments_count - 1)
     db.commit()
+
+
+def _make_talk(db: Session, hub: Thread, author_id: int) -> Thread:
+    """Тред общего обсуждения уголка. Уголок готов сразу, модерация — жалобами."""
+    name = (hub.title or "Уголок").strip() or "Уголок"
+    talk = Thread(author_id=author_id, title=None,
+                  body_md=f"Общее обсуждение: {name}",
+                  body_html=f"Общее обсуждение: {name}",
+                  is_offtop=True, place_id=hub.place_id,
+                  city=hub.city, district=hub.district, region=hub.region, country=hub.country,
+                  hub_id=hub.id, is_hub_talk=True)
+    db.add(talk); db.flush()
+    return talk
+
+
+class HubCreate(BaseModel):
+    place_id: int
+    title: str = Field(min_length=2, max_length=150)
+
+
+@router.post("/hubs", status_code=201)
+def create_hub(data: HubCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Создать уголок места. Готов сразу; споры — через жалобы."""
+    place = db.get(GeoPlace, data.place_id)
+    if not place:
+        raise HTTPException(404, "Место не найдено")
+    hub = Thread(author_id=user.id, title=data.title.strip(), body_md=data.title.strip(),
+                 body_html=data.title.strip(), is_offtop=False, place_id=place.id,
+                 city=place.city, district=place.district, region=place.region, country=place.country,
+                 is_hub=True)
+    db.add(hub); db.flush()
+    talk = _make_talk(db, hub, user.id)
+    db.commit(); db.refresh(hub)
+    out = _thread_out(hub, db, user.id)
+    out["talk_id"] = talk.id
+    return out
+
+
+class HubTitle(BaseModel):
+    title: str | None = Field(default=None, max_length=150)
+
+
+@router.post("/{thread_id}/make-hub", status_code=201)
+def make_hub(thread_id: int, data: HubTitle, db: Session = Depends(get_db),
+             user: User = Depends(get_current_user)):
+    """Переквалифицировать тред с местом в уголок (автор или админ)."""
+    t = db.get(Thread, thread_id)
+    if not t:
+        raise HTTPException(404, "Тред не найден")
+    if t.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Недостаточно прав")
+    if t.is_hub or t.is_hub_talk:
+        raise HTTPException(400, "Уже уголок")
+    if t.place_id is None:
+        raise HTTPException(400, "Уголку нужна точка или территория")
+    if data.title:
+        t.title = data.title.strip() or t.title
+    if not t.title:
+        t.title = "Уголок"
+    t.is_hub = True
+    t.is_offtop = False
+    db.flush()
+    talk = _make_talk(db, t, user.id)
+    db.commit(); db.refresh(t)
+    out = _thread_out(t, db, user.id)
+    out["talk_id"] = talk.id
+    return out
+
+
+class HubAttach(BaseModel):
+    hub_id: int
+
+
+@router.post("/{thread_id}/attach-hub")
+def attach_hub(thread_id: int, data: HubAttach, db: Session = Depends(get_db),
+               user: User = Depends(get_current_user)):
+    """Прикрепить свой вопрос к уголку того же места (чужой — только админ)."""
+    t = db.get(Thread, thread_id)
+    hub = db.get(Thread, data.hub_id)
+    if not t or not hub:
+        raise HTTPException(404, "Тред не найден")
+    if not hub.is_hub:
+        raise HTTPException(400, "Это не уголок")
+    if t.is_hub or t.is_hub_talk:
+        raise HTTPException(400, "Уголок нельзя прикрепить")
+    if t.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Недостаточно прав")
+    if t.place_id != hub.place_id:
+        raise HTTPException(400, "Уголок другого места")
+    t.hub_id = hub.id
+    db.commit(); db.refresh(t)
+    return _thread_out(t, db, user.id)
+
+
+@router.delete("/{thread_id}/attach-hub")
+def detach_hub(thread_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    t = db.get(Thread, thread_id)
+    if not t:
+        raise HTTPException(404, "Тред не найден")
+    if t.author_id != user.id and user.role != "admin":
+        raise HTTPException(403, "Недостаточно прав")
+    t.hub_id = None
+    db.commit(); db.refresh(t)
+    return _thread_out(t, db, user.id)
+
+
+@router.get("/{thread_id}/attached")
+def hub_attached(thread_id: int, db: Session = Depends(get_db)):
+    """Вопросы, прикреплённые к уголку (в общую ленту они тоже попадают)."""
+    hub = db.get(Thread, thread_id)
+    if not hub or not hub.is_hub:
+        raise HTTPException(404, "Уголок не найден")
+    items = (db.query(Thread).filter(Thread.hub_id == thread_id, Thread.is_hub_talk == False)
+             .order_by(Thread.id.desc()).limit(30).all())
+    return [_thread_out(t, db) for t in items]
 
 
 @router.post("/{thread_id}/vote")

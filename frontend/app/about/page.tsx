@@ -50,7 +50,7 @@ export default function AboutPage() {
             <div className="text-xs text-slate-500 dark:text-neutral-400">{label}</div>
           </div>
         ))}
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-transparent p-4">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-transparent p-4 dark:border-neutral-600">
           <div className="text-2xl font-extrabold text-slate-300 dark:text-neutral-500">↗</div>
           <div className="text-xs text-slate-500 dark:text-neutral-400">растём каждый день</div>
         </div>

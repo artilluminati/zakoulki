@@ -72,7 +72,7 @@ export default function PlaceSuggest({ query, onPick, onClose, ctlRef }: {
           onClick={() => { onPick(p); onClose(); }}
           className={`flex w-full items-center gap-2.5 px-3 py-2 text-left ${i === hi ? "bg-emerald-50 dark:bg-emerald-950" : ""}`}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950">
             <MapPin className="h-4 w-4 text-emerald-700 dark:text-emerald-300" />
           </span>
           <span className="min-w-0">

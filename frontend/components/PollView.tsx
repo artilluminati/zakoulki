@@ -60,7 +60,7 @@ const PollView = memo(function PollView({ threadId, initial, canVote }: {
                 isPicked ? "border-emerald-500 bg-emerald-50 font-bold dark:bg-emerald-950" : "border-slate-200 bg-white hover:border-slate-300 dark:border-neutral-700 dark:bg-neutral-900"
               } ${!canVote ? "cursor-default" : ""}`}
             >
-              <span className="absolute inset-y-0 left-0 bg-emerald-100/70" style={{ width: `${pct}%` }} />
+              <span className="absolute inset-y-0 left-0 bg-emerald-100/70 dark:bg-emerald-900/50" style={{ width: `${pct}%` }} />
               <span className="relative flex items-center justify-between gap-2">
                 <span>{o.text} {isVoted && "· ваш голос"}</span>
                 <span className="shrink-0 font-bold text-slate-500 dark:text-neutral-400">{pct}%</span>

@@ -99,7 +99,7 @@ export default function ScopePicker({ value, onChange }: {
             type="button"
             onClick={() => onChange({})}
             aria-label="Сбросить"
-            className="rounded-full p-1 text-emerald-600/60 hover:bg-emerald-100"
+            className="rounded-full p-1 text-emerald-600/60 hover:bg-emerald-100 dark:text-emerald-400/60 dark:hover:bg-emerald-950"
           >
             <X className="h-4 w-4" />
           </button>

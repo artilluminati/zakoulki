@@ -351,7 +351,7 @@ export default function MapPage() {
       <div className="relative h-[calc(100svh-3.5rem-3.75rem)] overflow-hidden md:h-[calc(100svh-3.5rem-2rem)] md:rounded-3xl md:border md:border-slate-200 md:shadow-sm">
         <div ref={ref} className="absolute inset-0 bg-slate-100 dark:bg-neutral-800" />
 
-        {loading && <div className="absolute inset-0 z-10 animate-pulse bg-slate-200/70" />}
+        {loading && <div className="absolute inset-0 z-10 animate-pulse bg-slate-200/70 dark:bg-neutral-800/70" />}
 
         {err ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-50 p-6 dark:bg-neutral-800">

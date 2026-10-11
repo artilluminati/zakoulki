@@ -6,7 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
 import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestImportant, voteImportant } from "@/lib/v5";
-import { ThreadHtml, timeAgo, OfficialBadge, ImportantBadge } from "@/components/ThreadCard";
+import { ThreadHtml, timeAgo, OfficialBadge, ImportantBadge, HubBadge } from "@/components/ThreadCard";
+import HubSection from "@/components/HubSection";
 import MdEditor from "@/components/editor/MdEditor";
 import PasteButton from "@/components/PasteButton";
 import PhotoImg from "@/components/PhotoImg";
@@ -302,6 +303,7 @@ export default function ThreadPage() {
             <Link href={`/map?place=${t.place.id}`} className="block bg-slate-50 px-3 py-2 text-[13px] font-bold text-emerald-700 dark:bg-neutral-800 dark:text-emerald-300">Открыть на карте →</Link>
           </div>
         )}
+        <HubSection t={t} user={user} reload={load} />
         <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
           <button onClick={() => likeThread(t.id).then(load).catch(() => toast("Не получилось", "error"))} className="flex items-center gap-1.5 hover:text-slate-800"><Heart className="h-4 w-4" /> {t.likes_count}</button>
           <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
@@ -395,6 +397,16 @@ export default function ThreadPage() {
           {(t.comments ?? []).length === 0 && <p className="text-sm text-slate-400 dark:text-neutral-500">Пока нет ответов — станьте первым.</p>}
         </div>
         {user ? (
+          t.is_hub && !t.is_hub_talk ? (
+            <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-center text-[13px] text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">
+              Уголок не обсуждают здесь —{" "}
+              {t.talk_id ? (
+                <Link href={`/thread/${t.talk_id}`} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">
+                  общее обсуждение →
+                </Link>
+              ) : "обсуждение пока не создано"}
+            </div>
+          ) : (
           <div className="mt-3" onPaste={pasteFiles}>
             <MdEditor value={reply} onChange={setReply} compact placeholder="Написать ответ… @ + #" />
             {replyFiles.length > 0 && (
@@ -433,6 +445,7 @@ export default function ThreadPage() {
               </button>
             </div>
           </div>
+          )
         ) : (
           <Link href="/login" className="mt-3 block rounded-xl bg-slate-100 p-3 text-center text-sm dark:bg-neutral-800">Войдите, чтобы ответить →</Link>
         )}

@@ -140,6 +140,38 @@ export async function fetchSimilarPlaces(name: string, lat?: number, lng?: numbe
   return res.data;
 }
 
+export interface PlaceHub { id: number; title: string; author?: string | null; talk_id?: number | null; members: number; }
+
+export async function fetchPlaceHubs(placeId: number) {
+  const res = await api.get<PlaceHub[]>(`/geo-places/${placeId}/hubs`);
+  return res.data;
+}
+
+export async function createHub(placeId: number, title: string) {
+  const res = await api.post<ThreadV5>("/threads/hubs", { place_id: placeId, title });
+  return res.data;
+}
+
+export async function makeHub(threadId: number, title?: string | null) {
+  const res = await api.post<ThreadV5>(`/threads/${threadId}/make-hub`, { title: title ?? null });
+  return res.data;
+}
+
+export async function attachHub(threadId: number, hubId: number) {
+  const res = await api.post<ThreadV5>(`/threads/${threadId}/attach-hub`, { hub_id: hubId });
+  return res.data;
+}
+
+export async function detachHub(threadId: number) {
+  const res = await api.delete<ThreadV5>(`/threads/${threadId}/attach-hub`);
+  return res.data;
+}
+
+export async function fetchAttached(hubId: number) {
+  const res = await api.get<ThreadV5[]>(`/threads/${hubId}/attached`);
+  return res.data;
+}
+
 export async function uploadThreadPhoto(threadId: number, file: File) {
   const form = new FormData();
   form.append("file", file);
