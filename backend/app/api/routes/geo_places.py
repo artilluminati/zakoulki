@@ -160,8 +160,9 @@ def map_points(north: float, south: float, east: float, west: float,
     items = (db.query(Thread).join(GeoPlace, Thread.place_id == GeoPlace.id)
              .filter(GeoPlace.latitude.between(south, north))
              .filter(GeoPlace.longitude.between(west, east)))
-    # все вопросы с точкой участвуют в кластеризации — включая прикреплённые
-    # к разделам: счёт в кружке должен сходиться с реальным числом тредов
+    # прикреплённые к разделам вопросы и треды обсуждений — не отдельные пины:
+    # раздел представляет их всех, в кружке цифра по пинам (раздел = 1)
+    items = items.filter(Thread.hub_id.is_(None))
     if geo_any:
         vals = [v for v in geo_any if v]
         items = items.filter(_or2(GeoPlace.city.in_(vals), GeoPlace.district.in_(vals), GeoPlace.region.in_(vals)))
