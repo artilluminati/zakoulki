@@ -97,10 +97,10 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
   useEffect(() => {
     try {
       if (pin && !areaMode) {
-        markRef.current?.geometry.setCoordinates([pin.lat, pin.lng]);
-        markRef.current?.options.set("visible", true);
+        try { markRef.current?.geometry.setCoordinates([pin.lat, pin.lng]); } catch { /* ignore */ }
+        try { markRef.current?.options.set("visible", true); } catch { /* ignore */ }
       } else {
-        markRef.current?.options.set("visible", false);
+        try { markRef.current?.options.set("visible", false); } catch { /* ignore */ }
       }
       mapRef.current?.setCenter([center.lat, center.lng]);
     } catch { /* ignore */ }

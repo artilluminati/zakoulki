@@ -48,7 +48,7 @@ export default function MapPage() {
   const [pickMode, setPickMode] = useState(false);
   const [pickAddr, setPickAddr] = useState<{ name: string; address?: string | null } | null>(null);
   // полигон места из ?place= — рисуем отдельно от кластера
-  const [placePoly, setPlacePoly] = useState<{ area: [number, number][]; id: number } | null>(null);
+  const [placePoly, setPlacePoly] = useState<{ area: [number, number][]; id: number; threadId?: number } | null>(null);
   // точка внутри территории (в центре по умолчанию, перетаскиваемая)
   const [innerPt, setInnerPt] = useState<{ lat: number; lng: number; placeId: number } | null>(null);
   // свайп вниз по шиту = закрыть (мобайл)
@@ -145,14 +145,17 @@ export default function MapPage() {
         const ym = (window as any).ymaps;
         if (p.area && p.area.length >= 3) {
           // сохраняем полигон в состояние — эффект перерисовки будет рисовать его
-          setPlacePoly({ area: p.area as [number, number][], id: p.id });
-          // точка внутри территории — в центре полигона
           const lats = p.area.map((a: number[]) => a[0]);
           const lngs = p.area.map((a: number[]) => a[1]);
           const cLat = (Math.min(...lats) + Math.max(...lats)) / 2;
           const cLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+          setPlacePoly({ area: p.area as [number, number][], id: p.id });
           setInnerPt({ lat: cLat, lng: cLng, placeId: p.id });
-          map.setBounds(p.area, { checkZoomRange: true, duration: 250 });
+          // setBounds ожидает [[south,west],[north,east]]
+          map.setBounds([
+            [Math.min(...lats), Math.min(...lngs)],
+            [Math.max(...lats), Math.max(...lngs)],
+          ], { checkZoomRange: true, duration: 250 });
         } else {
           setPlacePoly(null);
           setInnerPt(null);
@@ -160,7 +163,10 @@ export default function MapPage() {
         }
         const at = await api.get("/threads", { params: { place_id: p.id, limit: 1 } });
         if (!alive) return;
-        if (at.data?.[0]) setSelected(await fetchThread(at.data[0].id));
+        if (at.data?.[0]) {
+          setSelected(await fetchThread(at.data[0].id));
+          if (placePoly) setPlacePoly({ ...placePoly, threadId: at.data[0].id });
+        }
       } catch {
         toast("Не получилось открыть место", "error");
       }
@@ -174,11 +180,13 @@ export default function MapPage() {
     if (!mapReady || !map || !(window as any).ymaps) return;
     const ymaps = (window as any).ymaps;
     // удаляем старые полигоны/точки
+    const toRemove: any[] = [];
     map.geoObjects.each((obj: any) => {
-      if (obj.properties?.get?.("isPlacePoly") || obj.properties?.get?.("isInnerPt")) {
-        map.geoObjects.remove(obj);
-      }
+      try {
+        if (obj.properties?.get?.("isPlacePoly") || obj.properties?.get?.("isInnerPt")) toRemove.push(obj);
+      } catch { /* ignore */ }
     });
+    toRemove.forEach((obj) => { try { map.geoObjects.remove(obj); } catch { /* ignore */ } });
     if (!placePoly) return;
     const poly = new ymaps.Polygon([[...placePoly.area, placePoly.area[0]]], {
       isPlacePoly: true,
@@ -189,8 +197,9 @@ export default function MapPage() {
       strokeWidth: 3,
       strokeOpacity: 0.9,
     });
+    const threadId = placePoly.threadId ?? placePoly.id;
     poly.events.add("click", async () => {
-      try { setSelected(await fetchThread(placePoly.id)); }
+      try { setSelected(await fetchThread(threadId)); }
       catch { toast("Не получилось открыть вопрос", "error"); }
     });
     map.geoObjects.add(poly);
@@ -210,7 +219,7 @@ export default function MapPage() {
         setInnerPt({ lat: c[0], lng: c[1], placeId: placePoly.id });
       });
       pt.events.add("click", async () => {
-        try { setSelected(await fetchThread(placePoly.id)); }
+        try { setSelected(await fetchThread(threadId)); }
         catch { toast("Не получилось открыть вопрос", "error"); }
       });
       map.geoObjects.add(pt);
@@ -239,9 +248,11 @@ export default function MapPage() {
     if (!map || !(window as any).ymaps) return;
     const ymaps = (window as any).ymaps;
     // удаляем только старые кластеры, оставляя полигоны места и внутренние точки
+    const toRemove: any[] = [];
     map.geoObjects.each((obj: any) => {
-      if (obj.properties?.get?.("isCluster")) map.geoObjects.remove(obj);
+      if (obj.properties?.get?.("isCluster")) toRemove.push(obj);
     });
+    toRemove.forEach((obj) => { try { map.geoObjects.remove(obj); } catch { /* ignore */ } });
     const visible = (filter === "Обсуждают"
       ? [...pts].sort((a, b) => b.comments - a.comments)
       : pts
@@ -261,7 +272,7 @@ export default function MapPage() {
         '<div style="width:64px;height:64px;border-radius:50%;background:#0f172a;border:4px solid #a3e635;box-shadow:0 4px 14px rgba(2,6,23,.35);display:flex;align-items:center;justify-content:center;color:#a3e635;font-weight:800;font-size:18px;font-family:system-ui,sans-serif;">{{ properties.geoObjects.length }}</div>'
       ),
     });
-    clusterer.properties.set("isCluster", true);
+    try { clusterer.properties.set("isCluster", true); } catch { /* ignore */ }
     // тап по кластеру на крупном зуме — список тредов, а не бесконечный зум
     clusterer.events.add("click", async (e: any) => {
       const target = e.get("target");
@@ -310,9 +321,11 @@ export default function MapPage() {
     map.geoObjects.add(clusterer);
 
     // полигоны из map-points — отдельно от кластера
+    const toRemoveAreas: any[] = [];
     map.geoObjects.each((obj: any) => {
-      if (obj.properties?.get?.("isMapArea")) map.geoObjects.remove(obj);
+      if (obj.properties?.get?.("isMapArea")) toRemoveAreas.push(obj);
     });
+    toRemoveAreas.forEach((obj) => { try { map.geoObjects.remove(obj); } catch { /* ignore */ } });
     for (const p of visible) {
       if (!p.area || p.area.length < 3) continue;
       const isSel = selected?.id === p.id;
