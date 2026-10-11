@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const [home, setHome] = useState<string | null>(null);
   const [homeQ, setHomeQ] = useState("");
   const [homeFound, setHomeFound] = useState<{ name: string }[]>([]);
+  const [homeHi, setHomeHi] = useState(0);
   useEffect(() => {
     setHome(getHomeCity());
   }, []);
@@ -107,19 +108,37 @@ export default function ProfilePage() {
         <div className="relative mt-2">
           <input
             value={homeQ}
-            onChange={(e) => setHomeQ(e.target.value)}
+            onChange={(e) => { setHomeQ(e.target.value); setHomeHi(0); }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown" && homeFound.length > 0) {
+                e.preventDefault();
+                setHomeHi((h) => Math.min(h + 1, homeFound.length - 1));
+              } else if (e.key === "ArrowUp" && homeFound.length > 0) {
+                e.preventDefault();
+                setHomeHi((h) => Math.max(h - 1, 0));
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                const c = homeFound[homeHi];
+                if (c) {
+                  setHomeCity(c.name); setHome(c.name); setHomeQ(""); setHomeFound([]); setHomeHi(0);
+                }
+              } else if (e.key === "Escape") {
+                setHomeFound([]);
+              }
+            }}
             placeholder="Найти город…"
             maxLength={100}
             className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
           />
           {homeFound.length > 0 && (
             <div className="absolute inset-x-0 top-11 z-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
-              {homeFound.map((c) => (
+              {homeFound.map((c, i) => (
                 <button
                   key={c.name}
                   type="button"
-                  onClick={() => { setHomeCity(c.name); setHome(c.name); setHomeQ(""); setHomeFound([]); }}
-                  className="block w-full truncate px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                  onMouseEnter={() => setHomeHi(i)}
+                  onClick={() => { setHomeCity(c.name); setHome(c.name); setHomeQ(""); setHomeFound([]); setHomeHi(0); }}
+                  className={`block w-full truncate px-3 py-2 text-left text-sm font-semibold dark:text-neutral-200 ${i === homeHi ? "bg-emerald-50 dark:bg-emerald-950" : "hover:bg-slate-50 dark:hover:bg-neutral-800"}`}
                 >
                   {c.name}
                 </button>
