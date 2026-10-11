@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/lib/toast";
 import { ScopeProvider } from "@/lib/scope";
+import { ThemeProvider } from "@/lib/theme";
 import AppShell from "@/components/AppShell";
 import Onboarding from "@/components/Onboarding";
 
@@ -16,16 +17,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={inter.variable}>
+    <html lang="ru" className={inter.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <AuthProvider>
-          <ToastProvider>
-            <ScopeProvider>
-              <AppShell>{children}</AppShell>
-              <Onboarding />
-            </ScopeProvider>
-          </ToastProvider>
-        </AuthProvider>
+        {/* выставляем тему до отрисовки, чтобы не мигало */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('zakoulki_theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
+          }}
+        />
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <ScopeProvider>
+                <AppShell>{children}</AppShell>
+                <Onboarding />
+              </ScopeProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

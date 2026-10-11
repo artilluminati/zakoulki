@@ -325,7 +325,7 @@ export default function CreatePage() {
     >
       <h1 className="text-xl font-extrabold">Новый вопрос</h1>
       {!authLoading && !user && (
-        <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
+        <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
           Войдите, чтобы задать вопрос →
         </Link>
       )}
@@ -335,7 +335,7 @@ export default function CreatePage() {
         onChange={(e) => setTitle(e.target.value)}
         maxLength={150}
         placeholder="Заголовок (необязательно — для важного)"
-        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500"
+        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500 dark:border-slate-700 dark:bg-slate-900"
       />
 
       <MdEditor value={body} onChange={setBody} placeholder="Опишите вопрос… @ — человек, + — место, # — тема" />
@@ -345,9 +345,9 @@ export default function CreatePage() {
       <PollBuilder value={poll} onChange={setPoll} />
 
       {/* фото */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
         <div className="grid grid-cols-2 gap-1.5">
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-500 hover:border-emerald-400 hover:text-emerald-700 dark:text-slate-400">
             <ImagePlus className="h-5 w-5" /> Выбрать{files.length > 0 ? ` (${files.length})` : ""}
             <input
               type="file" accept="image/*" multiple className="hidden"
@@ -362,7 +362,7 @@ export default function CreatePage() {
         {files.length > 0 && (
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {thumbs.map((src, i) => (
-              <span key={`${files[i]?.name}-${files[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100">
+              <span key={`${files[i]?.name}-${files[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt="" onClick={() => setLightbox(src)} className="h-24 w-full cursor-zoom-in object-contain" />
                 <button
@@ -389,50 +389,50 @@ export default function CreatePage() {
       )}
 
       {/* выбор города/региона — можно ввести вручную, даже если там ещё нет постов */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600" /> Город или район</div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Город или район</div>
         <ScopePicker value={scope} onChange={setScope} />
       </div>
 
       {/* точка / территория — одна карта, позиция не слетает при переключении */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600" /> Место</span>
+          <span className="flex items-center gap-1.5 text-sm font-bold"><MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Место</span>
           <span className="flex gap-1 text-xs">
             <button
               type="button"
               onClick={() => setAreaMode(false)}
-              className={`rounded-lg px-2 py-1 font-bold ${!areaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+              className={`rounded-lg px-2 py-1 font-bold ${!areaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-slate-400"}`}
             >
               Точка
             </button>
             <button
               type="button"
               onClick={() => { setAreaMode(true); setMapExpanded(true); }}
-              className={`rounded-lg px-2 py-1 font-bold ${areaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+              className={`rounded-lg px-2 py-1 font-bold ${areaMode ? "bg-slate-900 text-white" : "text-slate-500 dark:text-slate-400"}`}
             >
               Территория
             </button>
           </span>
           {(place || pendingGeo || vertices.length > 0) && (
-            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); setVertices([]); setAdjust(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"><X className="h-4 w-4" /> убрать</button>
+            <button onClick={() => { setPlace(null); setPendingGeo(null); setPendingLabel(null); setVertices([]); setAdjust(null); }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 dark:text-slate-500"><X className="h-4 w-4" /> убрать</button>
           )}
         </div>
         {areaMode && (
-          <div className="mt-2 text-xs text-slate-500">
+          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Кликайте по карте — точки соединятся в территорию. Повторный клик по точке убирает её.
             {vertices.length > 0 ? ` · Точек: ${vertices.length}` : ""}
             {vertices.length > 0 && vertices.length < 3 && (
-              <span className="font-bold text-amber-600"> · нужно минимум 3</span>
+              <span className="font-bold text-amber-600 dark:text-amber-300"> · нужно минимум 3</span>
             )}
             {vertices.length > 0 && (
               <>
                 {" · "}
-                <button type="button" onClick={() => setVertices((p) => p.slice(0, -1))} className="font-semibold text-slate-500 hover:text-slate-800">
+                <button type="button" onClick={() => setVertices((p) => p.slice(0, -1))} className="font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400">
                   отменить последнюю
                 </button>
                 {" · "}
-                <button type="button" onClick={() => setVertices([])} className="font-semibold text-slate-400 hover:text-red-500">
+                <button type="button" onClick={() => setVertices([])} className="font-semibold text-slate-400 hover:text-red-500 dark:text-slate-500">
                   заново
                 </button>
               </>
@@ -446,33 +446,33 @@ export default function CreatePage() {
                 value={addr}
                 onChange={(e) => setAddr(e.target.value)}
                 placeholder="Найти адрес или организацию…"
-                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800"
               />
-              <button onClick={useGeolocation} disabled={geoLocating} className="shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold text-emerald-700 disabled:opacity-50">
+              <button onClick={useGeolocation} disabled={geoLocating} className="shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold text-emerald-700 disabled:opacity-50 dark:border-slate-700 dark:text-emerald-300">
                 {geoLocating ? "…" : "Найти меня"}
               </button>
             </div>
             {found.map((p) => (
-              <button key={`${p.id}-${p.name}`} disabled={picking} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 disabled:opacity-50">
-                <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span className="min-w-0"><span className="block truncate text-sm font-bold">{p.name}</span><span className="block truncate text-xs text-slate-500">{p.address}</span></span>
+              <button key={`${p.id}-${p.name}`} disabled={picking} onClick={() => pickFound(p)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 disabled:opacity-50 dark:hover:bg-slate-800">
+                <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span className="min-w-0"><span className="block truncate text-sm font-bold">{p.name}</span><span className="block truncate text-xs text-slate-500 dark:text-slate-400">{p.address}</span></span>
               </button>
             ))}
           </>
         )}
         {(place || pendingGeo) && !areaMode && (
-          <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
-            <div className="font-bold text-emerald-800">
+          <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950">
+            <div className="font-bold text-emerald-800 dark:text-emerald-300">
               {place ? place.name : resolving ? "Определяем адрес…" : (pendingLabel?.name ?? "Точка на карте")}
             </div>
             {place ? (
-              <div className="text-xs text-emerald-600">{[place.address, place.district].filter(Boolean).join(" · ")}</div>
+              <div className="text-xs text-emerald-600 dark:text-emerald-400">{[place.address, place.district].filter(Boolean).join(" · ")}</div>
             ) : (
               <input
                 value={pendingAddrEdit ?? ""}
                 onChange={(e) => setPendingAddrEdit(e.target.value)}
                 placeholder="Уточните адрес…"
-                className="mt-1 h-8 w-full rounded-lg border border-emerald-200 bg-white px-2 text-xs outline-none focus:border-emerald-500"
+                className="mt-1 h-8 w-full rounded-lg border border-emerald-200 bg-white px-2 text-xs outline-none focus:border-emerald-500 dark:border-emerald-800 dark:bg-slate-900"
               />
             )}
             {place && (
@@ -503,7 +503,7 @@ export default function CreatePage() {
           />
         </div>
         {similar.length > 0 && !place && (
-          <div className="mt-2 rounded-xl border border-sky-200 bg-sky-50 p-2.5">
+          <div className="mt-2 rounded-xl border border-sky-200 bg-sky-50 p-2.5 dark:bg-sky-950">
             <div className="text-xs font-bold text-sky-800">Похожие места уже есть — может, это оно?</div>
             {similar.map((p) => (
               <button
@@ -511,20 +511,20 @@ export default function CreatePage() {
                 type="button"
                 disabled={picking}
                 onClick={() => pickFound(p)}
-                className="mt-1 flex w-full items-center gap-2 rounded-xl bg-white/70 px-2 py-1.5 text-left hover:bg-white disabled:opacity-50"
+                className="mt-1 flex w-full items-center gap-2 rounded-xl bg-white/70 px-2 py-1.5 text-left hover:bg-white disabled:opacity-50 dark:bg-slate-800/70 dark:hover:bg-slate-800"
               >
-                <MapPin className="h-4 w-4 shrink-0 text-sky-600" />
+                <MapPin className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-300" />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold">{p.name}</span>
-                  <span className="block truncate text-xs text-slate-500">{[p.address, p.district].filter(Boolean).join(" · ")}</span>
+                  <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{[p.address, p.district].filter(Boolean).join(" · ")}</span>
                 </span>
               </button>
             ))}
           </div>
         )}
         {nearby.length > 0 && (
-          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5">
-            <div className="text-xs font-bold text-amber-800">Рядом уже обсуждают ({nearby.length}) — гляньте, чтобы не дублировать:</div>
+          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950">
+            <div className="text-xs font-bold text-amber-800 dark:text-amber-300">Рядом уже обсуждают ({nearby.length}) — гляньте, чтобы не дублировать:</div>
             {nearby.map((n) => (
               <a key={n.id} href={`/thread/${n.id}`} className="mt-1 block truncate text-[13px] text-amber-900 underline">
                 #{n.id} {cleanSnippet(n.body_md)} {n.place_name ? `· ${n.place_name}` : ""}
@@ -534,14 +534,14 @@ export default function CreatePage() {
         )}
       </div>
 
-      {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">{error}</div>}
 
       <div className="sticky bottom-20 flex gap-2 md:bottom-6">
         <button onClick={publish} disabled={(!body.trim() && files.length === 0) || saving} className="flex-1 rounded-2xl bg-lime-400 py-3 text-[15px] font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
           {saving ? "Публикуем…" : "Опубликовать"}
         </button>
       </div>
-      <p className="pb-24 text-center text-xs text-slate-400 md:pb-8">Черновик сохраняется автоматически</p>
+      <p className="pb-24 text-center text-xs text-slate-400 md:pb-8 dark:text-slate-500">Черновик сохраняется автоматически</p>
     </div>
   );
 }

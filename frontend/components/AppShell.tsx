@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { timeAgo } from "@/components/ThreadCard";
 import { useScope, scopeLabel } from "@/lib/scope";
+import { ThemeToggle } from "@/lib/theme";
 import ScopePicker from "@/components/ScopePicker";
 
 function BellButton() {
@@ -52,22 +53,22 @@ function BellButton() {
   if (!user) return null;
   return (
     <div ref={ref} className="relative">
-      <button onClick={toggle} aria-label="Уведомления" className="relative flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
-        <Bell className="h-5 w-5 text-slate-600" />
+      <button onClick={toggle} aria-label="Уведомления" className="relative flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+        <Bell className="h-5 w-5 text-slate-600 dark:text-slate-300" />
         {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{count}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-          <div className="border-b border-slate-100 px-3 py-2 text-[13px] font-bold">Уведомления</div>
-          {items.length === 0 && <div className="px-3 py-4 text-center text-[13px] text-slate-400">Пока тихо</div>}
+        <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+          <div className="border-b border-slate-100 px-3 py-2 text-[13px] font-bold dark:border-slate-800">Уведомления</div>
+          {items.length === 0 && <div className="px-3 py-4 text-center text-[13px] text-slate-400 dark:text-slate-500">Пока тихо</div>}
           {items.map((n) => (
-            <Link key={String(n.id)} href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"} className="block border-b border-slate-50 px-3 py-2.5 last:border-0 hover:bg-slate-50">
+            <Link key={String(n.id)} href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"} className="block border-b border-slate-50 px-3 py-2.5 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800">
               <div className="text-sm">
                 <span className="font-bold">{n.author ?? "Кто-то"}</span>
-                <span className="text-slate-500"> {n.kind === "mention" ? "упомянул(а) вас" : "ответил(а) в вашем треде"}</span>
+                <span className="text-slate-500 dark:text-slate-400"> {n.kind === "mention" ? "упомянул(а) вас" : "ответил(а) в вашем треде"}</span>
               </div>
-              {n.snippet && <div className="mt-0.5 truncate text-xs text-slate-400">{n.snippet}</div>}
-              {n.created_at && <div className="mt-0.5 text-[11px] text-slate-300">{timeAgo(n.created_at)}</div>}
+              {n.snippet && <div className="mt-0.5 truncate text-xs text-slate-400 dark:text-slate-500">{n.snippet}</div>}
+              {n.created_at && <div className="mt-0.5 text-[11px] text-slate-300 dark:text-slate-500">{timeAgo(n.created_at)}</div>}
             </Link>
           ))}
         </div>
@@ -98,7 +99,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <Link
       href={href}
       className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] font-medium transition ${
-        isActive(href) ? "bg-lime-300/60 text-slate-900" : "text-slate-600 hover:bg-slate-100"
+        isActive(href) ? "bg-lime-300/60 text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
       }`}
     >
       <Icon className="h-5 w-5" />
@@ -109,7 +110,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col">
       {/* desktop top bar */}
-      <header className="sticky top-0 z-40 hidden border-b border-slate-200/70 bg-white/85 backdrop-blur md:block">
+      <header className="sticky top-0 z-40 hidden border-b border-slate-200/70 bg-white/85 backdrop-blur md:block dark:border-slate-800 dark:bg-slate-950/85">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
           <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-lime-400 text-slate-900">З</span>
@@ -119,7 +120,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <input
               name="q"
               placeholder="Поиск по вопросам и местам"
-              className="h-10 w-full rounded-full border border-slate-200 bg-slate-100 px-4 text-sm outline-none focus:border-lime-500 focus:bg-white"
+              className="h-10 w-full rounded-full border border-slate-200 bg-slate-100 px-4 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800"
             />
           </form>
           <Link href="/create" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
@@ -129,21 +130,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setScopeOpen(!scopeOpen)}
               title="Выбрать регион"
-              className="flex max-w-44 items-center gap-1 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200"
+              className="flex max-w-44 items-center gap-1 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
-              <MapPinned className="h-4 w-4 shrink-0 text-emerald-600" />
+              <MapPinned className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span className="truncate">{scopeLabel(scope)}</span>
-              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
             </button>
             {scopeOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+              <div className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
                 <ScopePicker value={scope} onChange={setScope} />
               </div>
             )}
           </div>
           <BellButton />
-          <Link href={user ? "/profile" : "/login"} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
-            <User className="h-5 w-5 text-slate-600" />
+          <ThemeToggle />
+          <Link href={user ? "/profile" : "/login"} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+            <User className="h-5 w-5 text-slate-600 dark:text-slate-300" />
           </Link>
         </div>
       </header>
@@ -155,16 +157,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {item("/map", "Карта", MapIcon)}
           {item("/create", "Создать", PlusCircle)}
           {item(user ? "/profile" : "/login", "Профиль", User)}
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-[13px] text-slate-500">
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-[13px] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
             Спрашивайте о городе: от ямы во дворе до судьбы парка — вопросы с местом видны на карте.
           </div>
         </aside>
         <main className="min-w-0 flex-1 pb-24 md:pb-12">{children}</main>
       </div>
 
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-4 text-[13px] text-slate-500">
-          <span className="flex items-center gap-1.5 font-extrabold text-slate-700">
+      <footer className="border-t border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-1.5 font-extrabold text-slate-700 dark:text-slate-200">
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-lime-400 text-xs text-slate-900">З</span>
             Закоулки
           </span>
@@ -176,7 +178,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </footer>
 
       {/* mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-700">
         <div className="grid grid-cols-5">
           {[
             { href: "/", label: "Главная", Icon: Home, fab: false },
@@ -185,7 +187,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             { href: "/search", label: "Поиск", Icon: Search, fab: false },
             { href: user ? "/profile" : "/login", label: "Профиль", Icon: User, fab: false },
           ].map(({ href, label, Icon, fab }) => (
-            <Link key={href + label} href={href} className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${isActive(href) ? "text-lime-700" : "text-slate-500"}`}>
+            <Link key={href + label} href={href} className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${isActive(href) ? "text-lime-700 dark:text-lime-300" : "text-slate-500 dark:text-slate-400"}`}>
               <Icon className={fab ? "h-7 w-7" : "h-6 w-6"} strokeWidth={fab ? 2.5 : 2} />
               {label}
             </Link>

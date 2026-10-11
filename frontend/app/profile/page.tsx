@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { fetchThreads, fetchBookmarks } from "@/lib/v5";
 import { api } from "@/lib/api";
+import { ThemeToggle } from "@/lib/theme";
 import ThreadCard, { timeAgo, OfficialBadge } from "@/components/ThreadCard";
 import type { ThreadV5 } from "@/types/v5";
 
@@ -49,7 +50,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-center gap-4">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-lime-200 text-2xl font-extrabold">{user.username.slice(0, 1).toUpperCase()}</span>
           <div>
@@ -57,14 +58,15 @@ export default function ProfilePage() {
               <span>@{user.username}</span>
               {user.badge === "official" && <OfficialBadge />}
             </div>
-            <div className="text-sm text-slate-500">{user.email}</div>
-            <div className="text-xs text-slate-400">с нами с {new Date(user.created_at).toLocaleDateString("ru-RU")}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">{user.email}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">с нами с {new Date(user.created_at).toLocaleDateString("ru-RU")}</div>
           </div>
-          <button onClick={logoutSafe} className="ml-auto rounded-xl border border-slate-200 px-3 py-1.5 text-sm">Выйти</button>
+          <button onClick={logoutSafe} className="ml-auto rounded-xl border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-700">Выйти</button>
+          <ThemeToggle />
         </div>
         <div className="mt-3 flex gap-4 text-sm">
-          <span><b>{mine.length}</b> <span className="text-slate-500">вопросов</span></span>
-          {user.role === "admin" && <Link href="/admin" className="font-bold text-emerald-700">Админка →</Link>}
+          <span><b>{mine.length}</b> <span className="text-slate-500 dark:text-slate-400">вопросов</span></span>
+          {user.role === "admin" && <Link href="/admin" className="font-bold text-emerald-700 dark:text-emerald-300">Админка →</Link>}
         </div>
       </div>
       <div className="flex gap-1.5">
@@ -72,22 +74,22 @@ export default function ProfilePage() {
           <button
             key={tb}
             onClick={() => setTab(tb)}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold ${tab === tb ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-500"}`}
+            className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold ${tab === tb ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"}`}
           >
             {tb === "mine" ? `Мои вопросы · ${mine.length}` : `Закладки · ${saved.length}`}
           </button>
         ))}
       </div>
       {mineFailed ? (
-        <div className="rounded-2xl border border-red-200 bg-white p-6 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-red-200 bg-white p-6 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
           Не загрузилось — обновите страницу.
         </div>
       ) : tab === "mine" ? (
         <div className="space-y-3">
           {mine.map((t) => <ThreadCard key={t.id} t={t} />)}
-          {mine.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400">Пока пусто. <Link href="/create" className="font-bold text-emerald-700">Спросить →</Link></div>}
+          {mine.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400 dark:bg-slate-900 dark:text-slate-500">Пока пусто. <Link href="/create" className="font-bold text-emerald-700 dark:text-emerald-300">Спросить →</Link></div>}
           {mineHasMore && mine.length > 0 && (
-            <button onClick={loadMoreMine} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+            <button onClick={loadMoreMine} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
               {loadingMore ? "Загружаем…" : "Показать ещё"}
             </button>
           )}
@@ -95,24 +97,24 @@ export default function ProfilePage() {
       ) : (
         <div className="space-y-3">
           {saved.map((t) => <ThreadCard key={t.id} t={t} />)}
-          {saved.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400">Нет закладок — нажмите на флажок в карточке вопроса.</div>}
+          {saved.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400 dark:bg-slate-900 dark:text-slate-500">Нет закладок — нажмите на флажок в карточке вопроса.</div>}
         </div>
       )}
 
       {notifs.length > 0 && (
         <>
           <h2 className="font-extrabold">Уведомления</h2>
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
             {notifs.map((n) => (
               <Link
                 key={String(n.id)}
                 href={n.thread_id ? `/thread/${n.thread_id}${n.comment_id ? `#comment-${n.comment_id}` : ""}` : "/"}
-                className="block border-b border-slate-50 px-4 py-2.5 text-sm last:border-0 hover:bg-slate-50"
+                className="block border-b border-slate-50 px-4 py-2.5 text-sm last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
               >
                 <span className="font-bold">{n.author ?? "Кто-то"}</span>
-                <span className="text-slate-500"> {n.kind === "mention" ? "упомянул(а) вас" : "ответил(а) в вашем треде"}</span>
-                {n.snippet && <span className="mt-0.5 block truncate text-xs text-slate-400">{n.snippet}</span>}
-                {n.created_at && <span className="mt-0.5 block text-[11px] text-slate-300">{timeAgo(n.created_at)}</span>}
+                <span className="text-slate-500 dark:text-slate-400"> {n.kind === "mention" ? "упомянул(а) вас" : "ответил(а) в вашем треде"}</span>
+                {n.snippet && <span className="mt-0.5 block truncate text-xs text-slate-400 dark:text-slate-500">{n.snippet}</span>}
+                {n.created_at && <span className="mt-0.5 block text-[11px] text-slate-300 dark:text-slate-500">{timeAgo(n.created_at)}</span>}
               </Link>
             ))}
           </div>

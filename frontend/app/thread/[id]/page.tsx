@@ -151,13 +151,13 @@ export default function ThreadPage() {
     }
   };
 
-  if (loading) return <div className="mx-auto max-w-2xl space-y-3 px-3 pt-6"><div className="h-48 animate-pulse rounded-2xl bg-white" /><div className="h-24 animate-pulse rounded-2xl bg-white" /></div>;
+  if (loading) return <div className="mx-auto max-w-2xl space-y-3 px-3 pt-6"><div className="h-48 animate-pulse rounded-2xl bg-white dark:bg-slate-900" /><div className="h-24 animate-pulse rounded-2xl bg-white dark:bg-slate-900" /></div>;
   if (!t) return <div className="mx-auto max-w-2xl px-3 pt-10 text-center">Тред не найден. <Link href="/" className="underline">В ленту</Link></div>;
 
   return (
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
-      <Link href="/" className="text-sm text-slate-400">← Лента</Link>
-      <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+      <Link href="/" className="text-sm text-slate-400 dark:text-slate-500">← Лента</Link>
+      <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 dark:border-slate-700 dark:bg-slate-900">
         {editing ? (
           <>
             <input
@@ -165,7 +165,7 @@ export default function ThreadPage() {
               onChange={(e) => setEditTitle(e.target.value)}
               maxLength={150}
               placeholder="Заголовок (необязательно)"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] outline-none focus:border-lime-500 dark:border-slate-700 dark:bg-slate-900"
             />
             <div className="mt-2">
               <MdEditor value={editBody} onChange={setEditBody} />
@@ -173,7 +173,7 @@ export default function ThreadPage() {
             {editPhotos.length > 0 && (
               <div className="mt-2 grid grid-cols-3 gap-1.5">
                 {editPhotos.map((p) => (
-                  <span key={p.id} className="relative overflow-hidden rounded-xl bg-slate-100">
+                  <span key={p.id} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                     <PhotoImg src={p.preview_url ?? p.url} fit="contain" className="h-24 w-full" />
                     <button
                       type="button"
@@ -195,7 +195,7 @@ export default function ThreadPage() {
               </div>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                 <ImagePlus className="h-4 w-4" /> Добавить фото
                 <input
                   type="file" accept="image/*" multiple className="hidden"
@@ -213,13 +213,13 @@ export default function ThreadPage() {
                 />
               </label>
               <button onClick={saveEdit} disabled={!editBody.trim()} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Сохранить</button>
-              <button onClick={() => setEditing(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold">Отмена</button>
+              <button onClick={() => setEditing(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700">Отмена</button>
             </div>
           </>
         ) : (
           <>
         {t.title && <h1 className="text-xl font-extrabold leading-tight">{t.title}</h1>}
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
           <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}</span>
           {t.author_badge === "official" && <OfficialBadge />}
           <ImportantBadge t={t} />
@@ -233,7 +233,7 @@ export default function ThreadPage() {
                     try { const u = await requestImportant(t.id); setT({ ...t, ...u }); toast("Выдвинуто — жители решат голосами", "success"); }
                     catch { toast("Не получилось", "error"); }
                   }}
-                  className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-[13px] font-bold text-amber-800 hover:bg-amber-100"
+                  className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-[13px] font-bold text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
                 >
                   Сделать важным
                 </button>
@@ -250,7 +250,7 @@ export default function ThreadPage() {
                     toast(status === 401 ? "Войдите, чтобы голосовать" : "Не получилось", "error");
                   }
                 }}
-                className={`rounded-xl border px-3 py-1.5 text-[13px] font-bold ${t.important_voted ? "border-amber-400 bg-amber-100 text-amber-900" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                className={`rounded-xl border px-3 py-1.5 text-[13px] font-bold ${t.important_voted ? "border-amber-400 bg-amber-100 text-amber-900 dark:bg-amber-950" : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"}`}
               >
                 {t.important_voted ? "✓ Это важно" : "Это важно"} · {t.important_votes ?? 0}/3
               </button>
@@ -260,7 +260,7 @@ export default function ThreadPage() {
         {t.tags && t.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {t.tags.map((tag) => (
-              <Link key={tag} href={`/tag/${encodeURIComponent(tag)}`} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200">
+              <Link key={tag} href={`/tag/${encodeURIComponent(tag)}`} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
                 {tag}
               </Link>
             ))}
@@ -288,28 +288,28 @@ export default function ThreadPage() {
           </div>
         )}
         {t.place && (
-          <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
+          <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
             {t.place.map_preview && (
               <PhotoImg src={t.place.map_preview} className="h-36 w-full" />
             )}
-            <div className="flex items-center gap-2 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
+            <div className="flex items-center gap-2 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
               <MapPin className="h-4 w-4" /> {t.place.name}
               {t.place.area && t.place.area.length >= 3 && (
                 <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white">территория</span>
               )}
             </div>
-            <div className="px-3 py-1.5 text-xs text-slate-500">{[t.place.address, t.place.district].filter(Boolean).join(" · ")}</div>
-            <Link href={`/map?place=${t.place.id}`} className="block bg-slate-50 px-3 py-2 text-[13px] font-bold text-emerald-700">Открыть на карте →</Link>
+            <div className="px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400">{[t.place.address, t.place.district].filter(Boolean).join(" · ")}</div>
+            <Link href={`/map?place=${t.place.id}`} className="block bg-slate-50 px-3 py-2 text-[13px] font-bold text-emerald-700 dark:bg-slate-800 dark:text-emerald-300">Открыть на карте →</Link>
           </div>
         )}
-        <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500">
+        <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <button onClick={() => likeThread(t.id).then(load).catch(() => toast("Не получилось", "error"))} className="flex items-center gap-1.5 hover:text-slate-800"><Heart className="h-4 w-4" /> {t.likes_count}</button>
           <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {t.views}</span>
           {canEdit && !editing && (
-            <button onClick={startEdit} className="font-bold text-emerald-700 hover:underline">Редактировать</button>
+            <button onClick={startEdit} className="font-bold text-emerald-700 hover:underline dark:text-emerald-300">Редактировать</button>
           )}
           {user?.role === "admin" && (
-            <button onClick={adminDelete} className="font-bold text-red-600 hover:underline">Удалить</button>
+            <button onClick={adminDelete} className="font-bold text-red-600 hover:underline dark:text-red-400">Удалить</button>
           )}
           {user?.role === "admin" && (
             <button
@@ -328,11 +328,11 @@ export default function ThreadPage() {
             </button>
           )}
           <span className="relative ml-auto">
-            <button onClick={() => setReportOpen(!reportOpen)} className="flex items-center gap-1 text-slate-400 hover:text-red-500"><Flag className="h-4 w-4" /> Жалоба</button>
+            <button onClick={() => setReportOpen(!reportOpen)} className="flex items-center gap-1 text-slate-400 hover:text-red-500 dark:text-slate-500"><Flag className="h-4 w-4" /> Жалоба</button>
             {reportOpen && (
-              <span className="absolute bottom-7 right-0 z-10 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+              <span className="absolute bottom-7 right-0 z-10 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
                 {[["spam", "Спам"], ["abuse", "Оскорбления"], ["offtopic", "Не по теме"], ["other", "Другое"]].map(([v, label]) => (
-                  <button key={v} onClick={() => sendReport(v)} className="block w-full px-3 py-2 text-left text-[13px] text-slate-700 hover:bg-slate-50">
+                  <button key={v} onClick={() => sendReport(v)} className="block w-full px-3 py-2 text-left text-[13px] text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
                     {label}
                   </button>
                 ))}
@@ -344,13 +344,13 @@ export default function ThreadPage() {
         )}
       </article>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <h2 className="font-extrabold">Ответы · {t.comments?.length ?? 0}</h2>
         <div className="mt-2 space-y-2">
           {(t.comments ?? []).map((c) => (
-            <div key={c.id} id={`comment-${c.id}`} className="rounded-xl bg-slate-50 px-3 py-2">
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <span className="font-bold text-slate-600">{c.author_username ? `@${c.author_username}` : "кто-то"}</span>
+            <div key={c.id} id={`comment-${c.id}`} className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+              <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                <span className="font-bold text-slate-600 dark:text-slate-300">{c.author_username ? `@${c.author_username}` : "кто-то"}</span>
                 {c.author_badge === "official" && <OfficialBadge />}
                 <span>· {timeAgo(c.created_at)}</span>
                 {(user && (user.id === c.author_id || user.role === "admin")) && (
@@ -375,7 +375,7 @@ export default function ThreadPage() {
                   <MdEditor value={editCommentBody} onChange={setEditCommentBody} compact />
                   <div className="mt-1.5 flex gap-2">
                     <button onClick={() => saveCommentEdit(c.id)} disabled={!editCommentBody.trim()} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40">Сохранить</button>
-                    <button onClick={() => setEditCommentId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold">Отмена</button>
+                    <button onClick={() => setEditCommentId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">Отмена</button>
                   </div>
                 </div>
               ) : (
@@ -392,7 +392,7 @@ export default function ThreadPage() {
               )}
             </div>
           ))}
-          {(t.comments ?? []).length === 0 && <p className="text-sm text-slate-400">Пока нет ответов — станьте первым.</p>}
+          {(t.comments ?? []).length === 0 && <p className="text-sm text-slate-400 dark:text-slate-500">Пока нет ответов — станьте первым.</p>}
         </div>
         {user ? (
           <div className="mt-3" onPaste={pasteFiles}>
@@ -400,7 +400,7 @@ export default function ThreadPage() {
             {replyFiles.length > 0 && (
               <div className="mt-2 grid grid-cols-4 gap-1.5">
                 {replyThumbs.map((src, i) => (
-                  <span key={`${replyFiles[i]?.name}-${replyFiles[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100">
+                  <span key={`${replyFiles[i]?.name}-${replyFiles[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt="" className="h-20 w-full object-contain" />
                     <button
@@ -416,7 +416,7 @@ export default function ThreadPage() {
               </div>
             )}
             <div className="mt-2 flex gap-2">
-              <button type="button" onClick={() => replyFileRef.current?.click()} title="Прикрепить фото" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+              <button type="button" onClick={() => replyFileRef.current?.click()} title="Прикрепить фото" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                 <ImagePlus className="h-4 w-4" /> Фото
               </button>
               <input
@@ -434,7 +434,7 @@ export default function ThreadPage() {
             </div>
           </div>
         ) : (
-          <Link href="/login" className="mt-3 block rounded-xl bg-slate-100 p-3 text-center text-sm">Войдите, чтобы ответить →</Link>
+          <Link href="/login" className="mt-3 block rounded-xl bg-slate-100 p-3 text-center text-sm dark:bg-slate-800">Войдите, чтобы ответить →</Link>
         )}
       </section>
     </div>

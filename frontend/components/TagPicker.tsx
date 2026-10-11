@@ -25,12 +25,12 @@ export default function TagPicker({ value, onChange }: { value: string[]; onChan
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-      <div className="text-sm font-bold">Теги <span className="font-normal text-slate-400">· до 5, помогают найти вопрос</span></div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      <div className="text-sm font-bold">Теги <span className="font-normal text-slate-400 dark:text-slate-500">· до 5, помогают найти вопрос</span></div>
       {value.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {value.map((t) => (
-            <span key={t} className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[13px] font-semibold text-emerald-800">
+            <span key={t} className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[13px] font-semibold text-emerald-800 dark:text-emerald-300">
               {t}
               <button type="button" onClick={() => onChange(value.filter((x) => x !== t))} aria-label={`Убрать ${t}`}>
                 <X className="h-3.5 w-3.5" />
@@ -46,7 +46,7 @@ export default function TagPicker({ value, onChange }: { value: string[]; onChan
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(q); } }}
           placeholder="Найти или вписать свой…"
           maxLength={50}
-          className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white"
+          className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800"
         />
         <button type="button" onClick={() => add(q)} disabled={!q.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white disabled:opacity-40">
           <Plus className="h-5 w-5" />
@@ -57,7 +57,7 @@ export default function TagPicker({ value, onChange }: { value: string[]; onChan
           {suggest.filter((s) => !value.includes(s.name)).map((s) => (
             <button
               key={s.name} type="button" onClick={() => add(s.name)}
-              className="rounded-md bg-slate-100 px-2 py-1 text-[13px] font-medium text-slate-600 hover:bg-slate-200"
+              className="rounded-md bg-slate-100 px-2 py-1 text-[13px] font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               {s.name}
             </button>

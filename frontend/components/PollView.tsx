@@ -41,9 +41,9 @@ const PollView = memo(function PollView({ threadId, initial, canVote }: {
   };
 
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
-      <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-bold">
-        <BarChart3 className="h-4 w-4 text-emerald-600" /> {poll.question}
+    <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+      <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-bold dark:bg-slate-800">
+        <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> {poll.question}
       </div>
       <div className="space-y-1.5 p-3">
         {poll.options.map((o) => {
@@ -57,19 +57,19 @@ const PollView = memo(function PollView({ threadId, initial, canVote }: {
               disabled={!canVote}
               onClick={() => toggle(o.id)}
               className={`relative block w-full overflow-hidden rounded-xl border px-3 py-2 text-left text-sm transition ${
-                isPicked ? "border-emerald-500 bg-emerald-50 font-bold" : "border-slate-200 bg-white hover:border-slate-300"
+                isPicked ? "border-emerald-500 bg-emerald-50 font-bold dark:bg-emerald-950" : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900"
               } ${!canVote ? "cursor-default" : ""}`}
             >
               <span className="absolute inset-y-0 left-0 bg-emerald-100/70" style={{ width: `${pct}%` }} />
               <span className="relative flex items-center justify-between gap-2">
                 <span>{o.text} {isVoted && "· ваш голос"}</span>
-                <span className="shrink-0 font-bold text-slate-500">{pct}%</span>
+                <span className="shrink-0 font-bold text-slate-500 dark:text-slate-400">{pct}%</span>
               </span>
             </button>
           );
         })}
         <div className="flex items-center justify-between pt-1">
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
             Голосов: {poll.total}{poll.multiple ? " · можно несколько" : ""}
           </span>
           {canVote && (

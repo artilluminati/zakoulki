@@ -25,16 +25,16 @@ export default function TagPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
-      <Link href="/" className="text-sm text-slate-400">← Лента</Link>
+      <Link href="/" className="text-sm text-slate-400 dark:text-slate-500">← Лента</Link>
       <h1 className="text-xl font-extrabold">{decodeURIComponent(tag)}</h1>
       {loading ? (
-        <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-white" />)}</div>
+        <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-white dark:bg-slate-900" />)}</div>
       ) : failed ? (
-        <div className="rounded-2xl border border-red-200 bg-white p-8 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-red-200 bg-white p-8 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
           Не загрузилось — проверьте соединение и обновите страницу.
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
           По этому тегу пока пусто
         </div>
       ) : (

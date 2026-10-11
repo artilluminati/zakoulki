@@ -15,15 +15,15 @@ export default function PhotoImg({ src, alt = "", className = "", fit = "cover",
   const [failed, setFailed] = useState(false);
 
   return (
-    <span className={`relative block overflow-hidden bg-slate-100 ${className}`}>
+    <span className={`relative block overflow-hidden bg-slate-100 dark:bg-slate-800 ${className}`}>
       {!loaded && !failed && (
-        <span className="absolute inset-0 flex animate-pulse items-center justify-center bg-slate-100">
-          <ImageIcon className="h-6 w-6 text-slate-300" />
+        <span className="absolute inset-0 flex animate-pulse items-center justify-center bg-slate-100 dark:bg-slate-800">
+          <ImageIcon className="h-6 w-6 text-slate-300 dark:text-slate-500" />
         </span>
       )}
       {failed ? (
-        <span className="flex h-full min-h-24 w-full flex-col items-center justify-center gap-1 bg-slate-100 p-4 text-xs text-slate-400">
-          <ImageIcon className="h-6 w-6 text-slate-300" />
+        <span className="flex h-full min-h-24 w-full flex-col items-center justify-center gap-1 bg-slate-100 p-4 text-xs text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+          <ImageIcon className="h-6 w-6 text-slate-300 dark:text-slate-500" />
           Фото не загрузилось
         </span>
       ) : (

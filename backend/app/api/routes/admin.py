@@ -145,3 +145,31 @@ def admin_report_status(report_id: int, data: ReportStatus, db: Session = Depend
     r.status = data.status
     db.commit()
     return {"id": r.id, "status": r.status}
+
+
+@router.get("/stats")
+def admin_stats(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Сводка для шапки админки: пользователи, треды, места, новые жалобы."""
+    require_admin(user)
+    from app.models.geo_place import GeoPlace
+    return {
+        "users": db.query(User).count(),
+        "threads": db.query(Thread).count(),
+        "places": db.query(GeoPlace).count(),
+        "reports_new": db.query(Report).filter(Report.status == "new").count(),
+    }
+
+
+@router.get("/threads")
+def admin_threads(limit: int = Query(30, le=100), db: Session = Depends(get_db),
+                  user: User = Depends(get_current_user)):
+    """Свежие треды для модерации: удаление, пин важного."""
+    require_admin(user)
+    items = db.query(Thread).order_by(Thread.id.desc()).limit(limit).all()
+    author_ids = {t.author_id for t in items}
+    authors = {u.id: u.username for u in db.query(User).filter(User.id.in_(author_ids)).all()} if author_ids else {}
+    return [{"id": t.id, "author": authors.get(t.author_id), "title": t.title,
+             "snippet": (t.body_md or "")[:120], "is_offtop": t.is_offtop,
+             "is_important": t.is_important, "important_pinned": t.important_pinned,
+             "place_id": t.place_id, "comments_count": t.comments_count,
+             "created_at": t.created_at} for t in items]

@@ -62,8 +62,8 @@ export default function UserSuggest({ query, onPick, onClose, ctlRef }: {
   if (query.length < 2) return null;
 
   return (
-    <div className="absolute z-50 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-      <div className="border-b border-slate-100 px-3 py-1.5 text-xs text-slate-400">
+    <div className="absolute z-50 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+      <div className="border-b border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
         {loading ? "Ищем людей…" : items.length ? `Люди: ${items.length}` : "Никого не нашли"}
       </div>
       {items.map((u, i) => (
@@ -72,7 +72,7 @@ export default function UserSuggest({ query, onPick, onClose, ctlRef }: {
           type="button"
           onMouseEnter={() => pickHi(i)}
           onClick={() => { onPick(u); onClose(); }}
-          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left ${i === hi ? "bg-emerald-50" : ""}`}
+          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left ${i === hi ? "bg-emerald-50 dark:bg-emerald-950" : ""}`}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-200 text-xs font-extrabold text-slate-900">
             {u.username.slice(0, 1).toUpperCase()}
@@ -82,7 +82,7 @@ export default function UserSuggest({ query, onPick, onClose, ctlRef }: {
           </span>
         </button>
       ))}
-      <button type="button" onClick={onClose} className="block w-full px-3 py-1.5 text-center text-xs text-slate-400 hover:bg-slate-50">
+      <button type="button" onClick={onClose} className="block w-full px-3 py-1.5 text-center text-xs text-slate-400 hover:bg-slate-50 dark:text-slate-500 dark:hover:bg-slate-800">
         Esc — закрыть
       </button>
     </div>

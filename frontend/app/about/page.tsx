@@ -45,14 +45,14 @@ export default function AboutPage() {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {nums.map(([label, v]) => (
-          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
             <div className="text-2xl font-extrabold">{v ?? "…"}</div>
-            <div className="text-xs text-slate-500">{label}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
           </div>
         ))}
         <div className="rounded-2xl border border-dashed border-slate-300 bg-transparent p-4">
-          <div className="text-2xl font-extrabold text-slate-300">↗</div>
-          <div className="text-xs text-slate-500">растём каждый день</div>
+          <div className="text-2xl font-extrabold text-slate-300 dark:text-slate-500">↗</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">растём каждый день</div>
         </div>
       </div>
 
@@ -62,15 +62,15 @@ export default function AboutPage() {
           { Icon: MapPin, t: "Привяжите", d: "Точка, адрес или организация. Вопрос появится на карте города." },
           { Icon: Landmark, t: "Доведите", d: "Обсуждение, упоминания ответственных, официальные ответы." },
         ].map(({ Icon, t, d }) => (
-          <div key={t} className="rounded-2xl border border-slate-200 bg-white p-4">
-            <Icon className="h-5 w-5 text-emerald-600" />
+          <div key={t} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+            <Icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             <div className="mt-2 font-extrabold">{t}</div>
-            <div className="mt-1 text-[13px] leading-relaxed text-slate-500">{d}</div>
+            <div className="mt-1 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">{d}</div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
         <div className="flex items-center gap-2 font-extrabold text-emerald-900">
           <Landmark className="h-5 w-5" /> Администрациям и организациям
         </div>
@@ -79,20 +79,20 @@ export default function AboutPage() {
           получайте упоминания и сводите обращения в одном месте.
           Верификация — через администрацию сервиса.
         </p>
-        <Link href="/data" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:underline">
+        <Link href="/data" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
           На каких данных мы стоим <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-center gap-2 font-extrabold">
-          <Database className="h-5 w-5 text-slate-500" /> Открытые данные
+          <Database className="h-5 w-5 text-slate-500 dark:text-slate-400" /> Открытые данные
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-slate-500">
+        <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
           Карта и геокодинг — на открытых и partner-источниках.
           Готовимся к интеграции городских наборов данных.
         </p>
-        <Link href="/data" className="mt-2 inline-block text-sm font-bold text-emerald-700 hover:underline">
+        <Link href="/data" className="mt-2 inline-block text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
           Все источники →
         </Link>
       </div>

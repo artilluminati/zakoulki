@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* тёмная тема — переключение классом .dark на <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-inter), system-ui, sans-serif;
 }
@@ -10,6 +13,16 @@ body {
   background: #f6f7f4;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
+}
+.dark body {
+  background: #0b0f0e;
+  color: #e2e8f0;
+  color-scheme: dark;
+}
+
+/* тёмная карта: приглушаем тайлы, пины и фото не трогаем */
+.dark .ymap-container {
+  filter: brightness(0.88) saturate(0.92);
 }
 
 button, [role="button"] {
@@ -55,11 +68,15 @@ button:disabled {
   text-decoration: none; white-space: nowrap; vertical-align: baseline;
 }
 .thread-html a.place:hover { background: #d1fae5; }
+.dark .thread-html a.place { background: #022c22; color: #6ee7b7; border-color: #065f46; }
+.dark .thread-html a.place:hover { background: #064e3b; }
 .thread-html a.tag {
   color: #047857; font-weight: 600; text-decoration: none;
 }
+.dark .thread-html a.tag { color: #6ee7b7; }
 .thread-html a.tag:hover { text-decoration: underline; }
 .thread-html a.user-mention { color: #0f172a; font-weight: 700; text-decoration: none; }
+.dark .thread-html a.user-mention { color: #f1f5f9; }
 .thread-html a.user-mention:hover { text-decoration: underline; }
 
 /* клиентское превью редактора */
@@ -74,10 +91,16 @@ button:disabled {
 .pv-li::before { content: "•"; position: absolute; left: 6px; color: #94a3b8; }
 .pv-blank { min-height: 24px; }
 .pv-preview code { background: #f1f5f9; border-radius: 6px; padding: 0 5px; font-size: 13px; }
+.dark .pv-preview code { background: #1e293b; }
 .pv-preview a { color: #047857; font-weight: 600; }
+.dark .pv-preview a { color: #6ee7b7; }
 .pv-place { display: inline-block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 999px; padding: 0 8px; font-size: 13px; font-weight: 600; }
+.dark .pv-place { background: #022c22; color: #6ee7b7; border-color: #065f46; }
 .pv-user { font-weight: 700; color: #0f172a; }
+.dark .pv-user { color: #f1f5f9; }
 .pv-tag { color: #047857; font-weight: 600; }
+.dark .pv-tag { color: #6ee7b7; }
+.dark .pv-quote { border-left-color: #065f46; color: #94a3b8; }
 .pv-empty { color: #94a3b8; }
 .thread-html p { margin: 0 0 8px; }
 .thread-html p:last-child { margin-bottom: 0; }

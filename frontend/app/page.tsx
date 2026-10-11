@@ -164,7 +164,7 @@ export default function FeedPage() {
       {/* композер */}
       {user ? (
         <div
-          className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+          className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
           onPaste={(e) => {
             const imgs = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
             if (imgs.length > 0) {
@@ -178,7 +178,7 @@ export default function FeedPage() {
           {draftFiles.length > 0 && (
             <div className="mt-2 grid grid-cols-4 gap-1.5">
               {draftThumbs.map((src, i) => (
-                <span key={`${draftFiles[i]?.name}-${draftFiles[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100">
+                <span key={`${draftFiles[i]?.name}-${draftFiles[i]?.size}-${i}`} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt="" className="h-20 w-full object-contain" />
                   <button
@@ -194,9 +194,9 @@ export default function FeedPage() {
             </div>
           )}
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-slate-400">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{draft.length}/5000 {draft.length > 280 ? "· вопрос" : "· оффтоп"}</span>
             <div className="flex gap-2">
-              <button type="button" onClick={pickFiles} title="Прикрепить фото" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+              <button type="button" onClick={pickFiles} title="Прикрепить фото" className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                 <ImagePlus className="h-4 w-4" />
               </button>
               <input
@@ -208,7 +208,7 @@ export default function FeedPage() {
                 }}
               />
               <PasteButton iconOnly onPaste={(imgs) => { setDraftFiles((prev) => [...prev, ...imgs]); toast(`Фото добавлено: ${imgs.length}`, "success"); }} />
-              <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">Расширить</Link>
+              <Link href="/create" className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold dark:border-slate-700">Расширить</Link>
               <button onClick={post} disabled={(!draft.trim() && draftFiles.length === 0) || posting} className="rounded-xl bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-900 disabled:opacity-40 hover:bg-lime-300">
                 {posting ? "…" : "Опубликовать"}
               </button>
@@ -216,7 +216,7 @@ export default function FeedPage() {
           </div>
         </div>
       ) : (
-        <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
+        <Link href="/login" className="block rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
           Войдите, чтобы спросить город →
         </Link>
       )}
@@ -226,33 +226,33 @@ export default function FeedPage() {
         <div ref={scopeRef} className="relative">
           <button
             onClick={() => setScopeOpen(!scopeOpen)}
-            className="flex max-w-44 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm"
+            className="flex max-w-44 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           >
-            <MapPinned className="h-4 w-4 shrink-0 text-emerald-600" />
+            <MapPinned className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <span className="truncate">{scopeLabel(scope)}</span>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
           </button>
           {scopeOpen && (
-            <div className="absolute left-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+            <div className="absolute left-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
               <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
             </div>
           )}
         </div>
         {search && (
-          <Link href="/" className="flex items-center gap-1 rounded-full border border-emerald-500 bg-emerald-50 px-3 py-1.5 text-[13px] font-bold text-emerald-700">
+          <Link href="/" className="flex items-center gap-1 rounded-full border border-emerald-500 bg-emerald-50 px-3 py-1.5 text-[13px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
             Поиск: {search} ✕
           </Link>
         )}
-        <div className="flex rounded-full bg-white p-1 text-sm shadow-sm border border-slate-200">
+        <div className="flex rounded-full bg-white p-1 text-sm shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-700">
           {(["new", "top", "near"] as Sort[]).map((s) => (
-            <button key={s} onClick={() => pickSort(s)} className={`rounded-full px-3 py-1.5 font-semibold ${sort === s ? "bg-slate-900 text-white" : "text-slate-500"}`}>
+            <button key={s} onClick={() => pickSort(s)} className={`rounded-full px-3 py-1.5 font-semibold ${sort === s ? "bg-slate-900 text-white" : "text-slate-500 dark:text-slate-400"}`}>
               {s === "new" ? "Новые" : s === "top" ? "Обсуждают" : "Рядом"}
             </button>
           ))}
         </div>
         <div className="flex gap-1.5 text-[13px]">
           {(["all", "important", "offtop"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`rounded-full border px-3 py-1.5 font-semibold ${filter === f ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-500"}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`rounded-full border px-3 py-1.5 font-semibold ${filter === f ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"}`}>
               {f === "all" ? "Все" : f === "important" ? "Важное" : "Оффтоп"}
             </button>
           ))}
@@ -260,43 +260,43 @@ export default function FeedPage() {
       </div>
 
       {sort === "near" && geoPending && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center text-[13px] text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center text-[13px] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
           Определяем ваше местоположение…
         </div>
       )}
       {sort === "near" && geoError && !geoPending && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           Не можем определить местоположение — разрешите доступ в браузере или показываем новое.
           <button onClick={requestGeo} className="ml-2 font-bold underline">Попробовать снова</button>
         </div>
       )}
 
       {loading ? (
-        <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-white shadow-sm" />)}</div>
+        <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-white shadow-sm dark:bg-slate-900" />)}</div>
       ) : loadError ? (
-        <div className="rounded-3xl border border-red-200 bg-white p-10 text-center">
+        <div className="rounded-3xl border border-red-200 bg-white p-10 text-center dark:bg-slate-900">
           <h2 className="text-lg font-extrabold">Не загрузилось</h2>
-          <p className="mt-1 text-sm text-slate-500">Проверьте соединение и попробуйте снова.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Проверьте соединение и попробуйте снова.</p>
           <button onClick={() => load()} className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">Повторить</button>
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
+        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-900">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-100">
-            <MessagesSquare className="h-7 w-7 text-lime-700" />
+            <MessagesSquare className="h-7 w-7 text-lime-700 dark:text-lime-300" />
           </span>
           <h2 className="mt-3 text-lg font-extrabold">Пока тихо</h2>
-          <p className="mt-1 text-sm text-slate-500">Станьте первым — спросите город.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Станьте первым — спросите город.</p>
           <Link href="/create" className="mt-3 inline-block rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition active:scale-95">Создать вопрос</Link>
         </div>
       ) : (
         <div className="space-y-3">
           {items.map((t) => <ThreadCard key={t.id} t={t} />)}
           {hasMore ? (
-            <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50">
+            <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
               {loadingMore ? "Загружаем…" : "Показать ещё"}
             </button>
           ) : (
-            <div className="flex items-center justify-center gap-2 py-6 text-sm text-slate-400">
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-slate-400 dark:text-slate-500">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Вы все прочитали
             </div>
           )}
