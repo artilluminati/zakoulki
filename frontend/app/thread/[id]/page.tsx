@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Heart, Eye, Flag, ImagePlus, X } from "lucide-react";
-import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub } from "@/lib/v5";
+import { fetchThread, commentThread, likeThread, reportThread, deleteComment, updateThread, updateComment, uploadCommentPhoto, uploadThreadPhoto, deletePhoto, requestHub, voteHub, createGeoPlace, fetchAttached, createThread, attachHub, searchGeoPlaces, reverseGeocode } from "@/lib/v5";
 import QuickComposer from "@/components/QuickComposer";
 import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge } from "@/components/ThreadCard";
 import HubSection from "@/components/HubSection";
@@ -17,7 +17,7 @@ import PollView from "@/components/PollView";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import type { ThreadV5 } from "@/types/v5";
+import type { ThreadV5, GeoPlaceV5 } from "@/types/v5";
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +44,11 @@ export default function ThreadPage() {
   const [editMapExpanded, setEditMapExpanded] = useState(false);
   const [editView, setEditView] = useState({ lat: 55.755, lng: 37.617, nonce: 0 });
   const [editSaving, setEditSaving] = useState(false);
+  // прикрепить точку к треду без места + убрать точку
+  const [editAddr, setEditAddr] = useState("");
+  const [editFound, setEditFound] = useState<GeoPlaceV5[]>([]);
+  const [editNewPlace, setEditNewPlace] = useState<GeoPlaceV5 | null>(null);
+  const [editRemovePlace, setEditRemovePlace] = useState(false);
   const [editCommentId, setEditCommentId] = useState<number | null>(null);
   const [editCommentBody, setEditCommentBody] = useState("");
   const canEdit = !!user && !!t && (user.id === t.author_id || user.role === "admin");
@@ -62,10 +67,23 @@ export default function ThreadPage() {
     } else {
       setEditPin(null);
       setEditVertices([]);
+      setEditAddr("");
+      setEditFound([]);
+      setEditNewPlace(null);
+      setEditRemovePlace(false);
     }
     setEditMapExpanded(false);
     setEditing(true);
   };
+
+  // поиск места для треда без точки
+  useEffect(() => {
+    if (!editing || editAddr.trim().length < 3) { setEditFound([]); return; }
+    const tm = setTimeout(async () => {
+      try { setEditFound(await searchGeoPlaces(editAddr.trim())); } catch { setEditFound([]); }
+    }, 300);
+    return () => clearTimeout(tm);
+  }, [editing, editAddr]);
 
   const saveEdit = async () => {
     if (!t || !editBody.trim() || editSaving) return;
@@ -73,7 +91,9 @@ export default function ThreadPage() {
     try {
       let placeId: number | null | undefined;
       if (t.place) {
-        if (!editAreaMode && editPin && (editPin.lat !== t.place.lat || editPin.lng !== t.place.lng)) {
+        if (editRemovePlace) {
+          placeId = 0;
+        } else if (!editAreaMode && editPin && (editPin.lat !== t.place.lat || editPin.lng !== t.place.lng)) {
           const p = await createGeoPlace({
             name: t.place.name, latitude: editPin.lat, longitude: editPin.lng,
             address: t.place.address, district: t.place.district, street: t.place.street,
@@ -95,8 +115,25 @@ export default function ThreadPage() {
             placeId = p.id;
           }
         }
+      } else if (editNewPlace) {
+        // точку добавили при правке: внешнее место сначала закрепляем в базе
+        if (editNewPlace.id > 0) {
+          placeId = editNewPlace.id;
+        } else {
+          const r = await reverseGeocode(editNewPlace.lat, editNewPlace.lng).catch(() => null);
+          const p = await createGeoPlace({
+            name: editNewPlace.name, latitude: editNewPlace.lat, longitude: editNewPlace.lng,
+            address: editNewPlace.address || r?.address || null,
+            district: editNewPlace.district || r?.district || null,
+            street: editNewPlace.street || r?.street || null,
+            city: editNewPlace.city || r?.city || t.city || null,
+            region: editNewPlace.region || r?.region || t.region || null,
+            country: editNewPlace.country || r?.country || t.country || "Россия",
+          });
+          placeId = p.id;
+        }
       }
-      await updateThread(t.id, { title: editTitle || null, body_md: editBody, ...(placeId ? { place_id: placeId } : {}) });
+      await updateThread(t.id, { title: editTitle || null, body_md: editBody, ...(placeId !== undefined ? { place_id: placeId } : {}) });
       toast("Сохранено", "success");
       setEditing(false);
       load();
@@ -359,6 +396,74 @@ export default function ThreadPage() {
                     onExpandedChange={setEditMapExpanded}
                   />
                 </div>
+                {!t.is_hub && (
+                  <button
+                    type="button"
+                    onClick={() => setEditRemovePlace(!editRemovePlace)}
+                    className={`mt-1.5 text-xs font-semibold ${editRemovePlace ? "text-amber-600" : "text-slate-400 hover:text-red-500"}`}
+                  >
+                    {editRemovePlace ? "Точка будет убрана при сохранении (нажмите, чтобы отменить)" : "Убрать точку"}
+                  </button>
+                )}
+              </div>
+            )}
+            {!t.place && (
+              <div className="mt-2 rounded-xl border border-dashed border-slate-300 p-2.5 dark:border-neutral-600">
+                <div className="mb-1.5 text-[13px] font-bold dark:text-neutral-200">
+                  {editNewPlace ? editNewPlace.name : "Прикрепить точку"}
+                </div>
+                {!editNewPlace ? (
+                  <>
+                    <input
+                      value={editAddr}
+                      onChange={(e) => setEditAddr(e.target.value)}
+                      placeholder="Найти адрес или место…"
+                      maxLength={100}
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                    />
+                    {editFound.length > 0 && (
+                      <div className="mt-1 max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-neutral-700">
+                        {editFound.slice(0, 6).map((p) => (
+                          <button
+                            key={`${p.id}-${p.name}`}
+                            type="button"
+                            onClick={() => {
+                              setEditNewPlace(p);
+                              setEditAddr("");
+                              setEditFound([]);
+                              setEditView((v) => ({ lat: p.lat, lng: p.lng, nonce: v.nonce + 1 }));
+                            }}
+                            className="block w-full truncate px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50 dark:hover:bg-neutral-800"
+                          >
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-1.5 h-36 w-full overflow-hidden rounded-xl">
+                      <MiniMap
+                        center={editView}
+                        pin={{ lat: editNewPlace.lat, lng: editNewPlace.lng }}
+                        onMove={(la, ln) => {
+                          setEditNewPlace((prev) => (prev ? { ...prev, lat: la, lng: ln } : prev));
+                          setEditView((v) => ({ lat: la, lng: ln, nonce: v.nonce }));
+                        }}
+                        expanded={false}
+                        onExpandedChange={() => {}}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditNewPlace(null)}
+                      className="text-xs font-semibold text-slate-400 hover:text-red-500"
+                    >
+                      Выбрать другое
+                    </button>
+                  </>
+                )}
               </div>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
