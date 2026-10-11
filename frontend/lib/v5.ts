@@ -43,6 +43,11 @@ export async function scoreThread(id: number, value: 1 | -1) {
   return res.data as { score: number; my_vote: number };
 }
 
+export async function scoreComment(commentId: number, value: 1 | -1) {
+  const res = await api.post(`/threads/comments/${commentId}/score`, { value });
+  return res.data as { score: number; my_vote: number };
+}
+
 export async function bookmarkThread(id: number) {
   const res = await api.post(`/threads/${id}/bookmark`);
   return res.data as { bookmarked: boolean };

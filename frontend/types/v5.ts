@@ -63,6 +63,8 @@ export interface ThreadCommentV5 {
   author_badge?: string | null;
   body_md: string;
   body_html: string;
+  score?: number;
+  my_vote?: number | null;
   photos?: { id: number; url: string; preview_url?: string }[];
   created_at: string;
 }

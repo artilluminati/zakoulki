@@ -456,12 +456,18 @@ def get_thread(thread_id: int, db: Session = Depends(get_db),
         raise HTTPException(404, "Тред не найден")
     t.views += 1; db.commit()
     out = _thread_out(t, db, user.id if user else None)
+    from app.models.thread_comment import CommentVote
+    my_votes = {}
+    if user:
+        my_votes = {v.comment_id: v.value for v in
+                    db.query(CommentVote).filter(CommentVote.user_id == user.id).all()}
     comments = db.query(ThreadComment).filter(ThreadComment.thread_id == thread_id).order_by(ThreadComment.id).all()
     out["comments"] = [{
         "id": c.id, "parent_id": c.parent_id, "author_id": c.author_id,
         "author_username": (db.get(User, c.author_id).username if db.get(User, c.author_id) else None),
         "author_badge": (db.get(User, c.author_id).badge if db.get(User, c.author_id) else None),
         "body_md": c.body_md, "body_html": c.body_html, "created_at": c.created_at,
+        "score": c.score, "my_vote": my_votes.get(c.id, 0),
         "photos": [{"id": p.id, **_photo_urls(p.file_name)}
                    for p in db.query(ThreadPhoto).filter(ThreadPhoto.comment_id == c.id).all()],
     } for c in comments]
@@ -537,6 +543,37 @@ def update_thread(thread_id: int, data: ThreadUpdate, db: Session = Depends(get_
 
 class CommentUpdate(BaseModel):
     body_md: str = Field(min_length=1, max_length=2000)
+
+
+class CommentVoteIn(BaseModel):
+    value: int = Field(ge=-1, le=1, description="+1 вверх, -1 вниз")
+
+
+@router.post("/comments/{comment_id}/score")
+def score_comment(comment_id: int, data: CommentVoteIn, db: Session = Depends(get_db),
+                  user: User = Depends(get_current_user)):
+    """Голос стрелкой на ответе: повторный клик снимает, смена — переворачивает."""
+    from app.models.thread_comment import CommentVote
+    c = db.get(ThreadComment, comment_id)
+    if not c:
+        raise HTTPException(404, "Ответ не найден")
+    if data.value not in (1, -1):
+        raise HTTPException(400, "Голос: +1 или -1")
+    ex = db.get(CommentVote, {"user_id": user.id, "comment_id": comment_id})
+    if ex and ex.value == data.value:
+        c.score -= ex.value
+        db.delete(ex)
+        my_vote = 0
+    elif ex:
+        c.score += 2 * data.value
+        ex.value = data.value
+        my_vote = data.value
+    else:
+        db.add(CommentVote(user_id=user.id, comment_id=comment_id, value=data.value))
+        c.score += data.value
+        my_vote = data.value
+    db.commit()
+    return {"score": c.score, "my_vote": my_vote}
 
 
 @router.patch("/comments/{comment_id}")

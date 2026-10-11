@@ -52,6 +52,7 @@ export default function ThreadPage() {
   const [editRemovePlace, setEditRemovePlace] = useState(false);
   const [editCommentId, setEditCommentId] = useState<number | null>(null);
   const [editCommentBody, setEditCommentBody] = useState("");
+  const [editCommentPhotos, setEditCommentPhotos] = useState<{ id: number; url: string; preview_url?: string }[]>([]);
   const canEdit = !!user && !!t && (user.id === t.author_id || user.role === "admin");
 
   const startEdit = () => {
@@ -678,10 +679,11 @@ export default function ThreadPage() {
                 <span className="font-bold text-slate-600 dark:text-neutral-300">{c.author_username ? `@${c.author_username}` : "кто-то"}</span>
                 {c.author_badge === "official" && <OfficialBadge />}
                 <span>· {timeAgo(c.created_at)}</span>
+                <ScoreArrows id={c.id} score={c.score ?? 0} myVote={c.my_vote} comment />
                 {(user && (user.id === c.author_id || user.role === "admin")) && (
                   <>
                     <button
-                      onClick={() => { setEditCommentId(c.id); setEditCommentBody(c.body_md); }}
+                      onClick={() => { setEditCommentId(c.id); setEditCommentBody(c.body_md); setEditCommentPhotos(c.photos ?? []); }}
                       className="ml-auto hover:text-slate-700"
                     >
                       Редактировать
@@ -698,7 +700,46 @@ export default function ThreadPage() {
               {editCommentId === c.id ? (
                 <div className="mt-1.5">
                   <MdEditor value={editCommentBody} onChange={setEditCommentBody} compact />
+                  {editCommentPhotos.length > 0 && (
+                    <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+                      {editCommentPhotos.map((p) => (
+                        <span key={p.id} className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-neutral-800">
+                          <PhotoImg src={p.preview_url ?? p.url} fit="contain" className="h-16 w-full" />
+                          <button
+                            type="button"
+                            aria-label="Убрать фото"
+                            onClick={async () => {
+                              try {
+                                await deletePhoto(p.id);
+                                setEditCommentPhotos((prev) => prev.filter((x) => x.id !== p.id));
+                              } catch { toast("Не удалилось", "error"); }
+                            }}
+                            className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-1 text-white"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-1.5 flex gap-2">
+                    <label className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-slate-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
+                      + Фото
+                      <input
+                        type="file" accept="image/*" multiple className="hidden"
+                        onChange={async (e) => {
+                          const list = Array.from(e.target.files ?? []);
+                          e.target.value = "";
+                          if (list.length === 0) return;
+                          try {
+                            const uploaded = await Promise.all(list.map((f) => uploadCommentPhoto(c.id, f)));
+                            setEditCommentPhotos((prev) => [...prev, ...uploaded]);
+                          } catch {
+                            toast("Какое-то фото не загрузилось", "error");
+                          }
+                        }}
+                      />
+                    </label>
                     <button onClick={() => saveCommentEdit(c.id)} disabled={!editCommentBody.trim()} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40">Сохранить</button>
                     <button onClick={() => setEditCommentId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-neutral-700">Отмена</button>
                   </div>

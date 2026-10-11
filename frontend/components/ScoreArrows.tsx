@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { scoreThread } from "@/lib/v5";
+import { scoreThread, scoreComment } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 
 /** Голоса как на реддите: стрелка вверх/вниз, счёт между ними. */
-export default function ScoreArrows({ id, score, myVote, vertical = false }: {
+export default function ScoreArrows({ id, score, myVote, vertical = false, comment = false }: {
   id: number;
   score: number;
   myVote?: number | null;
   vertical?: boolean;
+  comment?: boolean;
 }) {
   const toast = useToast();
   const [value, setValue] = useState(score ?? 0);
@@ -26,7 +27,9 @@ export default function ScoreArrows({ id, score, myVote, vertical = false }: {
     setMine(next);
     setValue(prevValue + (next - prevMine));
     try {
-      const r = await scoreThread(id, next === 0 ? (mine === 1 ? 1 : -1) : next);
+      const r = comment
+        ? await scoreComment(id, next === 0 ? (mine === 1 ? 1 : -1) : next)
+        : await scoreThread(id, next === 0 ? (mine === 1 ? 1 : -1) : next);
       setValue(r.score);
       setMine(r.my_vote);
     } catch (e) {
