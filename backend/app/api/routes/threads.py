@@ -488,6 +488,25 @@ class HubCreate(BaseModel):
     title: str = Field(min_length=2, max_length=150)
 
 
+@router.get("/hubs")
+def search_hubs(q: str | None = Query(None, min_length=2, max_length=100),
+                limit: int = Query(20, le=50), db: Session = Depends(get_db)):
+    """Все разделы для карточки выбора: поиск по названию и месту. Масштабируется списком."""
+    query = db.query(Thread).filter(Thread.is_hub == True)  # noqa: E712
+    if q:
+        like = f"%{q}%"
+        query = (query.outerjoin(GeoPlace, Thread.place_id == GeoPlace.id)
+                 .filter((Thread.title.ilike(like)) | (GeoPlace.name.ilike(like))))
+    hubs = query.order_by(Thread.id.desc()).limit(limit).all()
+    out = []
+    for h in hubs:
+        members = (db.query(Thread).filter(Thread.hub_id == h.id, Thread.is_hub_talk == False).count())
+        out.append({"id": h.id, "title": h.title or "Раздел",
+                    "place": {"id": h.place.id, "name": h.place.name} if h.place else None,
+                    "members": members})
+    return out
+
+
 @router.post("/hubs", status_code=201)
 def create_hub(data: HubCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Создать раздел места. Готов сразу; споры — через жалобы."""

@@ -142,6 +142,15 @@ export async function fetchSimilarPlaces(name: string, lat?: number, lng?: numbe
 
 export interface PlaceHub { id: number; title: string; author?: string | null; talk_id?: number | null; members: number; }
 
+export interface HubListItem { id: number; title: string; place?: { id: number; name: string } | null; members: number; }
+
+export async function searchHubs(q?: string) {
+  const res = await api.get<HubListItem[]>("/threads/hubs", { params: q?.trim() ? { q: q.trim() } : {} });
+  return res.data;
+}
+
+export interface PickedHub { id: number; title: string; placeId: number; placeName: string; }
+
 export async function fetchPlaceHubs(placeId: number) {
   const res = await api.get<PlaceHub[]>(`/geo-places/${placeId}/hubs`);
   return res.data;

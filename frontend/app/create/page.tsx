@@ -8,8 +8,9 @@ import MdEditor from "@/components/editor/MdEditor";
 import TagPicker from "@/components/TagPicker";
 import MiniMap from "@/components/MiniMap";
 import PasteButton from "@/components/PasteButton";
+import HubPicker from "@/components/HubPicker";
 import PollBuilder, { type PollDraft } from "@/components/PollBuilder";
-import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode, fetchSimilarPlaces, fetchPlaceHubs, createHub, attachHub, fetchThread, type PlaceHub } from "@/lib/v5";
+import { createThread, createGeoPlace, fetchNearbyThreads, searchGeoPlaces, uploadThreadPhoto, reverseGeocode, fetchSimilarPlaces, attachHub, fetchThread, type PickedHub } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import { useScope, scopeLabel } from "@/lib/scope";
@@ -99,11 +100,8 @@ export default function CreatePage() {
   // (сам эффект ниже, после всех useState — см. перед pickFound)
   const [tags, setTags] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
-  // разделы места: прикрепить вопрос сразу или создать новый
-  const [placeHubs, setPlaceHubs] = useState<PlaceHub[]>([]);
-  const [pickedHubId, setPickedHubId] = useState<number | null>(null);
-  const [hubTitle, setHubTitle] = useState("");
-  const [hubBusy, setHubBusy] = useState(false);
+  // выбранный раздел: место и регион берутся из него
+  const [pickedHub, setPickedHub] = useState<PickedHub | null>(null);
 
   // черновик: загрузка один раз + автосохранение (точка и теги тоже, фото — нет)
   useEffect(() => {
@@ -161,23 +159,14 @@ export default function CreatePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // разделы выбранного места — для прикрепления вопроса сразу
-  useEffect(() => {
-    if (!place || place.id <= 0) { setPlaceHubs([]); setPickedHubId(null); return; }
-    fetchPlaceHubs(place.id).then((list) => {
-      setPlaceHubs(list);
-      setPickedHubId((prev) => (prev && list.some((h) => h.id === prev) ? prev : null));
-    }).catch(() => setPlaceHubs([]));
-  }, [place]);
-
-  // вопрос изнутри уголка (?hub=): подтягиваем место и привязку
+  // вопрос изнутри раздела (?hub=): место и привязка из раздела
   useEffect(() => {
     const hubId = params.get("hub");
     if (!hubId) return;
     fetchThread(hubId).then((h) => {
       if (h.is_hub && h.place) {
         setPlace(h.place);
-        setPickedHubId(h.id);
+        setPickedHub({ id: h.id, title: h.title || "Раздел", placeId: h.place.id, placeName: h.place.name });
         goView(h.place.lat, h.place.lng, 15);
       }
     }).catch(() => { /* ignore */ });
@@ -276,6 +265,7 @@ export default function CreatePage() {
     setSaving(true); setError(null);
     try {
       let placeId = place && place.id > 0 && !adjust ? place.id : null;
+      if (!placeId && pickedHub) placeId = pickedHub.placeId;
       if (!placeId && vertices.length >= 3) {
         const c = centroid(vertices)!;
         const r = await reverseGeocode(c.latitude, c.longitude).catch(() => null);
@@ -322,8 +312,8 @@ export default function CreatePage() {
       for (const f of files) {
         try { await uploadThreadPhoto(t.id, f); } catch { failedPhotos += 1; }
       }
-      if (pickedHubId) {
-        try { await attachHub(t.id, pickedHubId); } catch { /* вопрос опубликован, привязка не сработала */ }
+      if (pickedHub) {
+        try { await attachHub(t.id, pickedHub.id); } catch { /* вопрос опубликован, привязка не сработала */ }
       }
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
       if (failedPhotos > 0) toast(`Опубликовано, но ${failedPhotos} фото не загрузилось`, "error");
@@ -418,16 +408,14 @@ export default function CreatePage() {
         </div>
       )}
 
-      {pickedHubId ? (
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm dark:border-emerald-800 dark:bg-emerald-950/40">
+      <HubPicker value={pickedHub} onChange={setPickedHub} />
+      {pickedHub ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900">
           <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="min-w-0 flex-1 truncate">
-            Вопрос в раздел <b>«{placeHubs.find((h) => h.id === pickedHubId)?.title ?? "…"}»</b>
-            <span className="text-slate-500 dark:text-neutral-400"> — место уже задано</span>
+            <b>{pickedHub.placeName}</b>
+            <span className="text-slate-500 dark:text-neutral-400"> — место раздела, менять не нужно</span>
           </span>
-          <button type="button" onClick={() => setPickedHubId(null)} className="shrink-0 text-[13px] font-bold text-emerald-700 hover:underline dark:text-emerald-300">
-            Сменить
-          </button>
         </div>
       ) : (
         <>
@@ -526,54 +514,6 @@ export default function CreatePage() {
             {!place && (
               <div className="mt-0.5 text-[11px] text-emerald-600/70 dark:text-emerald-400/70">Метку можно перетащить</div>
             )}
-          </div>
-        )}
-        {place && place.id > 0 && (
-          <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm dark:border-emerald-800 dark:bg-emerald-950/40">
-            <div className="font-bold text-emerald-800 dark:text-emerald-300">Раздел места</div>
-            {placeHubs.length === 0 && (
-              <div className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">Уголков пока нет — вопрос попадёт в общий список.</div>
-            )}
-            {placeHubs.map((h) => (
-              <label key={h.id} className="mt-1 flex cursor-pointer items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5 text-[13px] dark:bg-neutral-800/70">
-                <input
-                  type="radio"
-                  name="hub"
-                  checked={pickedHubId === h.id}
-                  onChange={() => setPickedHubId(pickedHubId === h.id ? null : h.id)}
-                  className="accent-emerald-600"
-                />
-                <span className="min-w-0 flex-1 truncate font-semibold">{h.title}</span>
-                <span className="shrink-0 text-[11px] text-slate-400 dark:text-neutral-500">{h.members} вопр.</span>
-              </label>
-            ))}
-            <div className="mt-1.5 flex gap-1.5">
-              <input
-                value={hubTitle}
-                onChange={(e) => setHubTitle(e.target.value)}
-                placeholder="Новый раздел…"
-                maxLength={150}
-                className="h-8 min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-2 text-xs outline-none focus:border-emerald-500 dark:border-emerald-800 dark:bg-neutral-900"
-              />
-              <button
-                type="button"
-                disabled={hubBusy || hubTitle.trim().length < 2}
-                onClick={async () => {
-                  setHubBusy(true);
-                  try {
-                    const h = await createHub(place.id, hubTitle.trim());
-                    setPlaceHubs((prev) => [...prev, { id: h.id, title: h.title || hubTitle.trim(), members: 0 }]);
-                    setPickedHubId(h.id);
-                    setHubTitle("");
-                    toast("Раздел создан", "success");
-                  } catch { toast("Не получилось", "error"); }
-                  finally { setHubBusy(false); }
-                }}
-                className="shrink-0 rounded-lg bg-emerald-600 px-2.5 text-xs font-bold text-white disabled:opacity-40"
-              >
-                Создать
-              </button>
-            </div>
           </div>
         )}
         <div className="mt-2">
