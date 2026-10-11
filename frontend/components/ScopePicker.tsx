@@ -2,9 +2,9 @@
 /* eslint-disable react-hooks/set-state-in-effect -- дебаунс-поиск и чтение сохраненного scope */
 
 import { useEffect, useState } from "react";
-import { MapPin, X, Search } from "lucide-react";
+import { MapPin, X, Search, House, History } from "lucide-react";
 import { api } from "@/lib/api";
-import { scopeLabel, type Scope } from "@/lib/scope";
+import { scopeLabel, getHomeCity, getRecentScopes, pushRecentScope, type Scope } from "@/lib/scope";
 
 interface SuggestItem { name: string; count: number; level: "city" | "district" | "region"; }
 
@@ -41,6 +41,24 @@ export default function ScopePicker({ value, onChange }: {
 
   const close = () => { setQ(""); setItems([]); setHi(0); };
 
+  // применение выбора: сразу пишем в недавние
+  const apply = (s: Scope) => {
+    pushRecentScope(s);
+    setTick((t) => t + 1);
+    onChange(s);
+  };
+
+  // крестик снимает один уровень: район -> город -> область -> всё
+  const stepUp = () => {
+    if (value.any?.length || value.anyLabel) { apply({}); close(); return; }
+    const rest: Scope = { ...value };
+    if (value.district) delete rest.district;
+    else if (value.city) delete rest.city;
+    else if (value.region) delete rest.region;
+    else { apply({}); close(); return; }
+    apply(rest); close();
+  };
+
   const pick = async (name: string, level: "city" | "district" | "region") => {
     setResolving(true);
     try {
@@ -48,9 +66,9 @@ export default function ScopePicker({ value, onChange }: {
       const r = res.data;
       if (!r.city && !r.region && !r.district) {
         // такого нет в базе — свободный фильтр: сработает где встретится
-        onChange({ any: [name], anyLabel: name });
+        apply({ any: [name], anyLabel: name });
       } else {
-        onChange({
+        apply({
           ...(r.country ? { country: r.country } : {}),
           ...(r.region ? { region: r.region } : {}),
           ...(r.city ? { city: r.city } : {}),
@@ -63,7 +81,7 @@ export default function ScopePicker({ value, onChange }: {
   };
 
   const pickCombo = (city: string, region: string) => {
-    onChange({ country: "Россия", region, city, any: [city, region], anyLabel: `${city} и ${region}` });
+    apply({ country: "Россия", region, city, any: [city, region], anyLabel: `${city} и ${region}` });
     close();
   };
 
@@ -89,6 +107,13 @@ export default function ScopePicker({ value, onChange }: {
 
   const hasScope = !!(value.country || value.region || value.city || value.district || value.any?.length || value.anyLabel);
 
+  // быстрые строки, пока ничего не введено: домашний город + недавние.
+  // tick обновляет их после каждого выбора (пикер на создании не размонтируется).
+  const [tick, setTick] = useState(0);
+  const homeCity = typeof window === "undefined" ? null : getHomeCity();
+  const recents = typeof window === "undefined" ? [] : getRecentScopes();
+  void tick;
+
   return (
     <div className="space-y-2">
       {hasScope && (
@@ -97,8 +122,9 @@ export default function ScopePicker({ value, onChange }: {
           <span className="min-w-0 flex-1 truncate font-bold text-emerald-800 dark:text-emerald-300">{scopeLabel(value)}</span>
           <button
             type="button"
-            onClick={() => onChange({})}
-            aria-label="Сбросить"
+            onClick={stepUp}
+            aria-label="Сбросить уровень"
+            title="Снять уровень: район → город → всё"
             className="rounded-full p-1 text-emerald-600/60 hover:bg-emerald-100 dark:text-emerald-400/60 dark:hover:bg-emerald-950"
           >
             <X className="h-4 w-4" />
@@ -133,6 +159,33 @@ export default function ScopePicker({ value, onChange }: {
         className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800"
       />
       {resolving && <div className="text-center text-xs text-slate-400 dark:text-neutral-500">Определяем…</div>}
+      {q.trim().length < 2 && (homeCity || recents.length > 0) && (
+        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-neutral-700">
+          {homeCity && (
+            <button
+              type="button"
+              onClick={() => pick(homeCity, "city")}
+              className="flex w-full items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2 text-left dark:border-neutral-800 dark:bg-neutral-800"
+            >
+              <House className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="min-w-0 flex-1 truncate text-sm font-bold">{homeCity}</span>
+              <span className="shrink-0 text-[11px] text-slate-400 dark:text-neutral-500">домашний</span>
+            </button>
+          )}
+          {recents.filter((r) => !homeCity || r.label !== homeCity).map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              onClick={() => { apply(r.scope); close(); }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-neutral-800"
+            >
+              <History className="h-4 w-4 shrink-0 text-slate-300 dark:text-neutral-500" />
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.label}</span>
+              <span className="shrink-0 text-[11px] text-slate-400 dark:text-neutral-500">недавний</span>
+            </button>
+          ))}
+        </div>
+      )}
       {q.trim().length >= 2 && (
         <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-neutral-700">
           <button

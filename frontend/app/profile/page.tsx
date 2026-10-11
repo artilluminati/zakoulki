@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect -- чтение домашнего города и дебаунс-подсказки */
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -6,6 +7,7 @@ import { useEffect, useState } from "react";
 import { fetchThreads, fetchBookmarks } from "@/lib/v5";
 import { api } from "@/lib/api";
 import { ThemeToggle } from "@/lib/theme";
+import { getHomeCity, setHomeCity } from "@/lib/scope";
 import ThreadCard, { timeAgo, OfficialBadge } from "@/components/ThreadCard";
 import type { ThreadV5 } from "@/types/v5";
 
@@ -20,6 +22,23 @@ export default function ProfilePage() {
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [saved, setSaved] = useState<ThreadV5[]>([]);
   const [tab, setTab] = useState<"mine" | "saved">("mine");
+  // домашний город: подсказки региона и стартовый скоуп
+  const [home, setHome] = useState<string | null>(null);
+  const [homeQ, setHomeQ] = useState("");
+  const [homeFound, setHomeFound] = useState<{ name: string }[]>([]);
+  useEffect(() => {
+    setHome(getHomeCity());
+  }, []);
+  useEffect(() => {
+    if (homeQ.trim().length < 2) { setHomeFound([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const r = await api.get("/geo-places/suggest", { params: { level: "city", q: homeQ.trim(), limit: 5 } });
+        setHomeFound(r.data ?? []);
+      } catch { setHomeFound([]); }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [homeQ]);
 
   useEffect(() => {
     if (user) {
@@ -67,6 +86,46 @@ export default function ProfilePage() {
         <div className="mt-3 flex gap-4 text-sm">
           <span><b>{mine.length}</b> <span className="text-slate-500 dark:text-neutral-400">вопросов</span></span>
           {user.role === "admin" && <Link href="/admin" className="font-bold text-emerald-700 dark:text-emerald-300">Админка →</Link>}
+        </div>
+      </div>
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+        <div className="flex items-center gap-2 text-sm font-extrabold dark:text-neutral-100">
+          Домашний город
+          {home && (
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[13px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">{home}</span>
+          )}
+          {home && (
+            <button
+              onClick={() => { setHomeCity(null); setHome(null); }}
+              className="ml-auto text-[13px] font-semibold text-slate-400 hover:text-red-500"
+            >
+              Убрать
+            </button>
+          )}
+        </div>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">Подсказывается первым в выборе региона и становится стартовым.</p>
+        <div className="relative mt-2">
+          <input
+            value={homeQ}
+            onChange={(e) => setHomeQ(e.target.value)}
+            placeholder="Найти город…"
+            maxLength={100}
+            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+          />
+          {homeFound.length > 0 && (
+            <div className="absolute inset-x-0 top-11 z-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+              {homeFound.map((c) => (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => { setHomeCity(c.name); setHome(c.name); setHomeQ(""); setHomeFound([]); }}
+                  className="block w-full truncate px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex gap-1.5">
