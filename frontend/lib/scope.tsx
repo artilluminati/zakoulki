@@ -15,7 +15,10 @@ export interface Scope {
 const KEY = "zakoulki_scope_v1";
 const HOME_KEY = "zakoulki_home_city";
 const RECENT_KEY = "zakoulki_recent_scopes";
+const VISIT_KEY = "zakoulki_last_visit";
 const RECENT_MAX = 4;
+// вернулся спустя дольше — считаем, что давно не заходил, и сажаем на домашний регион
+const AWAY_MS = 24 * 60 * 60 * 1000;
 
 export function scopeLabel(s: Scope): string {
   return s.anyLabel ?? s.district ?? s.city ?? s.region ?? s.country ?? "Вся Россия";
@@ -71,19 +74,34 @@ interface ScopeCtx {
 const Ctx = createContext<ScopeCtx>({ scope: {}, setScope: () => {}, clearScope: () => {} });
 
 export function ScopeProvider({ children }: { children: ReactNode }) {
-  // по умолчанию — вся Россия (пустой скоуп = без фильтра)
-  const [scope, setScopeState] = useState<Scope>({});
+  // по умолчанию — домашний город, иначе вся Россия (пустой скоуп = без фильтра)
+  const [scope, setScopeState] = useState<Scope>(() => {
+    try {
+      const h = typeof window !== "undefined" ? localStorage.getItem(HOME_KEY) : null;
+      return h ? { city: h } : {};
+    } catch { return {}; }
+  });
 
   useEffect(() => {
     try {
+      const now = Date.now();
+      const last = Number(localStorage.getItem(VISIT_KEY) || 0);
+      localStorage.setItem(VISIT_KEY, String(now));
+      const home = getHomeCity();
+      // давно не заходил и есть домашний — возвращаем домой
+      if (home && last > 0 && now - last > AWAY_MS) {
+        const init = { city: home } as Scope;
+        setScopeState(init);
+        localStorage.setItem(KEY, JSON.stringify(init));
+        return;
+      }
       const raw = localStorage.getItem(KEY);
       if (raw) {
         setScopeState(normalizeScope(JSON.parse(raw) as Scope));
       } else {
         // сохранённого нет — стартуем с домашнего города, если задан
-        const home = getHomeCity();
-        const init = home ? { city: home } : {};
-        setScopeState(init as Scope);
+        const init = home ? ({ city: home } as Scope) : {};
+        setScopeState(init);
         localStorage.setItem(KEY, JSON.stringify(init));
       }
     } catch { /* ignore */ }
