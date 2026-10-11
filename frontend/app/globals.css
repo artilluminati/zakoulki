@@ -77,6 +77,19 @@ button:disabled {
 .thread-html a.tag:hover { text-decoration: underline; }
 .thread-html a.user-mention { color: #0f172a; font-weight: 700; text-decoration: none; }
 .dark .thread-html a.user-mention { color: #f1f5f9; }
+/* чипы своих постов/разделов в тексте */
+.thread-html a.postlink {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #f1f5f9; color: #334155;
+  border: 1px solid #cbd5e1; border-radius: 999px;
+  padding: 1px 10px 1px 6px; font-size: 13px; font-weight: 600;
+  text-decoration: none; white-space: nowrap; vertical-align: baseline;
+}
+.thread-html a.postlink[data-kind="hub"] {
+  background: #ecfdf5; color: #047857; border-color: #a7f3d0;
+}
+.dark .thread-html a.postlink { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+.dark .thread-html a.postlink[data-kind="hub"] { background: #022c22; color: #6ee7b7; border-color: #065f46; }
 .thread-html a.user-mention:hover { text-decoration: underline; }
 
 /* клиентское превью редактора */
@@ -96,6 +109,10 @@ button:disabled {
 .dark .pv-preview a { color: #6ee7b7; }
 .pv-place { display: inline-block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 999px; padding: 0 8px; font-size: 13px; font-weight: 600; }
 .dark .pv-place { background: #022c22; color: #6ee7b7; border-color: #065f46; }
+.pv-postlink { display: inline-block; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 999px; padding: 0 8px; font-size: 13px; font-weight: 600; }
+.dark .pv-postlink { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+.pv-postlink.pv-hub { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.dark .pv-postlink.pv-hub { background: #022c22; color: #6ee7b7; border-color: #065f46; }
 .pv-user { font-weight: 700; color: #0f172a; }
 .dark .pv-user { color: #f1f5f9; }
 .pv-tag { color: #047857; font-weight: 600; }

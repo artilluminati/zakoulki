@@ -1,7 +1,17 @@
 /** Клиентское превью markdown: сначала escape, потом оформление. XSS-safe по построению. */
 
+import { INTERNAL_HOSTS } from "./links";
+
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const HOST_ALT = INTERNAL_HOSTS.map((h) => h.replace(/\./g, "\\.")).join("|");
+
+function postlinkChip(kind: string, id: string, label: string): string {
+  const hub = kind === "hub";
+  const text = label || (hub ? `Раздел #${id}` : `Вопрос #${id}`);
+  return `<span class="pv-postlink${hub ? " pv-hub" : ""}">${text}</span>`;
 }
 
 function inline(src: string): string {
@@ -14,8 +24,14 @@ function inline(src: string): string {
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
   s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>");
-  // ссылки [текст](url) — только http(s)
-  s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  // ссылки [текст](url) — только http(s); свои треды/разделы — чипом
+  s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, (m, text, url) => {
+    const inner = String(url).match(new RegExp(`^https?://(?:${HOST_ALT})/((?:thread|hub))/(\\d+)`, "i"));
+    if (inner) return postlinkChip(inner[1].toLowerCase(), inner[2], text);
+    return `<a href="${url}" target="_blank" rel="noreferrer">${text}</a>`;
+  });
+  // голые ссылки на свои треды/разделы — тоже чипом
+  s = s.replace(new RegExp(`https?://(?:${HOST_ALT})/((?:thread|hub))/(\\d+)(?![\\w/-])`, "gi"), (m, kind, id) => postlinkChip(kind.toLowerCase(), id, ""));
   // теги #слово (кириллица и латиница) — только после пробела/скобки, чтобы не ломать заголовки
   s = s.replace(/([\s(])#([а-яА-ЯёЁa-zA-Z0-9_]{2,50})/g, '$1<span class="pv-tag">#$2</span>');
   return s;

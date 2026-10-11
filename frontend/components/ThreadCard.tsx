@@ -3,7 +3,7 @@
 import { memo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, MessageCircle, Eye, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, MessagesSquare } from "lucide-react";
+import { MapPin, MessageCircle, Eye, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, MessagesSquare, FileText } from "lucide-react";
 import ScoreArrows from "@/components/ScoreArrows";
 import type { ThreadV5 } from "@/types/v5";
 import { reportThread, bookmarkThread } from "@/lib/v5";
@@ -91,16 +91,33 @@ export const ThreadHtml = memo(function ThreadHtml({ html, placePreview }: { htm
     }
   };
 
-  // грубо парсим чипы мест регуляркой — без dangerouslySetInnerHTML для всего
-  const parts = html.split(/(<a class="place" data-place-id="\d+" href="[^"]*">.*?<\/a>)/g);
+  // грубо парсим чипы мест и постов регуляркой — без dangerouslySetInnerHTML для всего
+  const parts = html.split(/(<a class="(?:place|postlink)"[^>]*>.*?<\/a>)/g);
   return (
     <div className="thread-html text-[15px] leading-relaxed" onClick={onNav}>
       {parts.map((p, i) => {
-        const m = p.match(/data-place-id="(\d+)".*?>(.*?)<\/a>/);
-        if (!m) return <span key={i} dangerouslySetInnerHTML={{ __html: p }} />;
-        const id = Number(m[1]);
-        const label = m[2].replace("📍", "");
-        const info = placePreview?.[id];
+        const lm = p.match(/data-thread-id="(\d+)" data-kind="(thread|hub)".*?>(.*?)<\/a>/);
+        if (lm) {
+          const id = Number(lm[1]);
+          const isHubLink = lm[2] === "hub";
+          const label = lm[3] || (isHubLink ? `Раздел #${id}` : `Вопрос #${id}`);
+          return (
+            <Link
+              key={i}
+              href={`/${isHubLink ? "hub" : "thread"}/${id}`}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${isHubLink ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"}`}
+            >
+              {isHubLink ? <MessagesSquare className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+              {label}
+            </Link>
+          );
+        }
+        const pm = p.match(/data-place-id="(\d+)".*?>(.*?)<\/a>/);
+        if (!pm) return <span key={i} dangerouslySetInnerHTML={{ __html: p }} />;
+        {
+          const id = Number(pm[1]);
+          const label = pm[2].replace("📍", "");
+          const info = placePreview?.[id];
         return (
           <span key={i} className="relative inline-block">
             <button
@@ -133,6 +150,7 @@ export const ThreadHtml = memo(function ThreadHtml({ html, placePreview }: { htm
             )}
           </span>
         );
+        }
       })}
     </div>
   );

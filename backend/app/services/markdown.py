@@ -13,7 +13,14 @@ except ImportError:
     HAS_LIBS = False
 
 ALLOWED_TAGS = ["p", "br", "strong", "em", "code", "pre", "blockquote", "ul", "ol", "li", "a", "h1", "h2", "h3"]
-ALLOWED_ATTRS = {"a": ["href", "class", "data-place-id", "data-user-id", "data-tag"]}
+ALLOWED_ATTRS = {"a": ["href", "class", "data-place-id", "data-user-id", "data-tag", "data-thread-id", "data-kind"]}
+
+# Свои хосты: ссылки вида HOST/thread/123 и HOST/hub/45 превращаем в чипы
+# постов/разделов. При переезде на другой домен — дописать сюда.
+INTERNAL_HOSTS = {"zakoulki.serveousercontent.com"}
+INTERNAL_LINK_RE = re.compile(
+    r'<a href="(?:https?://([^/"\s]+))?/(thread|hub)/(\d+)[^"]*">([^<]*)</a>'
+)
 USER_RE = re.compile(r"@\[(\d+):([^\]]+)\]")  # legacy, для старых записей
 PLAIN_USER_RE = re.compile(r"(?<![\wа-яА-ЯёЁ@\[])@([а-яА-ЯёЁa-zA-Z0-9_]{2,50})")
 PLACE_RE = re.compile(r"\+\[(\d+):([^\]]+)\]")
@@ -73,6 +80,17 @@ def render_markdown(raw_md: str, comments_mode: bool = False) -> tuple[str, dict
         r'<a class="tag" href="/tag/\1">#\1</a>',
         html,
     )
+
+    def _postlink(m: "re.Match") -> str:
+        host, kind, tid, text = m.group(1), m.group(2), m.group(3), m.group(4)
+        if host and host.lower() not in INTERNAL_HOSTS:
+            return m.group(0)  # чужой домен — обычная ссылка
+        label = text.strip() or f"#{tid}"
+        return (f'<a class="postlink" data-thread-id="{tid}" data-kind="{kind}" '
+                f'href="/{kind}/{tid}">{label}</a>')
+
+    # свои посты/разделы -> чипы (полные URL своего хоста и относительные)
+    html = INTERNAL_LINK_RE.sub(_postlink, html)
     if comments_mode:
         # в комментах режем заголовки
         html = re.sub(r"</?h[1-3]>", "", html)
