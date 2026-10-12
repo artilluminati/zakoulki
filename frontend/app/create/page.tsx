@@ -317,18 +317,18 @@ export default function CreatePage() {
   };
 
   const publishHub = async () => {
-    if (title.trim().length < 2 || saving) return;
+    if (hubName.trim().length < 2 || saving) return;
     setSaving(true); setError(null);
     try {
       const placeId = await resolvePlaceId();
       if (!placeId) {
-        setError("Разделу нужно место — выберите точку или территорию ниже");
+        setError("Разделу нужно место — вернитесь на шаг «Место» и выберите точку или территорию");
         setSaving(false);
         return;
       }
-      const h = await createHub(placeId, title.trim(), body.trim() || undefined);
+      const h = await createHub(placeId, hubName.trim(), hubDesc.trim() || undefined);
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-      setCreatedHub({ id: h.id, title: h.title || title.trim() });
+      setCreatedHub({ id: h.id, title: h.title || hubName.trim() });
     } catch (e: unknown) {
       const status = (e as { response?: { status?: number; data?: { detail?: string } } })?.response?.status;
       if (status === 401) {

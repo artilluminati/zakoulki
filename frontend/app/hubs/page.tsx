@@ -1,18 +1,31 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect -- загрузка разделов с сервера */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { MapPin, MessageCircle, MessagesSquare, Plus } from "lucide-react";
+import { MapPin, MapPinned, ChevronDown, MessageCircle, MessagesSquare, Plus } from "lucide-react";
 import { fetchThreads } from "@/lib/v5";
 import type { ThreadV5 } from "@/types/v5";
 import { useScope, scopeLabel } from "@/lib/scope";
 import { scopeParams } from "@/lib/v5";
+import ScopePicker from "@/components/ScopePicker";
 
 export default function HubsPage() {
-  const { scope } = useScope();
+  const { scope, setScope } = useScope();
   const [hubs, setHubs] = useState<ThreadV5[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeRef = useRef<HTMLDivElement>(null);
+
+  // закрытие поповера региона по клику вне
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (scopeRef.current && !scopeRef.current.contains(e.target as Node)) setScopeOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [scopeOpen]);
 
   const reload = () => {
     setLoading(true);
@@ -30,9 +43,26 @@ export default function HubsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       <div>
-        <h1 className="text-xl font-extrabold dark:text-neutral-100">Разделы</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-extrabold dark:text-neutral-100">Разделы</h1>
+          <div ref={scopeRef} className="relative ml-auto">
+            <button
+              onClick={() => setScopeOpen(!scopeOpen)}
+              className="flex max-w-44 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+              <MapPinned className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="truncate">{scopeLabel(scope)}</span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-neutral-500" />
+            </button>
+            {scopeOpen && (
+              <div className="absolute right-0 z-30 mt-1 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+                <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
+              </div>
+            )}
+          </div>
+        </div>
         <p className="mt-0.5 text-sm text-slate-500 dark:text-neutral-400">
-          Разделы мест: вопросы одного двора, парка или улицы — в одном месте. {scopeLabel(scope) !== "Вся Россия" && <>Показаны: {scopeLabel(scope)}.</>}
+          Разделы мест: вопросы одного двора, парка или улицы — в одном месте.
         </p>
         <Link
           href="/create?newhub=1"
