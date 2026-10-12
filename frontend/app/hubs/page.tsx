@@ -35,7 +35,7 @@ export default function HubsPage() {
           Разделы мест: вопросы одного двора, парка или улицы — в одном месте. {scopeLabel(scope) !== "Вся Россия" && <>Показаны: {scopeLabel(scope)}.</>}
         </p>
         <Link
-          href="/create"
+          href="/create?newhub=1"
           className="mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"
         >
           <Plus className="h-4 w-4" /> Создать новый раздел

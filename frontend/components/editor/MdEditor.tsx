@@ -8,9 +8,13 @@ import type { SuggestCtl } from "./suggest";
 import { renderLine } from "@/lib/mdPreview";
 
 export default function MdEditor({
-  value, onChange, placeholder, compact = false,
+  value, onChange, placeholder, compact = false, toolbarBelow = false, minRows = 1,
 }: {
   value: string; onChange: (v: string) => void; placeholder?: string; compact?: boolean;
+  /** тулбар под полем — чтобы тултип выделения на мобилах не перекрывался */
+  toolbarBelow?: boolean;
+  /** минимальная высота поля ввода в строках */
+  minRows?: number;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -223,6 +227,7 @@ export default function MdEditor({
 
   return (
     <div ref={boxRef} className="relative overflow-visible rounded-xl border border-slate-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+      {!toolbarBelow && (
       <div className="flex items-center gap-1 overflow-x-auto rounded-t-xl border-b border-slate-100 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-800 [&>button]:shrink-0">
         <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Bold className="h-4 w-4" /></button>
         <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Italic className="h-4 w-4" /></button>
@@ -243,6 +248,7 @@ export default function MdEditor({
           поддерживается markdown
         </div>
       </div>
+      )}
       <div className="px-3 py-2">
         {lines.length === 1 && lines[0] === "" && safeActive === null ? (
           <div
@@ -258,7 +264,8 @@ export default function MdEditor({
                 key={i}
                 ref={areaRef}
                 value={line}
-                rows={1}
+                rows={Math.max(1, minRows)}
+                style={minRows > 1 ? { minHeight: `${minRows * 1.5}rem` } : undefined}
                 onChange={(e) => onLineChange(i, e.target.value)}
                 onKeyDown={(e) => onLineKey(i, e)}
                 onBlur={(e) => {
@@ -288,6 +295,18 @@ export default function MdEditor({
           )
         )}
       </div>
+      {toolbarBelow && (
+      <div className="flex items-center gap-1 overflow-x-auto rounded-b-xl border-t border-slate-100 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-800 [&>button]:shrink-0">
+        <button type="button" title="Жирный (Ctrl+B)" onClick={() => wrap("**", "**")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Bold className="h-4 w-4" /></button>
+        <button type="button" title="Курсив (Ctrl+I)" onClick={() => wrap("*", "*")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Italic className="h-4 w-4" /></button>
+        <button type="button" title="Упомянуть человека" onClick={() => insertToken("@")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><AtSign className="h-4 w-4" /></button>
+        <button type="button" title="Прикрепить место" onClick={() => insertToken("+")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><MapPin className="h-4 w-4" /></button>
+        <button type="button" title="Тег" onClick={() => insertToken("#")} className="rounded p-2 hover:bg-slate-200 dark:hover:bg-neutral-700"><Hash className="h-4 w-4" /></button>
+        <div className="ml-auto flex shrink-0 items-center px-1 text-[11px] text-slate-400 dark:text-neutral-500">
+          поддерживается markdown
+        </div>
+      </div>
+      )}
       {plusQuery !== null && safeActive !== null && (
         <PlaceSuggest query={plusQuery} onClose={() => setPlusQuery(null)} onPick={pickPlace} ctlRef={plusCtl} />
       )}
