@@ -16,6 +16,7 @@ import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import { useScope, scopeLabel } from "@/lib/scope";
 import ScopePicker from "@/components/ScopePicker";
+import { regionLine } from "@/components/ThreadCard";
 import type { GeoPlaceV5 } from "@/types/v5";
 
 function cleanSnippet(raw: string): string {
@@ -727,18 +728,35 @@ export default function CreatePage() {
 
       {isHubMode && hubStep === 3 && !createdHub && (
         <div className="space-y-3">
-          <div className="overflow-hidden rounded-2xl border border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/30">
+          <div className="overflow-hidden rounded-2xl border border-emerald-300 bg-emerald-50/50 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/30">
             <div className="border-b border-emerald-200/60 px-4 py-2 text-xs font-bold uppercase tracking-wide text-emerald-700 dark:border-emerald-800 dark:text-emerald-300">
               Так будет выглядеть раздел
             </div>
             <div className="p-4">
-              <div className="text-xl font-extrabold leading-tight dark:text-neutral-100">{hubName || "Без названия"}</div>
-              <div className="mt-1 text-xs text-slate-500 dark:text-neutral-400">
-                {place?.name ?? pendingLabel?.name ?? "Место"} · {scopeLabel(scope)}
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-extrabold text-white">
+                  {(hubName.trim() || "Р").slice(0, 1).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[16px] font-extrabold leading-snug dark:text-neutral-100">{hubName.trim() || "Без названия"}</div>
+                  <div className="truncate text-xs text-slate-500 dark:text-neutral-400">
+                    @{user?.username ?? "вы"} · только что{regionLine({ district: null, city: place?.city ?? scope.city ?? null, region: place?.region ?? scope.region ?? null, place: null }) ? ` · ${regionLine({ district: null, city: place?.city ?? scope.city ?? null, region: place?.region ?? scope.region ?? null, place: null })}` : ""}
+                  </div>
+                </div>
               </div>
               {hubDesc.trim() && (
-                <div className="mt-2 rounded-xl bg-white/60 p-3 text-sm dark:bg-neutral-900/60">{hubDesc.slice(0, 300)}{hubDesc.length > 300 ? "…" : ""}</div>
+                <div className="mt-2 text-sm leading-relaxed dark:text-neutral-200">{hubDesc.trim().slice(0, 300)}{hubDesc.trim().length > 300 ? "…" : ""}</div>
               )}
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
+                {(place || pendingGeo) && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                    <MapPin className="h-3 w-3" />{place?.name ?? pendingLabel?.name ?? "Точка на карте"}
+                  </span>
+                )}
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
+                  вопросов: 0
+                </span>
+              </div>
             </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-[13px] text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
