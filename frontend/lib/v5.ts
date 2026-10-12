@@ -163,8 +163,8 @@ export interface PlaceHub { id: number; title: string; author?: string | null; t
 
 export interface HubListItem { id: number; title: string; place?: { id: number; name: string } | null; members: number; }
 
-export async function searchHubs(q?: string) {
-  const res = await api.get<HubListItem[]>("/threads/hubs", { params: q?.trim() ? { q: q.trim() } : {} });
+export async function searchHubs(q?: string, scope?: Record<string, string | string[]>) {
+  const res = await api.get<HubListItem[]>("/threads/hubs", { params: { ...(q?.trim() ? { q: q.trim() } : {}), ...(scope ?? {}) } });
   return res.data;
 }
 

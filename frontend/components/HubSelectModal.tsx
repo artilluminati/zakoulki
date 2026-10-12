@@ -2,8 +2,10 @@
 /* eslint-disable react-hooks/set-state-in-effect -- дебаунс-поиск разделов */
 
 import { useEffect, useState } from "react";
-import { Globe2, MapPin, Plus, Search, Users, X } from "lucide-react";
-import { searchHubs, type HubListItem, type PickedHub } from "@/lib/v5";
+import { Globe2, MapPin, MapPinned, ChevronDown, Plus, Search, Users, X } from "lucide-react";
+import { searchHubs, scopeParams, type HubListItem, type PickedHub } from "@/lib/v5";
+import { useScope, scopeLabel } from "@/lib/scope";
+import ScopePicker from "@/components/ScopePicker";
 
 /** Модалка выбора раздела в духе Reddit "Choose community":
  * поиск, список разделов, пункт "Общие вопросы", кнопка создания. */
@@ -14,19 +16,22 @@ export default function HubSelectModal({ open, value, onClose, onPick, onCreateH
   onPick: (h: PickedHub | null) => void;
   onCreateHub: () => void;
 }) {
+  const { scope, setScope } = useScope();
   const [q, setQ] = useState("");
   const [hubs, setHubs] = useState<HubListItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [scopeOpen, setScopeOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     const t = setTimeout(async () => {
-      try { setHubs(await searchHubs(q)); } catch { setHubs([]); }
+      try { setHubs(await searchHubs(q, scopeParams(scope))); } catch { setHubs([]); }
       finally { setLoading(false); }
     }, q.trim().length >= 2 ? 300 : 0);
     return () => clearTimeout(t);
-  }, [open, q]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, q, scope]);
 
   // Esc закрывает
   useEffect(() => {
@@ -78,6 +83,22 @@ export default function HubSelectModal({ open, value, onClose, onPick, onCreateH
               maxLength={100}
               className="h-11 w-full rounded-full border border-slate-200 bg-slate-100 pl-9 pr-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:bg-neutral-900"
             />
+          </div>
+          <div className="relative mt-2">
+            <button
+              type="button"
+              onClick={() => setScopeOpen(!scopeOpen)}
+              className="flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+              <MapPinned className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="truncate">{scopeLabel(scope)}</span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-neutral-500" />
+            </button>
+            {scopeOpen && (
+              <div className="absolute left-0 right-0 z-30 mt-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+                <ScopePicker value={scope} onChange={(s) => { setScope(s); setScopeOpen(false); }} />
+              </div>
+            )}
           </div>
         </div>
 

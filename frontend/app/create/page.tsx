@@ -571,6 +571,11 @@ export default function CreatePage() {
         <div className="space-y-3">
           {/* выбор раздела — первым делом, модалкой */}
           <HubSelectButton value={pickedHub} onOpen={() => setHubModalOpen(true)} />
+          <div className="-mt-2 text-xs text-slate-400 dark:text-neutral-500">
+            {pickedHub
+              ? `Регион и место — из раздела «${pickedHub.title}», выбирать не нужно`
+              : `Регион: ${scopeLabel(scope)} · точка и территория — на следующем шаге «Место»`}
+          </div>
           <HubSelectModal
             open={hubModalOpen}
             value={pickedHub}

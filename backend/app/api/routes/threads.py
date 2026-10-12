@@ -456,9 +456,30 @@ class HubCreate(BaseModel):
 
 @router.get("/hubs")
 def search_hubs(q: str | None = Query(None, min_length=2, max_length=100),
-                limit: int = Query(20, le=50), db: Session = Depends(get_db)):
+                limit: int = Query(20, le=50),
+                district: str | None = Query(None), city: str | None = Query(None),
+                region: str | None = Query(None), country: str | None = Query(None),
+                geo_any: list[str] | None = Query(None),
+                db: Session = Depends(get_db)):
     """Все разделы для карточки выбора: поиск по названию и месту. Масштабируется списком."""
+    from sqlalchemy import or_ as _loc_or
     query = db.query(Thread).filter(Thread.is_hub == True)  # noqa: E712
+    if district or city or region or country or geo_any:
+        query = query.outerjoin(GeoPlace, Thread.place_id == GeoPlace.id)
+        if geo_any:
+            vals = [v for v in geo_any if v]
+            query = query.filter(_loc_or(
+                GeoPlace.city.in_(vals), GeoPlace.district.in_(vals), GeoPlace.region.in_(vals),
+                Thread.city.in_(vals), Thread.district.in_(vals), Thread.region.in_(vals),
+            ))
+        if district:
+            query = query.filter(_loc_or(GeoPlace.district == district, Thread.district == district))
+        if city:
+            query = query.filter(_loc_or(GeoPlace.city == city, Thread.city == city))
+        if region:
+            query = query.filter(_loc_or(GeoPlace.region == region, Thread.region == region))
+        if country:
+            query = query.filter(_loc_or(GeoPlace.country == country, Thread.country == country))
     if q:
         like = f"%{q}%"
         query = (query.outerjoin(GeoPlace, Thread.place_id == GeoPlace.id)
