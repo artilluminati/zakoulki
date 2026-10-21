@@ -12,10 +12,15 @@ from app.models.poll import Poll, PollOption, PollVote
 from app.models.hub_vote import HubVote
 from app.models.hub_moderator import HubModerator
 from app.models.report import Report
+from app.models.badge import UserBadge
+from app.models.donation import Donation
+from app.models.recommendation import Recommendation
+from app.models.password_reset import PasswordResetToken
 
 __all__ = [
     "User", "City", "Category",
     "GeoPlace", "Thread", "thread_categories", "ThreadComment", "CommentVote", "ThreadView",
     "Tag", "ThreadTag", "ThreadMention", "ThreadLike", "ThreadPhoto", "ThreadBookmark",
     "Poll", "PollOption", "PollVote", "HubVote", "HubModerator", "Report",
+    "UserBadge", "Donation", "Recommendation", "PasswordResetToken",
 ]

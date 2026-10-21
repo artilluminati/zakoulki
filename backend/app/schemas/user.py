@@ -14,6 +14,16 @@ class UserLogin(BaseModel):
     password: str
 
 
+class BadgeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    kind: str
+    label: str | None = None
+    meta: dict = Field(default_factory=dict)
+    created_at: datetime
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -22,5 +32,12 @@ class UserOut(BaseModel):
     email: EmailStr
     avatar: str | None = None
     role: str = "user"
-    badge: str | None = None
+    badge: str | None = None          # legacy: официальная организация
+    badges: list[BadgeOut] = Field(default_factory=list)
+    email_notifications: bool = True
     created_at: datetime
+
+
+class UserProfileUpdate(BaseModel):
+    email_notifications: bool | None = None
+    avatar: str | None = Field(default=None, max_length=255)

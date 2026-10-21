@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 import os
@@ -65,10 +65,14 @@ def _thread_out(t: Thread, db: Session, user_id: int | None = None) -> dict:
     tag_rows = (db.query(Tag).join(ThreadTag, ThreadTag.tag_id == Tag.id)
                 .filter(ThreadTag.thread_id == t.id).all())
     author = db.get(User, t.author_id)
+    from app.services.badges import badges_map_cached
+    author_badges = badges_map_cached(db, [t.author_id]).get(t.author_id, [])
     return {
         "id": t.id, "author_id": t.author_id,
         "author_username": author.username if author else None,
         "author_badge": author.badge if author else None,
+        "author_badges": author_badges,
+        "is_author": bool(user_id and t.author_id == user_id),
         "title": t.title,
         "body_md": t.body_md, "body_html": t.body_html,
         "categories": cats,
@@ -555,7 +559,8 @@ def get_thread(thread_id: int, db: Session = Depends(get_db),
 
 
 @router.post("/{thread_id}/comments", status_code=201)
-def add_comment(thread_id: int, data: CommentCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def add_comment(thread_id: int, data: CommentCreate, background: BackgroundTasks,
+                db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     t = db.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Тред не найден")
@@ -566,13 +571,40 @@ def add_comment(thread_id: int, data: CommentCreate, db: Session = Depends(get_d
     c = ThreadComment(thread_id=thread_id, parent_id=data.parent_id, author_id=user.id,
                       body_md=data.body_md, body_html=html)
     db.add(c); db.flush()
+    mentioned_ids = []
     for pid in entities["place_ids"]:
         db.add(ThreadMention(comment_id=c.id, kind="place", place_id=pid))
     for uid in _resolve_user_ids(db, entities["user_ids"], entities.get("usernames", [])):
         db.add(ThreadMention(comment_id=c.id, kind="user", user_id=uid))
+        mentioned_ids.append(uid)
     t.comments_count += 1
     db.commit(); db.refresh(c)
+
+    _notify_by_email(db, background, t, c, user, mentioned_ids)
     return {"id": c.id, "body_html": c.body_html}
+
+
+def _notify_by_email(db: Session, background, t: Thread, c: ThreadComment,
+                     author: User, mentioned_ids: list[int]) -> None:
+    """Письма: ответ в моём треде + упоминание меня. Отправка не должна ломать ответ."""
+    if background is None:
+        return
+    from app.services import email_notify
+    snippet = (c.body_md or "")[:200]
+    # ответ автору треда
+    if t.author_id != author.id:
+        thread_author = db.get(User, t.author_id)
+        if thread_author:
+            background.add_task(email_notify.notify_reply, thread_author, author.username,
+                                t.title, snippet, t.id)
+    # упоминания
+    for uid in dict.fromkeys(mentioned_ids):
+        if uid == author.id or uid == t.author_id:
+            continue
+        mentioned = db.get(User, uid)
+        if mentioned:
+            background.add_task(email_notify.notify_mention, mentioned, author.username,
+                                t.title, snippet, t.id)
 
 
 class ThreadUpdate(BaseModel):

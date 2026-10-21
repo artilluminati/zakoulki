@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import UserOut
+from app.schemas.user import UserOut, UserProfileUpdate
+from app.services import badges as badge_service
+from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -21,7 +24,7 @@ def get_user_by_username(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(404, "Пользователь не найден")
-    return user
+    return _user_out(db, user)
 
 
 @router.get("/{user_id}", response_model=UserOut)
@@ -29,4 +32,22 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(404, "Пользователь не найден")
-    return user
+    return _user_out(db, user)
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(data: UserProfileUpdate, db: Session = Depends(get_db),
+              user: User = Depends(get_current_user)):
+    if data.email_notifications is not None:
+        user.email_notifications = data.email_notifications
+    if data.avatar is not None:
+        user.avatar = data.avatar
+    db.commit()
+    db.refresh(user)
+    return _user_out(db, user)
+
+
+def _user_out(db: Session, user: User) -> UserOut:
+    out = UserOut.model_validate(user)
+    out.badges = badge_service.badges_out(db, user.id)
+    return out
