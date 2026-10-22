@@ -7,3 +7,7 @@ backend/app/uploads/*
 backend/test.db
 backend/ci.db
 backend/*.db
+
+# локальные env фронта (ключи)
+frontend/.env.local
+frontend/.env.production
