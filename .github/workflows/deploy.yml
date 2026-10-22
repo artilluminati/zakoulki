@@ -37,7 +37,8 @@ jobs:
           rsync -az --delete \
             --exclude 'backend/venv' --exclude 'backend/.env' \
             --exclude 'frontend/node_modules' --exclude 'frontend/.next' \
-            --exclude 'backend/app/uploads' --exclude '.git' \
+            --exclude 'frontend/.env.local' --exclude 'frontend/.env.production' \
+            --exclude 'backend/app/uploads/' --exclude '*.db' --exclude '.git' \
             ./ "$HOST:$APP_PATH/"
 
       - name: Обновить и перезапустить

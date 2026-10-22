@@ -38,11 +38,20 @@ systemctl --user restart zakoulki-backend.service zakoulki-frontend.service
 - `backend/app/services/markdown.py` — рендер/парсинг markdown + извлечение `@`/`+`/`#`.
 - `backend/app/api/routes/threads.py` — CRUD тредов, комменты, лайки, закладки, жалобы, уведомления.
 - `backend/app/api/routes/geo_places.py` — поиск мест, nearby, map-points.
+- `backend/app/api/routes/donations.py` — донаты: создание платежа ЮKassa + вебхук.
+- `backend/app/api/routes/admin.py` — админка: пользователи, бейджи, категории, разделы, места, донаты, рекомендации.
+- `backend/app/services/mailer.py` — отправка писем (SMTP), `services/mail_templates.py` — тексты писем.
+- `backend/app/services/badges.py` — бейджи пользователя (несколько сразу).
 - `frontend/components/editor/MdEditor.tsx` — редактор с тулбаром, `@`/`+` меню, превью.
 - `frontend/components/ThreadCard.tsx` — карточка треда + `ThreadHtml` (рендер чипов мест/тегов/юзеров).
 - `docs/TODO.md` — активный список задач, новый входящий пользовательский фидбек добавляется в конец.
 - `docs/QUESTIONS.md` — открытые вопросы и лог решений.
 - `docs/STARTUP-v5.md` — полный запуск с нуля.
+- `docs/09-mail.md` — настройка почты (Яндекс, пароль приложения).
+- `docs/10-yookassa.md` — регистрация магазина ЮKassa, вебхук, проверка доната.
+- `docs/11-deploy.md` — выкладка на VPS, домен/HTTPS, бэкапы, откат.
+- `docs/12-testing.md` — чек-лист группового тестирования.
+- `deploy/` — скрипты выкладки (`install.sh`, `deploy.sh`, `backup.sh`), systemd-юниты, nginx.
 
 ## Финальный проход (после закрытия всех задач выше)
 - [ ] 13. Пробежать по всем разделам и улучшить то что имеется (дизайн, микроанимации, состояния, доступность). Записано в AGENTS.md и TODO.md, не пропускать.

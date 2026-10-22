@@ -36,7 +36,11 @@ chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 
 echo "== 5. фронтенд =="
 cd "$APP_DIR/frontend"
-cp .env.local.example .env.production 2>/dev/null || true
+cat > .env.production <<'ENVFILE'
+NEXT_PUBLIC_API_URL=/api
+NEXT_PUBLIC_YANDEX_MAPS_API_KEY=
+ENVFILE
+echo "!! Впиши ключ Яндекс-Карт в $APP_DIR/frontend/.env.production и пересобери фронт"
 npm ci
 npm run build
 

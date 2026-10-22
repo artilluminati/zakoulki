@@ -21,8 +21,9 @@ fi
 echo "== копируем код =="
 rsync -az --delete \
   --exclude 'venv' --exclude '.env' --exclude 'node_modules' --exclude '.next' \
-  --exclude '__pycache__' --exclude '*.pyc' --exclude 'app/uploads' \
-  --exclude '.git' \
+  --exclude '.env.local' --exclude '.env.production' \
+  --exclude '__pycache__' --exclude '*.pyc' --exclude 'backend/app/uploads/' \
+  --exclude '*.db' --exclude '.git' \
   "$ROOT/" "$APP_DIR/"
 
 echo "== бэкенд: зависимости и миграции =="
