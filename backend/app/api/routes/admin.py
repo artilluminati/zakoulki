@@ -311,6 +311,7 @@ def admin_hubs(limit: int = Query(100, le=300), db: Session = Depends(get_db),
     authors = {u.id: u.username for u in db.query(User).filter(
         User.id.in_({t.author_id for t in items})).all()} if items else {}
     return [{"id": t.id, "title": t.title, "author": authors.get(t.author_id),
+             "body_md": t.body_md, "body_html": t.body_html,
              "city": t.city, "district": t.district, "region": t.region,
              "is_archived": t.is_archived, "comments_count": t.comments_count,
              "created_at": t.created_at} for t in items]

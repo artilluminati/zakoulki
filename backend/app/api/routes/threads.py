@@ -586,25 +586,31 @@ def add_comment(thread_id: int, data: CommentCreate, background: BackgroundTasks
 
 def _notify_by_email(db: Session, background, t: Thread, c: ThreadComment,
                      author: User, mentioned_ids: list[int]) -> None:
-    """Письма: ответ в моём треде + упоминание меня. Отправка не должна ломать ответ."""
+    """Письма: ответ в моём треде + упоминание меня.
+
+    В очередь кладём простые значения (не ORM-объекты): фоновые задачи выполняются
+    после закрытия сессии БД."""
     if background is None:
         return
     from app.services import email_notify
     snippet = (c.body_md or "")[:200]
+    author_name = author.username
     # ответ автору треда
     if t.author_id != author.id:
         thread_author = db.get(User, t.author_id)
-        if thread_author:
-            background.add_task(email_notify.notify_reply, thread_author, author.username,
-                                t.title, snippet, t.id)
+        if thread_author and getattr(thread_author, "email_notifications", True):
+            background.add_task(email_notify.notify_reply,
+                                {"email": thread_author.email, "username": thread_author.username},
+                                author_name, t.title, snippet, t.id)
     # упоминания
     for uid in dict.fromkeys(mentioned_ids):
         if uid == author.id or uid == t.author_id:
             continue
         mentioned = db.get(User, uid)
-        if mentioned:
-            background.add_task(email_notify.notify_mention, mentioned, author.username,
-                                t.title, snippet, t.id)
+        if mentioned and getattr(mentioned, "email_notifications", True):
+            background.add_task(email_notify.notify_mention,
+                                {"email": mentioned.email, "username": mentioned.username},
+                                author_name, t.title, snippet, t.id)
 
 
 class ThreadUpdate(BaseModel):
