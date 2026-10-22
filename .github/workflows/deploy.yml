@@ -50,4 +50,6 @@ jobs:
       - name: Проверка живости
         env:
           HOST: ${{ inputs.host }}
-        run: ssh "$HOST" "curl -fsS http://127.0.0.1:8000/health && curl -fsS -o /dev/null -w 'фронт: %{http_code}\n' http://127.0.0.1:3001/"
+        run: |
+          ssh "$HOST" 'curl -fsS http://127.0.0.1:8000/health'
+          ssh "$HOST" 'curl -fsS -o /dev/null -w "фронт: %{http_code}\n" http://127.0.0.1:3001/'
