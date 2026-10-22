@@ -42,7 +42,7 @@ class Donation(Base):
 
     badge_granted: Mapped[bool] = mapped_column(Boolean, default=False)
     recommendation_id: Mapped[int | None] = mapped_column(
-        ForeignKey("recommendations.id", ondelete="SET NULL"), nullable=True)
+        ForeignKey("recommendations.id", ondelete="SET NULL", use_alter=True), nullable=True)
     # заготовка рекомендации, которую создадим после успешной оплаты
     recommendation_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 

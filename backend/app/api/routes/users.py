@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import UserOut, UserProfileUpdate
+from app.schemas.user import BadgeOut, UserOut, UserProfileUpdate
 from app.services import badges as badge_service
 from app.api.deps import get_current_user
 
@@ -49,5 +49,5 @@ def update_me(data: UserProfileUpdate, db: Session = Depends(get_db),
 
 def _user_out(db: Session, user: User) -> UserOut:
     out = UserOut.model_validate(user)
-    out.badges = badge_service.badges_out(db, user.id)
+    out.badges = [BadgeOut.model_validate(b) for b in badge_service.badges_out(db, user.id)]
     return out

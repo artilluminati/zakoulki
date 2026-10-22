@@ -1,0 +1,52 @@
+name: Deploy
+
+# Деплой на сервер запускается вручную: Actions -> Deploy -> Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Адрес сервера (user@host)"
+        required: true
+      path:
+        description: "Папка проекта на сервере"
+        required: false
+        default: "/opt/zakoulki"
+
+jobs:
+  deploy:
+    name: Выкладка на сервер
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Настроить SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ inputs.host }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$(echo "$HOST" | cut -d@ -f2)" >> ~/.ssh/known_hosts
+
+      - name: Скопировать код
+        env:
+          HOST: ${{ inputs.host }}
+          APP_PATH: ${{ inputs.path }}
+        run: |
+          rsync -az --delete \
+            --exclude 'backend/venv' --exclude 'backend/.env' \
+            --exclude 'frontend/node_modules' --exclude 'frontend/.next' \
+            --exclude 'backend/app/uploads' --exclude '.git' \
+            ./ "$HOST:$APP_PATH/"
+
+      - name: Обновить и перезапустить
+        env:
+          HOST: ${{ inputs.host }}
+          APP_PATH: ${{ inputs.path }}
+        run: ssh "$HOST" "cd '$APP_PATH' && APP_DIR='$APP_PATH' bash deploy/deploy.sh"
+
+      - name: Проверка живости
+        env:
+          HOST: ${{ inputs.host }}
+        run: ssh "$HOST" "curl -fsS http://127.0.0.1:8000/health && curl -fsS -o /dev/null -w 'фронт: %{http_code}\n' http://127.0.0.1:3001/"

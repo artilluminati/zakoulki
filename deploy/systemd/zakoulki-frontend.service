@@ -1,0 +1,18 @@
+[Unit]
+Description=Zakoulki frontend (Next.js)
+After=network-online.target zakoulki-backend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zakoulki
+WorkingDirectory=/opt/zakoulki/frontend
+Environment=PORT=3001
+Environment=HOSTNAME=127.0.0.1
+EnvironmentFile=/opt/zakoulki/frontend/.env.production
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
