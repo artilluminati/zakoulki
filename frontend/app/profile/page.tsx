@@ -8,15 +8,30 @@ import { fetchThreads, fetchBookmarks } from "@/lib/v5";
 import { api } from "@/lib/api";
 import { ThemeToggle } from "@/lib/theme";
 import { useConfirm } from "@/lib/confirm";
+import { useToast } from "@/lib/toast";
 import { getHomeCity, setHomeCity } from "@/lib/scope";
 import ThreadCard, { timeAgo, OfficialBadge } from "@/components/ThreadCard";
+import UserBadges, { type Badge } from "@/components/UserBadges";
 import type { ThreadV5 } from "@/types/v5";
 
 interface Notif { id: string | number; kind: string; author?: string; author_id?: number; thread_id?: number | null; comment_id?: number | null; title?: string | null; snippet?: string; created_at?: string; }
 
+/** В ответе профиля есть значки и настройка писем; в общем типе пользователя их нет. */
+type MeUser = {
+  id: number;
+  username: string;
+  email: string;
+  badge?: string | null;
+  badges?: Badge[];
+  email_notifications?: boolean;
+  role?: string;
+  created_at: string;
+};
+
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
   const { confirm } = useConfirm();
+  const toast = useToast();
   const [mine, setMine] = useState<ThreadV5[]>([]);
   const [mineFailed, setMineFailed] = useState(false);
   const [mineHasMore, setMineHasMore] = useState(false);
@@ -24,14 +39,21 @@ export default function ProfilePage() {
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [saved, setSaved] = useState<ThreadV5[]>([]);
   const [tab, setTab] = useState<"mine" | "saved">("mine");
+  const [emailNotif, setEmailNotif] = useState(true);
+  const [savingMail, setSavingMail] = useState(false);
   // домашний город: подсказки региона и стартовый скоуп
   const [home, setHome] = useState<string | null>(null);
   const [homeQ, setHomeQ] = useState("");
   const [homeFound, setHomeFound] = useState<{ name: string; extra?: string | null }[]>([]);
   const [homeHi, setHomeHi] = useState(0);
+  const me = user as MeUser | null;
   useEffect(() => {
     setHome(getHomeCity());
   }, []);
+  // текущее значение настройки писем берём из профиля
+  useEffect(() => {
+    if (me) setEmailNotif(me.email_notifications ?? true);
+  }, [me]);
   useEffect(() => {
     if (homeQ.trim().length < 2) { setHomeFound([]); return; }
     const t = setTimeout(async () => {
@@ -67,6 +89,22 @@ export default function ProfilePage() {
     logout();
   };
 
+  const toggleMail = async () => {
+    if (savingMail) return;
+    const next = !emailNotif;
+    setEmailNotif(next);
+    setSavingMail(true);
+    try {
+      await api.patch("/users/me", { email_notifications: next });
+      toast(next ? "Письма об уведомлениях включены" : "Письма об уведомлениях выключены", "success");
+    } catch {
+      setEmailNotif(!next);
+      toast("Не получилось сохранить — попробуйте ещё раз", "error");
+    } finally {
+      setSavingMail(false);
+    }
+  };
+
   if (loading) return <div className="mx-auto max-w-2xl px-3 pt-10">Загружаем…</div>;
   if (!user) return <div className="mx-auto max-w-2xl px-3 pt-10 text-center">Войдите. <Link href="/login" className="underline">Войти</Link></div>;
 
@@ -92,6 +130,9 @@ export default function ProfilePage() {
           <span><b>{mine.length}</b> <span className="text-slate-500 dark:text-neutral-400">вопросов</span></span>
           {user.role === "admin" && <Link href="/admin" className="font-bold text-emerald-700 dark:text-emerald-300">Админка →</Link>}
         </div>
+        {me?.badges && me.badges.length > 0 && (
+          <UserBadges badges={me.badges} mode="stack" className="mt-3" />
+        )}
       </div>
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-center gap-2 text-sm font-extrabold dark:text-neutral-100">
@@ -150,6 +191,32 @@ export default function ProfilePage() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+        <div className="flex items-center gap-2 text-sm font-extrabold dark:text-neutral-100">
+          Уведомления
+        </div>
+        <div className="mt-2 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-semibold">Присылать письма об уведомлениях</div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">
+              Напишем, когда в ваших вопросах отвечают или упоминают вас.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={emailNotif}
+            aria-label="Присылать письма об уведомлениях"
+            disabled={savingMail}
+            onClick={toggleMail}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-60 ${emailNotif ? "bg-emerald-500" : "bg-slate-300 dark:bg-neutral-700"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${emailNotif ? "left-[22px]" : "left-0.5"}`}
+            />
+          </button>
         </div>
       </div>
       <div className="flex gap-1.5">

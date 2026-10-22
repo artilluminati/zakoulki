@@ -8,112 +8,62 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { useConfirm } from "@/lib/confirm";
 import { timeAgo } from "@/components/ThreadCard";
+import CategoriesAdmin from "@/components/admin/CategoriesAdmin";
+import UsersAdmin from "@/components/admin/UsersAdmin";
+import HubsAdmin from "@/components/admin/HubsAdmin";
+import PlacesAdmin from "@/components/admin/PlacesAdmin";
+import DonationsAdmin from "@/components/admin/DonationsAdmin";
+import RecommendationsAdmin from "@/components/admin/RecommendationsAdmin";
+import { errMessage } from "@/components/admin/common";
 
-interface AdminUser { id: number; username: string; email: string; role: string; badge?: string | null; created_at: string; }
 interface Report { id: number; reporter_id: number; reporter?: string; thread_id?: number | null; comment_id?: number | null; reason: string; text?: string | null; status: string; }
 interface AdminThread { id: number; author?: string | null; title?: string | null; snippet: string; is_offtop: boolean; is_hub: boolean; place_id?: number | null; comments_count: number; created_at: string; }
-interface Stats { users: number; threads: number; places: number; reports_new: number; }
+interface Stats { users: number; threads: number; places: number; reports_new: number; donations: number; donations_paid: number; recommendations_pending: number; }
 
 const REASONS: Record<string, string> = { spam: "Спам", abuse: "Оскорбления", offtopic: "Не по теме", other: "Другое" };
 
-type Tab = "reports" | "users" | "threads";
+type Tab = "reports" | "users" | "threads" | "categories" | "hubs" | "places" | "donations" | "recommendations";
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
-  const { confirm, prompt } = useConfirm();
+  const { confirm } = useConfirm();
   const [tab, setTab] = useState<Tab>("reports");
-  const [users, setUsers] = useState<AdminUser[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [threads, setThreads] = useState<AdminThread[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [denied, setDenied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userQuery, setUserQuery] = useState("");
   const [reportFilter, setReportFilter] = useState<"new" | "all">("new");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [u, r, t, s] = await Promise.all([
-        api.get("/admin/users", { params: userQuery.trim() ? { q: userQuery.trim() } : {} }),
+      const [r, t, s] = await Promise.all([
         api.get("/admin/reports", { params: reportFilter === "new" ? { status: "new" } : {} }),
         api.get("/admin/threads"),
         api.get("/admin/stats"),
       ]);
-      setUsers(u.data); setReports(r.data); setThreads(t.data); setStats(s.data);
+      setReports(r.data); setThreads(t.data); setStats(s.data);
       setDenied(false);
     } catch {
       setDenied(true);
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportFilter]);
 
   useEffect(() => {
     if (!authLoading) load();
   }, [authLoading, load, user]);
 
-  // дебаунс поиска пользователей
-  useEffect(() => {
-    if (authLoading || !user || user.role !== "admin") return;
-    const t = setTimeout(() => load(), 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userQuery]);
-
-  const changeRole = async (u: AdminUser) => {
-    if (user && u.id === user.id && u.role === "admin") {
-      toast("Нельзя снять админа с себя", "error");
-      return;
-    }
-    if (!await confirm({
-      title: `${u.role === "admin" ? "Снять админа" : "Сделать админом"} @${u.username}?`,
-      danger: u.role !== "admin",
-    })) return;
-    try {
-      await api.patch(`/admin/users/${u.id}`, { role: u.role === "admin" ? "user" : "admin" });
-      toast("Роль обновлена", "success");
-      load();
-    } catch {
-      toast("Не получилось", "error");
-    }
-  };
-
-  const resetPassword = async (u: AdminUser) => {
-    const pw = await prompt({
-      title: `Новый пароль для @${u.username}`,
-      text: "Минимум 6 символов. Передайте его пользователю.",
-      input: { placeholder: "Новый пароль" },
-      ok: "Сбросить",
-    });
-    if (!pw) return;
-    if (pw.length < 6) { toast("Пароль короче 6 символов", "error"); return; }
-    try {
-      await api.patch(`/admin/users/${u.id}/password`, { password: pw });
-      toast(`Пароль @${u.username} обновлён — передайте его пользователю`, "success");
-    } catch {
-      toast("Не получилось", "error");
-    }
-  };
-
-  const toggleBadge = async (u: AdminUser) => {
-    try {
-      await api.patch(`/admin/users/${u.id}/badge`, { badge: u.badge === "official" ? null : "official" });
-      toast(u.badge === "official" ? "Бейдж снят" : "Аккаунт верифицирован", "success");
-      load();
-    } catch {
-      toast("Не получилось", "error");
-    }
-  };
-
   const resolveReport = async (id: number, status: "reviewed" | "rejected") => {
     try {
       await api.patch(`/admin/reports/${id}`, { status });
+      toast(status === "reviewed" ? "Жалоба разобрана" : "Жалоба отклонена", "success");
       load();
-    } catch {
-      toast("Не получилось", "error");
+    } catch (e) {
+      toast(errMessage(e, "Не получилось"), "error");
     }
   };
 
@@ -123,8 +73,8 @@ export default function AdminPage() {
       await api.delete(`/admin/threads/${id}`);
       toast("Тред удалён", "success");
       load();
-    } catch {
-      toast("Не получилось", "error");
+    } catch (e) {
+      toast(errMessage(e, "Не получилось удалить тред"), "error");
     }
   };
 
@@ -147,6 +97,11 @@ export default function AdminPage() {
     { id: "reports", label: "Жалобы", badge: stats?.reports_new },
     { id: "users", label: "Пользователи" },
     { id: "threads", label: "Треды" },
+    { id: "categories", label: "Категории" },
+    { id: "hubs", label: "Разделы" },
+    { id: "places", label: "Места" },
+    { id: "donations", label: "Донаты" },
+    { id: "recommendations", label: "Рекомендации", badge: stats?.recommendations_pending },
   ];
 
   return (
@@ -154,74 +109,66 @@ export default function AdminPage() {
       <h1 className="text-xl font-extrabold dark:text-neutral-100">Админка</h1>
 
       {stats && (
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { v: stats.users, l: "юзеров" },
-            { v: stats.threads, l: "тредов" },
-            { v: stats.places, l: "мест" },
-            { v: stats.reports_new, l: "жалоб" },
-          ].map((s) => (
-            <div key={s.l} className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-center dark:border-neutral-800 dark:bg-neutral-900">
-              <div className="text-xl font-extrabold dark:text-neutral-100">{s.v}</div>
-              <div className="text-xs text-slate-500 dark:text-neutral-400">{s.l}</div>
-            </div>
+        <>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { v: stats.users, l: "юзеров" },
+              { v: stats.threads, l: "тредов" },
+              { v: stats.places, l: "мест" },
+              { v: stats.reports_new, l: "жалоб" },
+            ].map((s) => (
+              <div key={s.l} className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-center dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="text-xl font-extrabold dark:text-neutral-100">{s.v}</div>
+                <div className="text-xs text-slate-500 dark:text-neutral-400">{s.l}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { v: stats.donations, l: "донатов" },
+              { v: stats.donations_paid, l: "оплачено" },
+              { v: stats.recommendations_pending, l: "заявок" },
+            ].map((s) => (
+              <div key={s.l} className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-center dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="text-xl font-extrabold dark:text-neutral-100">{s.v}</div>
+                <div className="text-xs text-slate-500 dark:text-neutral-400">{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* вкладки: на мобильном — горизонтальная прокрутка */}
+      <div className="-mx-3 overflow-x-auto px-3 md:mx-0 md:px-0">
+        <div className="flex w-max gap-1.5 pb-1 sm:w-full sm:flex-wrap">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
+                tab === t.id
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-500 hover:text-slate-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
+              }`}
+            >
+              {t.label}
+              {!!t.badge && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">{t.badge}</span>}
+            </button>
           ))}
         </div>
-      )}
-
-      <div className="flex gap-1 rounded-full bg-white p-1 shadow-sm dark:bg-neutral-900">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === t.id ? "bg-slate-900 text-white" : "text-slate-500 dark:text-neutral-400"}`}
-          >
-            {t.label}
-            {!!t.badge && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">{t.badge}</span>}
-          </button>
-        ))}
       </div>
 
-      {tab === "users" && (
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-          <div className="border-b border-slate-100 px-4 py-2 dark:border-neutral-800">
-            <input
-              value={userQuery}
-              onChange={(e) => setUserQuery(e.target.value)}
-              placeholder="Поиск по нику…"
-              maxLength={50}
-              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-lime-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:bg-neutral-800"
-            />
-          </div>
-          {users.length === 0 && <div className="px-4 py-4 text-center text-sm text-slate-400 dark:text-neutral-500">Никого не нашли</div>}
-          {users.map((u) => (
-            <div key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-50 px-4 py-2 text-sm last:border-0 dark:border-neutral-800">
-              <Link href={`/user/${u.username}`} className="font-bold hover:underline dark:text-neutral-100">@{u.username}</Link>
-              <span className="hidden truncate text-slate-400 sm:inline dark:text-neutral-500">{u.email}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${u.role === "admin" ? "bg-slate-900 text-white dark:bg-neutral-100 dark:text-neutral-900" : "bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-neutral-400"}`}>{u.role}</span>
-              <button
-                onClick={() => toggleBadge(u)}
-                title="Верифицированная организация"
-                className={`rounded-full px-2 py-0.5 text-xs font-bold ${u.badge === "official" ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300" : "border border-slate-200 text-slate-400 dark:border-neutral-700 dark:text-neutral-500"}`}
-              >
-                {u.badge === "official" ? "✓ official" : "official?"}
-              </button>
-              <button
-                onClick={() => changeRole(u)}
-                className="ml-auto rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              >
-                {u.role === "admin" ? "снять админа" : "сделать админом"}
-              </button>
-              <button
-                onClick={() => resetPassword(u)}
-                className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              >
-                сбросить пароль
-              </button>
-            </div>
-          ))}
-        </section>
-      )}
+      {tab === "users" && <UsersAdmin />}
+
+      {tab === "categories" && <CategoriesAdmin />}
+
+      {tab === "hubs" && <HubsAdmin />}
+
+      {tab === "places" && <PlacesAdmin />}
+
+      {tab === "donations" && <DonationsAdmin />}
+
+      {tab === "recommendations" && <RecommendationsAdmin />}
 
       {tab === "reports" && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">

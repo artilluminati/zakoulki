@@ -105,6 +105,11 @@ export default function AuthPanel({ initialMode = "login", onSuccess }: Props) {
           {showPw ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
         </button>
       </div>
+      {mode === "login" && (
+        <Link href="/forgot-password" className="self-end text-[13px] font-semibold text-emerald-700 hover:underline dark:text-emerald-300">
+          Забыли пароль?
+        </Link>
+      )}
       {mode === "register" && password.length > 0 && (
         <div className="flex items-center gap-2 text-xs">
           <div className="flex flex-1 gap-1">

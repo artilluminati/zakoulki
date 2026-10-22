@@ -16,11 +16,21 @@ export interface GeoPlaceV5 {
   map_preview?: string | null;
 }
 
+export interface ThreadBadgeV5 {
+  id?: number;
+  kind: string;
+  label: string;
+  meta?: Record<string, unknown> | null;
+}
+
 export interface ThreadV5 {
   id: number;
   author_id: number;
   author_username?: string | null;
   author_badge?: string | null;
+  author_badges?: ThreadBadgeV5[];
+  /** Автор треда — это «OP» ветки. */
+  is_author?: boolean;
   title?: string | null;
   body_md: string;
   body_html: string;

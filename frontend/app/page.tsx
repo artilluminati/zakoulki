@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThreadCard from "@/components/ThreadCard";
 import QuickComposer from "@/components/QuickComposer";
+import WhoHelps from "@/components/WhoHelps";
 import { fetchThreads, createThread, uploadThreadPhoto, scopeParams } from "@/lib/v5";
 import { MessagesSquare, CheckCircle2 } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
@@ -289,6 +290,8 @@ export default function FeedPage() {
           )}
         </div>
       )}
+
+      <WhoHelps />
     </div>
   );
 }

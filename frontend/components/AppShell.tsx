@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Home, Map as MapIcon, PlusCircle, User, Bell, Search, MapPinned, ChevronDown, MessagesSquare } from "lucide-react";
+import { Home, Map as MapIcon, PlusCircle, User, Bell, Search, MapPinned, ChevronDown, MessagesSquare, Heart } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { timeAgo } from "@/components/ThreadCard";
@@ -194,6 +194,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {item("/map", "Карта", MapIcon)}
           {item("/hubs", "Разделы", MessagesSquare)}
           {item("/create", "Создать", PlusCircle)}
+          {item("/donate", "Поддержать", Heart)}
           {item(user ? "/profile" : "/login", "Профиль", User)}
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-[13px] text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
             Спрашивайте о городе: от ямы во дворе до судьбы парка — вопросы с местом видны на карте.
@@ -211,21 +212,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/about" className="hover:text-slate-800">О проекте</Link>
           <Link href="/data" className="hover:text-slate-800">Источники данных</Link>
           <Link href="/map" className="hover:text-slate-800">Карта</Link>
+          <Link href="/donate" className="flex items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300">
+            <Heart className="h-3.5 w-3.5" /> Поддержать
+          </Link>
           <span className="ml-auto">Сделано на открытых данных · OSM, Яндекс.Карты</span>
         </div>
       </footer>
 
       {/* mobile bottom tabs */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-neutral-700 dark:bg-neutral-900/95">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {[
             { href: "/", label: "Главная", Icon: Home, fab: false },
             { href: "/map", label: "Карта", Icon: MapIcon, fab: false },
             { href: "/create", label: "Создать", Icon: PlusCircle, fab: true },
             { href: "/search", label: "Поиск", Icon: Search, fab: false },
             { href: user ? "/profile" : "/login", label: "Профиль", Icon: User, fab: false },
+            { href: "/donate", label: "Поддержка", Icon: Heart, fab: false },
           ].map(({ href, label, Icon, fab }) => (
-            <Link key={href + label} href={href} className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${isActive(href) ? "text-lime-700 dark:text-lime-300" : "text-slate-500 dark:text-neutral-400"}`}>
+            <Link key={href + label} href={href} className={`flex flex-col items-center gap-0.5 px-0.5 py-2 text-[11px] font-medium ${isActive(href) ? "text-lime-700 dark:text-lime-300" : "text-slate-500 dark:text-neutral-400"}`}>
               <Icon className={fab ? "h-7 w-7" : "h-6 w-6"} strokeWidth={fab ? 2.5 : 2} />
               {label}
             </Link>

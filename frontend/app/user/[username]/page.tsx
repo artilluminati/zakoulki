@@ -5,14 +5,17 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import ThreadCard, { OfficialBadge } from "@/components/ThreadCard";
+import UserBadges, { type Badge } from "@/components/UserBadges";
 import { api } from "@/lib/api";
 import { fetchThreads } from "@/lib/v5";
 import type { User } from "@/types";
 import type { ThreadV5 } from "@/types/v5";
 
+type UserProfile = User & { badges?: Badge[] };
+
 export default function UserPage() {
   const { username } = useParams<{ username: string }>();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [threads, setThreads] = useState<ThreadV5[]>([]);
   const [missing, setMissing] = useState(false);
   const [threadsFailed, setThreadsFailed] = useState(false);
@@ -47,6 +50,9 @@ export default function UserPage() {
             <div className="text-xs text-slate-400 dark:text-neutral-500">с нами с {new Date(user.created_at).toLocaleDateString("ru-RU")}</div>
           </div>
         </div>
+        {user.badges && user.badges.length > 0 && (
+          <UserBadges badges={user.badges} mode="stack" className="mt-3" />
+        )}
       </div>
       <h2 className="font-extrabold">Вопросы · {threads.length}</h2>
       {threadsFailed ? (

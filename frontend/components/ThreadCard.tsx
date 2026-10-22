@@ -3,8 +3,9 @@
 import { memo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, MessageCircle, Eye, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, MessagesSquare, FileText } from "lucide-react";
+import { MapPin, MessageCircle, Eye, Bookmark, MoreHorizontal, X, BadgeCheck, BarChart3, MessagesSquare, FileText, PenLine } from "lucide-react";
 import ScoreArrows from "@/components/ScoreArrows";
+import UserBadges, { type Badge } from "@/components/UserBadges";
 import type { ThreadV5 } from "@/types/v5";
 import { reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
@@ -46,6 +47,14 @@ export function OfficialBadge() {
   return (
     <span title="Официальный аккаунт" className="inline-flex items-center gap-0.5 rounded-full bg-sky-100 px-1.5 py-px text-[11px] font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
       <BadgeCheck className="h-3 w-3" /> Official
+    </span>
+  );
+}
+
+export function AuthorBadge() {
+  return (
+    <span title="Вы — автор этой ветки" className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-bold text-lime-800 dark:bg-lime-950 dark:text-lime-300">
+      <PenLine className="h-3 w-3" /> Автор
     </span>
   );
 }
@@ -190,6 +199,13 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
   const [reportMode, setReportMode] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
+  // бейджи автора: из ответа, а если их нет — старый флаг official
+  const authorBadges: Badge[] = t.author_badges?.length
+    ? t.author_badges
+    : t.author_badge === "official"
+      ? [{ kind: "official" }]
+      : [];
+
   const needAuth = (e: unknown) =>
     (e as { response?: { status?: number } })?.response?.status === 401;
 
@@ -230,7 +246,8 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
         <div className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
-            {t.author_badge === "official" && <OfficialBadge />}
+            <UserBadges badges={authorBadges} mode="inline" />
+            {t.is_author && <AuthorBadge />}
             <HubBadge t={t} />
             {t.is_resolved && <ResolvedBadge />}
             {isHubAuthor && <HubAuthorBadge />}

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, MessagesSquare, Database, Landmark, ArrowRight } from "lucide-react";
+import { MapPin, MessagesSquare, Database, Landmark, ArrowRight, Heart } from "lucide-react";
 import { api } from "@/lib/api";
+import WhoHelps from "@/components/WhoHelps";
 
 interface Stats { threads: number; with_geo: number; comments: number; places: number; users: number; }
 
@@ -109,6 +110,21 @@ export default function AboutPage() {
         </p>
         <Link href="/data" className="mt-2 inline-block text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
           Все источники →
+        </Link>
+      </div>
+
+      <WhoHelps />
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-900">
+        <div className="flex items-center gap-2 font-extrabold">
+          <Heart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> Поддержать проект
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-neutral-400">
+          Закоулки держатся на поддержке жителей: хостинг и домен, карты и фотографии,
+          модерация и помощь сообществу.
+        </p>
+        <Link href="/donate" className="mt-2 inline-block text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
+          Поддержать →
         </Link>
       </div>
     </div>
