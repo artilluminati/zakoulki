@@ -5,6 +5,9 @@ set -euo pipefail
 
 APP_DIR=/opt/zakoulki
 APP_USER=zakoulki
+DB_NAME=${DB_NAME:-zakoulki}
+DB_USER=${DB_USER:-zakoulki}
+DB_PASS=${DB_PASS:-замени_пароль}
 
 echo "== 1. пользователь и папки =="
 id -u "$APP_USER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$APP_USER"
@@ -16,9 +19,9 @@ apt-get update
 apt-get install -y python3-venv python3-pip postgresql nginx rsync curl unzip
 
 echo "== 3. база данных =="
-sudo -u postgres psql <<'SQL'
-CREATE USER zakoulki WITH PASSWORD 'пароль-замени';
-CREATE DATABASE zakoulki OWNER zakoulki;
+sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';
+CREATE DATABASE $DB_NAME OWNER $DB_USER;
 SQL
 
 echo "== 4. бэкенд =="
@@ -28,7 +31,8 @@ python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 if [ ! -f .env ]; then
   cp .env.example .env
-  echo "!! Отредактируй $APP_DIR/backend/.env и перезапусти скрипт"
+  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+psycopg2://$DB_USER:$DB_PASS@127.0.0.1:5432/$DB_NAME|" .env
+  echo "!! Отредактируй $APP_DIR/backend/.env (SITE_URL, SECRET_KEY, почта, ЮKassa) и запусти скрипт ещё раз"
   exit 1
 fi
 ./venv/bin/python -m alembic upgrade head
