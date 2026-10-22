@@ -316,6 +316,7 @@ def list_threads(
     before_id: int | None = None, limit: int = Query(20, ge=1, le=50),
     after_id: int | None = Query(None, description="только треды новее id — для лёгкого поллинга ленты"),
     db: Session = Depends(get_db),
+    user: User | None = Depends(get_optional_user),
 ):
     q = db.query(Thread).options(joinedload(Thread.place)).order_by(Thread.id.desc())
     # треды общего обсуждения — только внутри разделов, в общей ленте их не дублируем
@@ -378,7 +379,8 @@ def list_threads(
         q = q.order_by(Thread.score.desc(), Thread.id.desc())
     q = q.distinct()
     items = q.limit(limit).all()
-    return [_thread_out(t, db) for t in items]
+    viewer_id = user.id if user else None
+    return [_thread_out(t, db, viewer_id) for t in items]
 
 
 @router.post("", status_code=201)
@@ -1103,7 +1105,7 @@ def my_bookmarks(db: Session = Depends(get_db), user: User = Depends(get_current
         return []
     items = db.query(Thread).filter(Thread.id.in_(ids)).all()
     by_id = {t.id: t for t in items}
-    return [_thread_out(by_id[i], db) for i in ids if i in by_id]
+    return [_thread_out(by_id[i], db, user.id) for i in ids if i in by_id]
 
 
 class ReportCreate(BaseModel):

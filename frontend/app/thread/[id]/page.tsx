@@ -9,6 +9,7 @@ import { fetchThread, commentThread, reportThread, deleteComment, deleteThread, 
 import ScoreArrows from "@/components/ScoreArrows";
 import QuickComposer from "@/components/QuickComposer";
 import ThreadCard, { ThreadHtml, timeAgo, OfficialBadge, HubBadge, regionLine, ResolvedBadge } from "@/components/ThreadCard";
+import UserBadges from "@/components/UserBadges";
 import HubSection from "@/components/HubSection";
 import MiniMap from "@/components/MiniMap";
 import MdEditor from "@/components/editor/MdEditor";
@@ -526,7 +527,16 @@ export default function ThreadPage() {
         {t.title && <h1 className="text-xl font-extrabold leading-tight">{t.title}</h1>}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-neutral-400">
           <span>#{t.id} · <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="font-semibold hover:underline">{t.author_username}</Link> · {timeAgo(t.created_at)}{regionLine(t) ? ` · ${regionLine(t)}` : ""}</span>
-          {t.author_badge === "official" && <OfficialBadge />}
+          <UserBadges
+            badges={
+              t.author_badges?.length
+                ? t.author_badges
+                : t.author_badge === "official"
+                  ? [{ kind: "official", label: "Официальная организация" }]
+                  : []
+            }
+            mode="inline"
+          />
           <HubBadge t={t} />
           {t.is_resolved && <ResolvedBadge />}
         </div>

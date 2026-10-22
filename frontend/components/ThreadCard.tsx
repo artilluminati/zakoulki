@@ -9,6 +9,7 @@ import UserBadges, { type Badge } from "@/components/UserBadges";
 import type { ThreadV5 } from "@/types/v5";
 import { reportThread, bookmarkThread } from "@/lib/v5";
 import { useToast } from "@/lib/toast";
+import { useAuth } from "@/lib/auth";
 import PhotoImg from "@/components/PhotoImg";
 
 export function timeAgo(iso: string) {
@@ -194,6 +195,7 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
   const isHubMod = !isHubAuthor && !!hubModIds?.includes(t.author_id);
   const threadHref = t.is_hub ? `/hub/${t.id}` : `/thread/${t.id}`;
   const toast = useToast();
+  const { user } = useAuth();
   const [bookmarked, setBookmarked] = useState(false);
   const [menu, setMenu] = useState(false);
   const [reportMode, setReportMode] = useState(false);
@@ -203,8 +205,10 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
   const authorBadges: Badge[] = t.author_badges?.length
     ? t.author_badges
     : t.author_badge === "official"
-      ? [{ kind: "official" }]
+      ? [{ kind: "official", label: "Официальная организация" }]
       : [];
+  // «OP» ветки: сервер отдаёт флаг, но в ленте он может быть пустым — сверяем сами
+  const isAuthor = !!t.is_author || (!!user && user.id === t.author_id);
 
   const needAuth = (e: unknown) =>
     (e as { response?: { status?: number } })?.response?.status === 401;
@@ -247,7 +251,7 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
           <span className="flex flex-wrap items-center gap-1.5">
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
             <UserBadges badges={authorBadges} mode="inline" />
-            {t.is_author && <AuthorBadge />}
+            {isAuthor && <AuthorBadge />}
             <HubBadge t={t} />
             {t.is_resolved && <ResolvedBadge />}
             {isHubAuthor && <HubAuthorBadge />}

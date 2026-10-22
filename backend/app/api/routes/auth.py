@@ -48,8 +48,9 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserOut)
-def me(current_user: User = Depends(get_current_user)):
-    return current_user
+def me(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from app.api.routes.users import _user_out
+    return _user_out(db, current_user)
 
 
 class ForgotPassword(BaseModel):

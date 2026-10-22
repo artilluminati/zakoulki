@@ -16,13 +16,12 @@ import type { ThreadV5 } from "@/types/v5";
 
 interface Notif { id: string | number; kind: string; author?: string; author_id?: number; thread_id?: number | null; comment_id?: number | null; title?: string | null; snippet?: string; created_at?: string; }
 
-/** В ответе профиля есть значки и настройка писем; в общем типе пользователя их нет. */
+/** В сессии есть настройка писем; в общем типе пользователя её нет. */
 type MeUser = {
   id: number;
   username: string;
   email: string;
   badge?: string | null;
-  badges?: Badge[];
   email_notifications?: boolean;
   role?: string;
   created_at: string;
@@ -41,6 +40,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<"mine" | "saved">("mine");
   const [emailNotif, setEmailNotif] = useState(true);
   const [savingMail, setSavingMail] = useState(false);
+  const [badges, setBadges] = useState<Badge[]>([]);
   // домашний город: подсказки региона и стартовый скоуп
   const [home, setHome] = useState<string | null>(null);
   const [homeQ, setHomeQ] = useState("");
@@ -70,6 +70,8 @@ export default function ProfilePage() {
       fetchThreads({ author_id: user.id, limit: 20 }).then((d) => { setMine(d); setMineHasMore(d.length === 20); }).catch(() => setMineFailed(true));
       api.get("/threads/notifications/mine").then((r) => setNotifs(r.data ?? [])).catch(() => { /* ignore */ });
       fetchBookmarks().then(setSaved).catch(() => { /* ignore */ });
+      // значки берём из карточки пользователя — в сессии их нет
+      api.get(`/users/${user.id}`).then((r) => setBadges(r.data?.badges ?? [])).catch(() => { /* ignore */ });
     }
   }, [user]);
 
@@ -130,8 +132,8 @@ export default function ProfilePage() {
           <span><b>{mine.length}</b> <span className="text-slate-500 dark:text-neutral-400">вопросов</span></span>
           {user.role === "admin" && <Link href="/admin" className="font-bold text-emerald-700 dark:text-emerald-300">Админка →</Link>}
         </div>
-        {me?.badges && me.badges.length > 0 && (
-          <UserBadges badges={me.badges} mode="stack" className="mt-3" />
+        {badges.length > 0 && (
+          <UserBadges badges={badges} mode="stack" className="mt-3" />
         )}
       </div>
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
