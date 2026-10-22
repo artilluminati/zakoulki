@@ -10,7 +10,7 @@ import { loadYandex } from "@/lib/yandex";
 import { api, apiOrigin } from "@/lib/api";
 import { makePin, CLUSTER_BLANK, PIN_SIZE, PIN_OFFSET } from "@/lib/mapIcons";
 import { useToast } from "@/lib/toast";
-import { useScope } from "@/lib/scope";
+import { useScope, scopeFromPlace, scopeCovers, scopeLabel } from "@/lib/scope";
 import type { Scope } from "@/lib/scope";
 import PhotoImg from "@/components/PhotoImg";
 import type { ThreadV5 } from "@/types/v5";
@@ -61,10 +61,14 @@ export default function MapPage() {
   const params = useSearchParams();
   const router = useRouter();
   const toast = useToast();
-  const { scope } = useScope();
+  const { scope, setScope } = useScope();
   const scopeRef = useRef(scope);
   useEffect(() => { scopeRef.current = scope; }, [scope]);
   const focusPlace = params.get("place");
+  // фокус может смениться без перезагрузки страницы — держим его в ref,
+  // иначе загрузка точек (внутри эффекта карты) видела бы устаревшее значение
+  const focusRef2 = useRef(focusPlace);
+  useEffect(() => { focusRef2.current = focusPlace; }, [focusPlace]);
   const ref = useRef<HTMLDivElement>(null);
   const reqRef = useRef(0);
   // точные ссылки на объекты карты: чистка по ref, а не по флагам
@@ -131,7 +135,9 @@ export default function MapPage() {
           try {
             list = await fetchMapPoints({
               south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
-              ...scopeParams(s),
+              // когда открыта конкретная точка — глобальный фильтр не применяем,
+              // иначе точка из другого города отсекается и не рисуется
+              ...(focusRef2.current ? {} : scopeParams(s)),
             });
           } catch {
             return; // сеть моргнула — оставляем старые точки, а не пустую карту
@@ -230,6 +236,13 @@ export default function MapPage() {
         const p = (await api.get(`/geo-places/${focusPlace}`)).data;
         if (!alive) return;
         const ym = (window as any).ymaps;
+        // точка может быть в другом городе — тогда и выбор региона меняем,
+        // иначе карта и лента показывают разные места
+        const target = scopeFromPlace(p);
+        if (target && !scopeCovers(scopeRef.current, target)) {
+          setScope(target);
+          toast(`Точка в «${scopeLabel(target)}» — переключили выбор на этот регион`, "info");
+        }
         if (p.area && p.area.length >= 3) {
           // сохраняем полигон в состояние — эффект перерисовки будет рисовать его
           setPlacePoly({ area: p.area as [number, number][], id: p.id });
@@ -297,7 +310,8 @@ export default function MapPage() {
       try {
         list = await fetchMapPoints({
           south: b[0][0], west: b[0][1], north: b[1][0], east: b[1][1],
-          ...scopeParams(scope),
+          // фокус на точке — показываем её независимо от глобального региона
+          ...(focusPlace ? {} : scopeParams(scope)),
         });
       } catch {
         return; // сеть моргнула — оставляем старые точки
@@ -305,7 +319,7 @@ export default function MapPage() {
       if (alive) setPts(list);
     })();
     return () => { alive = false; };
-  }, [mapReady, scope]);
+  }, [mapReady, scope, focusPlace]);
 
   // перерисовка меток при смене точек/фильтра/выбора
   useEffect(() => {

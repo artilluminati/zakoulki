@@ -221,14 +221,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* mobile bottom tabs */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-neutral-700 dark:bg-neutral-900/95">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-5">
           {[
             { href: "/", label: "Главная", Icon: Home, fab: false },
             { href: "/map", label: "Карта", Icon: MapIcon, fab: false },
             { href: "/create", label: "Создать", Icon: PlusCircle, fab: true },
             { href: "/search", label: "Поиск", Icon: Search, fab: false },
             { href: user ? "/profile" : "/login", label: "Профиль", Icon: User, fab: false },
-            { href: "/donate", label: "Поддержка", Icon: Heart, fab: false },
           ].map(({ href, label, Icon, fab }) => (
             <Link key={href + label} href={href} className={`flex flex-col items-center gap-0.5 px-0.5 py-2 text-[11px] font-medium ${isActive(href) ? "text-lime-700 dark:text-lime-300" : "text-slate-500 dark:text-neutral-400"}`}>
               <Icon className={fab ? "h-7 w-7" : "h-6 w-6"} strokeWidth={fab ? 2.5 : 2} />

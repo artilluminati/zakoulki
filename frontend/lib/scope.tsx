@@ -65,6 +65,36 @@ export function normalizeScope(s: Scope): Scope {
   return s;
 }
 
+/** Скоуп по геоданным места: район + город, иначе регион. */
+export function scopeFromPlace(p: {
+  district?: string | null;
+  city?: string | null;
+  region?: string | null;
+}): Scope | null {
+  if (p.city || p.district) {
+    const s: Scope = {};
+    if (p.city) s.city = p.city;
+    if (p.district) s.district = p.district;
+    return s;
+  }
+  if (p.region) return { region: p.region };
+  return null;
+}
+
+/** Покрывает ли текущий выбор место (по геоданным)? */
+export function scopeCovers(scope: Scope, target: Scope): boolean {
+  if (target.city) {
+    if (scope.city !== target.city) return false;
+    if (target.district && scope.district && scope.district !== target.district) return false;
+    return true;
+  }
+  if (target.region) {
+    if (scope.city) return false;
+    return !scope.region || scope.region === target.region;
+  }
+  return true;
+}
+
 interface ScopeCtx {
   scope: Scope;
   setScope: (s: Scope) => void;

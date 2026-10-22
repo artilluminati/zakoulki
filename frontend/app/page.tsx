@@ -9,7 +9,7 @@ import ThreadCard from "@/components/ThreadCard";
 import QuickComposer from "@/components/QuickComposer";
 import WhoHelps from "@/components/WhoHelps";
 import { fetchThreads, createThread, uploadThreadPhoto, scopeParams } from "@/lib/v5";
-import { MessagesSquare, CheckCircle2 } from "lucide-react";
+import { MessagesSquare, CheckCircle2, Heart } from "lucide-react";
 import type { ThreadV5 } from "@/types/v5";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -237,6 +237,27 @@ export default function FeedPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* на телефоне разделы и поддержка — баннером: в нижнем меню для них нет места */}
+      <div className="flex gap-2 md:hidden">
+        <Link
+          href="/hubs"
+          className="flex flex-1 items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-3 py-2.5 dark:border-emerald-900 dark:bg-emerald-950/60"
+        >
+          <MessagesSquare className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className="min-w-0">
+            <span className="block text-[13px] font-extrabold leading-tight text-emerald-900 dark:text-emerald-200">Разделы</span>
+            <span className="block truncate text-[11px] leading-tight text-emerald-700/80 dark:text-emerald-300/70">обсуждения по районам</span>
+          </span>
+        </Link>
+        <Link
+          href="/donate"
+          className="flex items-center gap-2.5 rounded-2xl border border-rose-200 bg-rose-50/80 px-3 py-2.5 dark:border-rose-900 dark:bg-rose-950/60"
+        >
+          <Heart className="h-4 w-4 shrink-0 text-rose-500" />
+          <span className="text-[13px] font-extrabold leading-tight text-rose-900 dark:text-rose-200">Поддержать</span>
+        </Link>
       </div>
 
       {sort === "near" && geoPending && (
