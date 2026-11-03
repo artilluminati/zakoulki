@@ -9,7 +9,7 @@
 - Backend: FastAPI + PostgreSQL + Alembic. `backend/venv` уже создан, зависимости установлены.
 - Frontend: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4.
 - Сервисы: `systemctl --user start zakoulki-backend.service zakoulki-frontend.service` (backend :8000, frontend :3001).
-- Тестовый юзер: `tester@test.ru` / `test1234`, роль `admin`.
+- Тестовый юзер: `test@test.ru` / `test1234`, ник `tester`, роль `admin`.
 - Сид данных: `cd backend && venv/bin/python -m app.db.seed_v5`.
 
 ## Порядок проверки после правок
