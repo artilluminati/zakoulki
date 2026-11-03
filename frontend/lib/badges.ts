@@ -61,6 +61,13 @@ export function badgeLabel(badge: Badge): string {
   return badge.label?.trim() || badgeStyle(badge.kind).label;
 }
 
+/** Денежные бейджи — ступени одной награды: показываем только старшую.
+ *  Бэкенд тоже склеивает их, это страховка для старых данных в кэше. */
+export function visibleBadges(badges: Badge[]): Badge[] {
+  const hasSponsor = badges.some((b) => String(b.kind) === "sponsor");
+  return hasSponsor ? badges.filter((b) => String(b.kind) !== "donor") : badges;
+}
+
 /** Список видов бейджей — для выпадающих списков в админке. */
 export const BADGE_KINDS = (Object.keys(BADGE_STYLES) as BadgeKind[]).map((kind) => ({
   kind,

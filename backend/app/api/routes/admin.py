@@ -35,7 +35,8 @@ def admin_users(q: str | None = None, limit: int = Query(50, le=200),
     if q:
         query = query.filter((User.username.ilike(f"%{q}%")) | (User.email.ilike(f"%{q}%")))
     items = query.limit(limit).all()
-    badges_map = badge_service.badges_for_users(db, [u.id for u in items])
+    # админке нужны все строки, включая младший денежный бейдж — чтобы его можно было снять
+    badges_map = badge_service.badges_for_users(db, [u.id for u in items], collapse=False)
     return [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "badge": u.badge,
              "badges": badges_map.get(u.id, []),
              "email_notifications": u.email_notifications,
@@ -68,7 +69,7 @@ def admin_set_badge(user_id: int, data: BadgeUpdate, db: Session = Depends(get_d
         if badge:
             badge_service.remove_badge(db, target.id, badge.id)
     db.commit()
-    return {"id": target.id, "badges": badge_service.badges_out(db, target.id)}
+    return {"id": target.id, "badges": badge_service.badges_out(db, target.id, collapse=False)}
 
 
 class BadgeGrant(BaseModel):
@@ -81,7 +82,7 @@ class BadgeGrant(BaseModel):
 def admin_user_badges(user_id: int, db: Session = Depends(get_db),
                       user: User = Depends(get_current_user)):
     require_admin(user)
-    return badge_service.badges_out(db, user_id)
+    return badge_service.badges_out(db, user_id, collapse=False)
 
 
 @router.post("/users/{user_id}/badges", status_code=201)

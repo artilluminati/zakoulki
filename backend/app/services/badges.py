@@ -77,7 +77,15 @@ def _sync_legacy_badge(db: Session, user_id: int) -> None:
     user.badge = BADGE_OFFICIAL if has_official else None
 
 
-def badges_for_users(db: Session, user_ids: list[int]) -> dict[int, list[dict]]:
+def collapse_money_badges(badges: list[dict]) -> list[dict]:
+    """Денежные бейджи — ступени одной награды: если есть «Спонсор проекта»,
+    младший «Поддержал проект» не показываем отдельной плашкой."""
+    if any(b.get("kind") == BADGE_SPONSOR for b in badges):
+        return [b for b in badges if b.get("kind") != BADGE_DONOR]
+    return badges
+
+
+def badges_for_users(db: Session, user_ids: list[int], collapse: bool = True) -> dict[int, list[dict]]:
     """Бейджи сразу для нескольких пользователей — чтобы не делать запрос на каждый."""
     out: dict[int, list[dict]] = {uid: [] for uid in user_ids}
     if not user_ids:
@@ -85,6 +93,8 @@ def badges_for_users(db: Session, user_ids: list[int]) -> dict[int, list[dict]]:
     rows = db.query(UserBadge).filter(UserBadge.user_id.in_(user_ids)).order_by(UserBadge.id).all()
     for b in rows:
         out[b.user_id].append(_badge_out(b))
+    if collapse:
+        return {uid: collapse_money_badges(items) for uid, items in out.items()}
     return out
 
 
@@ -98,9 +108,10 @@ def _badge_out(b: UserBadge) -> dict:
     }
 
 
-def badges_out(db: Session, user_id: int) -> list[dict]:
+def badges_out(db: Session, user_id: int, collapse: bool = True) -> list[dict]:
     rows = db.query(UserBadge).filter(UserBadge.user_id == user_id).order_by(UserBadge.id).all()
-    return [_badge_out(b) for b in rows]
+    items = [_badge_out(b) for b in rows]
+    return collapse_money_badges(items) if collapse else items
 
 
 def badges_map_cached(db: Session, user_ids: list[int]) -> dict[int, list[dict]]:

@@ -1,6 +1,6 @@
 "use client";
 
-import { badgeStyle, type Badge } from "@/lib/badges";
+import { badgeStyle, visibleBadges, type Badge } from "@/lib/badges";
 
 export type { Badge, BadgeKind } from "@/lib/badges";
 
@@ -20,7 +20,7 @@ export default function UserBadges({
   mode?: "inline" | "stack";
   className?: string;
 }) {
-  const list = (badges ?? []).filter(Boolean);
+  const list = visibleBadges((badges ?? []).filter(Boolean));
   if (list.length === 0) return null;
 
   if (mode === "stack") {
