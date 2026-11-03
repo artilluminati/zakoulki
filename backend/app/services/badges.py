@@ -54,6 +54,18 @@ def remove_badge(db: Session, user_id: int, badge_id: int) -> bool:
     return True
 
 
+def has_badge(db: Session, user_id: int, kind: str) -> bool:
+    return db.query(UserBadge).filter(UserBadge.user_id == user_id, UserBadge.kind == kind).first() is not None
+
+
+def remove_badge_kind(db: Session, user_id: int, kind: str) -> bool:
+    """Снимает бейдж по виду — например, когда донор «дорос» до спонсора."""
+    badge = db.query(UserBadge).filter(UserBadge.user_id == user_id, UserBadge.kind == kind).first()
+    if not badge:
+        return False
+    return remove_badge(db, user_id, badge.id)
+
+
 def _sync_legacy_badge(db: Session, user_id: int) -> None:
     """Старое поле users.badge держим в синхроне (его ещё читает часть кода)."""
     user = db.get(User, user_id)

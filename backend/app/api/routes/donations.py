@@ -77,8 +77,9 @@ async def create_donation(data: DonationCreate, db: Session = Depends(get_db),
         raise HTTPException(503, "Приём платежей пока не настроен")
     if data.amount < settings.DONATION_MIN or data.amount > settings.DONATION_MAX:
         raise HTTPException(400, f"Сумма доната — от {settings.DONATION_MIN} до {settings.DONATION_MAX} ₽")
-    if data.purpose == PURPOSE_RECOMMENDATION and not data.recommendation:
-        raise HTTPException(400, "Для рекомендации укажите контакты и название")
+    if data.purpose == PURPOSE_RECOMMENDATION:
+        # Раздел «Кто поможет» пока в разработке: принимаем только донаты на проект.
+        raise HTTPException(503, "Раздел рекомендаций пока в разработке — сейчас можно поддержать только проект")
 
     donation = Donation(
         user_id=user.id if user else None,
@@ -167,14 +168,18 @@ async def yookassa_webhook(payload: dict, background: BackgroundTasks,
                 donor = db.query(User).filter(User.email == donation.donor_email).first()
 
             if donor and donation.amount >= settings.DONATION_BADGE_MIN:
-                badge_service.grant_badge(
-                    db, donor.id, BADGE_DONOR, meta={"amount": donation.amount, "purpose": donation.purpose}
-                )
-                donation.badge_granted = True
+                # Денежный бейдж ровно один — по максимальной ступени.
                 if donation.amount >= settings.DONATION_SPONSOR_MIN:
                     badge_service.grant_badge(
                         db, donor.id, BADGE_SPONSOR, meta={"amount": donation.amount}
                     )
+                    badge_service.remove_badge_kind(db, donor.id, BADGE_DONOR)
+                    donation.badge_granted = True
+                elif not badge_service.has_badge(db, donor.id, BADGE_SPONSOR):
+                    badge_service.grant_badge(
+                        db, donor.id, BADGE_DONOR, meta={"amount": donation.amount, "purpose": donation.purpose}
+                    )
+                    donation.badge_granted = True
 
             if donation.purpose == PURPOSE_RECOMMENDATION and donation.recommendation_payload:
                 payload_rec = donation.recommendation_payload

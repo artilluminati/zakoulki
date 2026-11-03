@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, Globe, Image, ShieldCheck, Users, ArrowRight } from "lucide-react";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import { getApiError } from "@/lib/errors";
-
-type Purpose = "project" | "recommendation";
-
-interface Topic { id: string; label: string; }
 
 const PRESETS = [100, 300, 500, 1000];
 const MIN_AMOUNT = 50;
@@ -16,28 +12,11 @@ const MIN_AMOUNT = 50;
 export default function DonateForm({ paid }: { paid: boolean }) {
   const [amount, setAmount] = useState(300);
   const [custom, setCustom] = useState("");
-  const [purpose, setPurpose] = useState<Purpose>("project");
   const [donorName, setDonorName] = useState("");
   const [message, setMessage] = useState("");
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [topic, setTopic] = useState("other");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [contact, setContact] = useState("");
-  const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState(false);
-
-  useEffect(() => {
-    api.get("/recommendations/topics")
-      .then((r) => {
-        const list: Topic[] = r.data ?? [];
-        setTopics(list);
-        if (list.length > 0) setTopic(list[0].id);
-      })
-      .catch(() => setTopics([]));
-  }, []);
 
   const chosenAmount = custom.trim() ? Number(custom.replace(/\s/g, "")) : amount;
 
@@ -50,34 +29,14 @@ export default function DonateForm({ paid }: { paid: boolean }) {
       setError(`Минимальная сумма поддержки — ${MIN_AMOUNT} ₽`);
       return;
     }
-    if (purpose === "recommendation") {
-      if (title.trim().length < 3) {
-        setError("Напишите название — минимум 3 символа");
-        return;
-      }
-      if (contact.trim().length < 3) {
-        setError("Укажите контакт, по которому вам напишут");
-        return;
-      }
-    }
 
     setBusy(true);
     try {
       const res = await api.post("/donations", {
         amount: Math.round(chosenAmount),
-        purpose,
+        purpose: "project",
         message: message.trim() ? message.trim() : undefined,
         donor_name: donorName.trim() ? donorName.trim() : undefined,
-        recommendation:
-          purpose === "recommendation"
-            ? {
-                title: title.trim(),
-                description: description.trim() ? description.trim() : undefined,
-                contact: contact.trim(),
-                url: url.trim() ? url.trim() : undefined,
-                topic,
-              }
-            : undefined,
       });
       const payUrl = res.data?.confirmation_url as string | undefined;
       if (payUrl) {
@@ -146,7 +105,7 @@ export default function DonateForm({ paid }: { paid: boolean }) {
         <h1 className="mt-2 text-2xl font-extrabold leading-tight">Помогите Закоулкам оставаться открытыми</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-white/70">
           «Закоулки» живут на поддержке жителей: без неё не было бы карты, разборов и ответов.
-          Можно поддержать проект целиком или разместить свою рекомендацию в разделе «Кто поможет».
+          Деньги идут на площадку целиком — без рекламы и платных разделов.
         </p>
       </div>
 
@@ -187,83 +146,34 @@ export default function DonateForm({ paid }: { paid: boolean }) {
         <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
           <div className="text-sm font-extrabold dark:text-neutral-100">На что идёт поддержка</div>
           <div className="mt-2 flex flex-col gap-2">
-            {[
-              { v: "project" as const, t: "На поддержку проекта", d: "Карта, модерация и работа над площадкой" },
-              { v: "recommendation" as const, t: "За рекомендацию в разделе «Кто поможет»", d: "Ваша заявка попадёт на модерацию" },
-            ].map((o) => (
-              <button
-                key={o.v}
-                type="button"
-                onClick={() => setPurpose(o.v)}
-                className={`flex items-start gap-3 rounded-2xl border px-3.5 py-3 text-left transition ${
-                  purpose === o.v
-                    ? "border-emerald-500 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/50"
-                    : "border-slate-200 bg-white hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800"
-                }`}
-              >
-                <span
-                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                    purpose === o.v ? "border-emerald-500" : "border-slate-300 dark:border-neutral-600"
-                  }`}
-                >
-                  {purpose === o.v && <span className="h-2 w-2 rounded-full bg-emerald-500" />}
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-500 bg-emerald-50 px-3.5 py-3 dark:border-emerald-700 dark:bg-emerald-950/50">
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-emerald-500">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span>
+                <span className="block text-[15px] font-bold dark:text-neutral-100">На поддержку проекта</span>
+                <span className="block text-[13px] text-slate-500 dark:text-neutral-400">
+                  Карта, модерация и работа над площадкой
                 </span>
-                <span>
-                  <span className="block text-[15px] font-bold">{o.t}</span>
-                  <span className="block text-[13px] text-slate-500 dark:text-neutral-400">{o.d}</span>
+              </span>
+            </div>
+            <div
+              aria-disabled="true"
+              className="flex items-start gap-3 rounded-2xl border border-dashed border-slate-200 px-3.5 py-3 opacity-60 dark:border-neutral-700"
+            >
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 dark:border-neutral-600" />
+              <span>
+                <span className="block text-[15px] font-bold dark:text-neutral-100">
+                  За рекомендацию в разделе «Кто поможет»
                 </span>
-              </button>
-            ))}
+                <span className="block text-[13px] text-slate-500 dark:text-neutral-400">
+                  Скоро — раздел в разработке
+                </span>
+              </span>
+            </div>
           </div>
         </div>
 
-        {purpose === "recommendation" && (
-          <div className="space-y-2.5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-            <div className="text-sm font-extrabold dark:text-neutral-100">Ваша рекомендация</div>
-            <input
-              placeholder="Название: например, «Сантехник на дом»"
-              value={title}
-              maxLength={150}
-              onChange={(e) => setTitle(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-            <textarea
-              placeholder="Описание: что вы делаете, чем поможете жителям"
-              value={description}
-              maxLength={2000}
-              rows={3}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-            <input
-              placeholder="Контакт: телефон или telegram"
-              value={contact}
-              maxLength={150}
-              onChange={(e) => setContact(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-            <input
-              placeholder="Ссылка (необязательно)"
-              value={url}
-              maxLength={255}
-              onChange={(e) => setUrl(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-            <label className="block text-[13px] font-semibold text-slate-500 dark:text-neutral-400">
-              Тема
-              <select
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-[15px] outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-              >
-                {topics.length === 0 && <option value="other">Другое</option>}
-                {topics.map((t) => (
-                  <option key={t.id} value={t.id}>{t.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
 
         <div className="space-y-2.5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
           <div className="text-sm font-extrabold dark:text-neutral-100">Необязательно</div>
@@ -311,7 +221,7 @@ function WhyBlock() {
   const items = [
     { Icon: Globe, t: "Хостинг и домен", d: "Чтобы сайт и карта открывались быстро и без рекламы." },
     { Icon: Image, t: "Карты и фотографии", d: "Подсказки мест, организации на карте и фото к вопросам." },
-    { Icon: ShieldCheck, t: "Модерация", d: "Проверка рекомендаций и разбор спорных вопросов." },
+    { Icon: ShieldCheck, t: "Модерация", d: "Проверка заявок и разбор спорных вопросов." },
     { Icon: Users, t: "Поддержка сообщества", d: "Помощь жителям: ответы, разборы, обратная связь." },
   ];
   return (
