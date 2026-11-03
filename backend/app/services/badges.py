@@ -1,16 +1,16 @@
-"""Выдача и снятие бейджей. У пользователя их может быть несколько."""
+"""Выдача и снятие бейджей. Денежный бейдж один — «Спонсор проекта»."""
 from sqlalchemy.orm import Session
 
 from app.models.badge import (
-    BADGE_DONOR,
     BADGE_LABELS,
     BADGE_OFFICIAL,
+    BADGE_OP,
     BADGE_SPONSOR,
     UserBadge,
 )
 from app.models.user import User
 
-ALL_KINDS = (BADGE_OFFICIAL, BADGE_DONOR, BADGE_SPONSOR, "op")
+ALL_KINDS = (BADGE_OFFICIAL, BADGE_SPONSOR, BADGE_OP)
 
 
 def grant_badge(
@@ -54,18 +54,6 @@ def remove_badge(db: Session, user_id: int, badge_id: int) -> bool:
     return True
 
 
-def has_badge(db: Session, user_id: int, kind: str) -> bool:
-    return db.query(UserBadge).filter(UserBadge.user_id == user_id, UserBadge.kind == kind).first() is not None
-
-
-def remove_badge_kind(db: Session, user_id: int, kind: str) -> bool:
-    """Снимает бейдж по виду — например, когда донор «дорос» до спонсора."""
-    badge = db.query(UserBadge).filter(UserBadge.user_id == user_id, UserBadge.kind == kind).first()
-    if not badge:
-        return False
-    return remove_badge(db, user_id, badge.id)
-
-
 def _sync_legacy_badge(db: Session, user_id: int) -> None:
     """Старое поле users.badge держим в синхроне (его ещё читает часть кода)."""
     user = db.get(User, user_id)
@@ -77,15 +65,7 @@ def _sync_legacy_badge(db: Session, user_id: int) -> None:
     user.badge = BADGE_OFFICIAL if has_official else None
 
 
-def collapse_money_badges(badges: list[dict]) -> list[dict]:
-    """Денежные бейджи — ступени одной награды: если есть «Спонсор проекта»,
-    младший «Поддержал проект» не показываем отдельной плашкой."""
-    if any(b.get("kind") == BADGE_SPONSOR for b in badges):
-        return [b for b in badges if b.get("kind") != BADGE_DONOR]
-    return badges
-
-
-def badges_for_users(db: Session, user_ids: list[int], collapse: bool = True) -> dict[int, list[dict]]:
+def badges_for_users(db: Session, user_ids: list[int]) -> dict[int, list[dict]]:
     """Бейджи сразу для нескольких пользователей — чтобы не делать запрос на каждый."""
     out: dict[int, list[dict]] = {uid: [] for uid in user_ids}
     if not user_ids:
@@ -93,8 +73,6 @@ def badges_for_users(db: Session, user_ids: list[int], collapse: bool = True) ->
     rows = db.query(UserBadge).filter(UserBadge.user_id.in_(user_ids)).order_by(UserBadge.id).all()
     for b in rows:
         out[b.user_id].append(_badge_out(b))
-    if collapse:
-        return {uid: collapse_money_badges(items) for uid, items in out.items()}
     return out
 
 
@@ -108,10 +86,9 @@ def _badge_out(b: UserBadge) -> dict:
     }
 
 
-def badges_out(db: Session, user_id: int, collapse: bool = True) -> list[dict]:
+def badges_out(db: Session, user_id: int) -> list[dict]:
     rows = db.query(UserBadge).filter(UserBadge.user_id == user_id).order_by(UserBadge.id).all()
-    items = [_badge_out(b) for b in rows]
-    return collapse_money_badges(items) if collapse else items
+    return [_badge_out(b) for b in rows]
 
 
 def badges_map_cached(db: Session, user_ids: list[int]) -> dict[int, list[dict]]:

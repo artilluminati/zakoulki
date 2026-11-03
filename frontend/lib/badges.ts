@@ -1,8 +1,8 @@
-import { Crown, Heart, ShieldCheck, Star } from "lucide-react";
+import { Crown, ShieldCheck, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /** Виды бейджей пользователя. Одновременно может быть несколько. */
-export type BadgeKind = "official" | "donor" | "sponsor" | "op";
+export type BadgeKind = "official" | "sponsor" | "op";
 
 export interface Badge {
   id?: number;
@@ -26,17 +26,11 @@ export const BADGE_STYLES: Record<BadgeKind, BadgeStyle> = {
     cls: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
     hint: "Статус подтверждён администратором площадки",
   },
-  donor: {
-    label: "Поддержал проект",
-    Icon: Heart,
-    cls: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
-    hint: "Помог проекту деньгами",
-  },
   sponsor: {
     label: "Спонсор проекта",
     Icon: Star,
     cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-    hint: "Крупная поддержка проекта",
+    hint: "Поддерживает проект деньгами",
   },
   op: {
     label: "Автор раздела",
@@ -59,13 +53,6 @@ export function badgeStyle(kind: string): BadgeStyle {
 
 export function badgeLabel(badge: Badge): string {
   return badge.label?.trim() || badgeStyle(badge.kind).label;
-}
-
-/** Денежные бейджи — ступени одной награды: показываем только старшую.
- *  Бэкенд тоже склеивает их, это страховка для старых данных в кэше. */
-export function visibleBadges(badges: Badge[]): Badge[] {
-  const hasSponsor = badges.some((b) => String(b.kind) === "sponsor");
-  return hasSponsor ? badges.filter((b) => String(b.kind) !== "donor") : badges;
 }
 
 /** Список видов бейджей — для выпадающих списков в админке. */

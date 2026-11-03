@@ -43,15 +43,15 @@ def test_several_badges_at_once(client, db):
     assert resp.status_code == 201
 
     resp = client.post(f"/api/admin/users/{user.id}/badges",
-                       json={"kind": "donor", "meta": {"amount": 500}}, headers=auth_header(token))
+                       json={"kind": "sponsor", "meta": {"amount": 500}}, headers=auth_header(token))
     assert resp.status_code == 201
 
     resp = client.get(f"/api/users/{user.id}")
     kinds = {b["kind"] for b in resp.json()["badges"]}
-    assert kinds == {"official", "donor"}
+    assert kinds == {"official", "sponsor"}
 
     # снятие одного бейджа не убирает второй
-    badge_id = next(b["id"] for b in resp.json()["badges"] if b["kind"] == "donor")
+    badge_id = next(b["id"] for b in resp.json()["badges"] if b["kind"] == "sponsor")
     resp = client.delete(f"/api/admin/users/{user.id}/badges/{badge_id}", headers=auth_header(token))
     assert resp.status_code == 204
     resp = client.get(f"/api/users/{user.id}")

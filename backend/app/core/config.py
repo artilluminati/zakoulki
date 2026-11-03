@@ -33,8 +33,7 @@ class Settings(BaseSettings):
     YOOKASSA_SHOP_ID: str = ""
     YOOKASSA_SECRET_KEY: str = ""
     YOOKASSA_RETURN_URL: str = ""   # куда вернуть пользователя после оплаты
-    DONATION_BADGE_MIN: int = 100        # от какой суммы выдаётся бейдж
-    DONATION_SPONSOR_MIN: int = 1000     # от какой суммы бейдж «спонсор»
+    DONATION_BADGE_MIN: int = 100        # от какой суммы выдаётся бейдж «Спонсор проекта»
     DONATION_MIN: int = 50
     DONATION_MAX: int = 100000
 

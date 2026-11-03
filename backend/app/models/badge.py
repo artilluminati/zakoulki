@@ -7,20 +7,17 @@ from app.db.base import Base
 
 # Типы бейджей. У пользователя их может быть несколько одновременно.
 BADGE_OFFICIAL = "official"   # официальная организация (верификация админом)
-BADGE_DONOR = "donor"         # поддержал проект деньгами
-BADGE_SPONSOR = "sponsor"     # крупная поддержка
+BADGE_SPONSOR = "sponsor"     # поддержал проект деньгами (единственный денежный бейдж)
 BADGE_OP = "op"               # автор ветки / раздела
 
 BADGE_LABELS = {
     BADGE_OFFICIAL: "Официальная организация",
-    BADGE_DONOR: "Поддержал проект",
     BADGE_SPONSOR: "Спонсор проекта",
     BADGE_OP: "Автор раздела",
 }
 
 BADGE_ICONS = {
     BADGE_OFFICIAL: "shield",
-    BADGE_DONOR: "heart",
     BADGE_SPONSOR: "star",
     BADGE_OP: "crown",
 }

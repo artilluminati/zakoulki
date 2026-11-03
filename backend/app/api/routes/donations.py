@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
 from app.db.session import get_db
-from app.models.badge import BADGE_DONOR, BADGE_SPONSOR
+from app.models.badge import BADGE_SPONSOR
 from app.models.donation import (
     PURPOSE_LABELS,
     PURPOSE_PROJECT,
@@ -168,18 +168,11 @@ async def yookassa_webhook(payload: dict, background: BackgroundTasks,
                 donor = db.query(User).filter(User.email == donation.donor_email).first()
 
             if donor and donation.amount >= settings.DONATION_BADGE_MIN:
-                # Денежный бейдж ровно один — по максимальной ступени.
-                if donation.amount >= settings.DONATION_SPONSOR_MIN:
-                    badge_service.grant_badge(
-                        db, donor.id, BADGE_SPONSOR, meta={"amount": donation.amount}
-                    )
-                    badge_service.remove_badge_kind(db, donor.id, BADGE_DONOR)
-                    donation.badge_granted = True
-                elif not badge_service.has_badge(db, donor.id, BADGE_SPONSOR):
-                    badge_service.grant_badge(
-                        db, donor.id, BADGE_DONOR, meta={"amount": donation.amount, "purpose": donation.purpose}
-                    )
-                    donation.badge_granted = True
+                # Денежный бейдж один — «Спонсор проекта», без младших ступеней.
+                badge_service.grant_badge(
+                    db, donor.id, BADGE_SPONSOR, meta={"amount": donation.amount, "purpose": donation.purpose}
+                )
+                donation.badge_granted = True
 
             if donation.purpose == PURPOSE_RECOMMENDATION and donation.recommendation_payload:
                 payload_rec = donation.recommendation_payload
