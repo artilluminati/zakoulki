@@ -1,0 +1,14 @@
+[Unit]
+Description=Демо-почтовый ящик Закоулок (логин по аккаунту сайта)
+After=network.target zakoulki-mailpit.service zakoulki-backend.service
+Wants=zakoulki-mailpit.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/zakoulki/backend
+ExecStart=%h/projects/zakoulki/backend/venv/bin/uvicorn app.mailbox:app --host 127.0.0.1 --port 8090
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

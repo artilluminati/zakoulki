@@ -24,7 +24,7 @@ def _plain(html: str) -> str:
 
 
 def _send_sync(to: str, subject: str, html: str) -> None:
-    sender = settings.MAIL_FROM or settings.MAIL_USER
+    sender = settings.MAIL_FROM or settings.MAIL_USER or "noreply@zakoulki.local"
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = f"{settings.MAIL_FROM_NAME} <{sender}>"
@@ -35,7 +35,9 @@ def _send_sync(to: str, subject: str, html: str) -> None:
     with smtplib.SMTP(settings.MAIL_HOST, settings.MAIL_PORT, timeout=settings.MAIL_TIMEOUT) as smtp:
         if settings.MAIL_USE_TLS:
             smtp.starttls(context=ssl.create_default_context())
-        smtp.login(settings.MAIL_USER, settings.MAIL_PASSWORD)
+        # Локальный Mailpit работает без авторизации — логинимся только если задан ящик.
+        if settings.MAIL_USER:
+            smtp.login(settings.MAIL_USER, settings.MAIL_PASSWORD)
         smtp.send_message(msg)
 
 
@@ -43,7 +45,7 @@ async def send_email(to: str | None, subject: str, html: str) -> bool:
     """Отправляет письмо. Возвращает True, если письмо ушло."""
     if not to:
         return False
-    if not settings.MAIL_ENABLED or not settings.MAIL_USER:
+    if not settings.MAIL_ENABLED:
         log.info("почта выключена — письмо «%s» на %s не отправлено", subject, to)
         return False
     try:

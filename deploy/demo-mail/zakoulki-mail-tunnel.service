@@ -1,0 +1,13 @@
+[Unit]
+Description=zakoulki demo mailbox tunnel (serveo -> :8090)
+After=network-online.target zakoulki-mailbox.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -i %h/.ssh/serveo_ed25519 -o StrictHostKeyChecking=no -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -R zakoulki-mail:80:localhost:8090 serveo.net
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Mailpit — локальный SMTP-приёмник и веб-ящик (демо почты)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/mailpit --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025 --database %h/.local/share/mailpit/mailpit.db --max 300 --disable-version-check
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
