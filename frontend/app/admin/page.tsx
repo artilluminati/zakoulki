@@ -14,15 +14,16 @@ import HubsAdmin from "@/components/admin/HubsAdmin";
 import PlacesAdmin from "@/components/admin/PlacesAdmin";
 import DonationsAdmin from "@/components/admin/DonationsAdmin";
 import RecommendationsAdmin from "@/components/admin/RecommendationsAdmin";
+import OrgApplicationsAdmin from "@/components/admin/OrgApplicationsAdmin";
 import { errMessage } from "@/components/admin/common";
 
 interface Report { id: number; reporter_id: number; reporter?: string; thread_id?: number | null; comment_id?: number | null; reason: string; text?: string | null; status: string; }
 interface AdminThread { id: number; author?: string | null; title?: string | null; snippet: string; is_offtop: boolean; is_hub: boolean; place_id?: number | null; comments_count: number; created_at: string; }
-interface Stats { users: number; threads: number; places: number; reports_new: number; donations: number; donations_paid: number; recommendations_pending: number; }
+interface Stats { users: number; threads: number; places: number; reports_new: number; donations: number; donations_paid: number; recommendations_pending: number; org_applications_pending: number; }
 
 const REASONS: Record<string, string> = { spam: "Спам", abuse: "Оскорбления", offtopic: "Не по теме", other: "Другое" };
 
-type Tab = "reports" | "users" | "threads" | "categories" | "hubs" | "places" | "donations" | "recommendations";
+type Tab = "reports" | "users" | "threads" | "categories" | "hubs" | "places" | "donations" | "recommendations" | "orgs";
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -102,6 +103,7 @@ export default function AdminPage() {
     { id: "places", label: "Места" },
     { id: "donations", label: "Донаты" },
     { id: "recommendations", label: "Рекомендации", badge: stats?.recommendations_pending },
+    { id: "orgs", label: "Организации", badge: stats?.org_applications_pending },
   ];
 
   return (
@@ -169,6 +171,8 @@ export default function AdminPage() {
       {tab === "donations" && <DonationsAdmin />}
 
       {tab === "recommendations" && <RecommendationsAdmin />}
+
+      {tab === "orgs" && <OrgApplicationsAdmin />}
 
       {tab === "reports" && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">

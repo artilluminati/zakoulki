@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.api.routes import (
     auth, users, cities, categories, threads, geo_places, admin, tags, citydata,
-    donations, recommendations,
+    donations, orgs, recommendations,
 )
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -34,6 +34,7 @@ app.include_router(admin.router, prefix=api_prefix)
 app.include_router(tags.router, prefix=api_prefix)
 app.include_router(citydata.router, prefix=api_prefix)
 app.include_router(donations.router, prefix=api_prefix)
+app.include_router(orgs.router, prefix=api_prefix)
 app.include_router(recommendations.router, prefix=api_prefix)
 
 

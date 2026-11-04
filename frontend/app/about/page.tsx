@@ -95,9 +95,17 @@ export default function AboutPage() {
           получайте упоминания и сводите обращения в одном месте.
           Верификация — через администрацию сервиса.
         </p>
-        <Link href="/data" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
-          На каких данных мы стоим <ArrowRight className="h-4 w-4" />
-        </Link>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Link
+            href="/organizations"
+            className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-emerald-500"
+          >
+            Заявка на официальный аккаунт <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link href="/data" className="inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
+            На каких данных мы стоим <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-900">

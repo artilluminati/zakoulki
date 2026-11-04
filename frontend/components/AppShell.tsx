@@ -210,6 +210,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             Закоулки
           </span>
           <Link href="/about" className="hover:text-slate-800">О проекте</Link>
+          <Link href="/organizations" className="hover:text-slate-800">Организациям</Link>
           <Link href="/data" className="hover:text-slate-800">Источники данных</Link>
           <Link href="/map" className="hover:text-slate-800">Карта</Link>
           <Link href="/donate" className="flex items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300">

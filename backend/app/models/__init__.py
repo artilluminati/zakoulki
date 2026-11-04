@@ -15,6 +15,7 @@ from app.models.report import Report
 from app.models.badge import UserBadge
 from app.models.donation import Donation
 from app.models.recommendation import Recommendation
+from app.models.org_application import OrgApplication
 from app.models.password_reset import PasswordResetToken
 
 __all__ = [
@@ -22,5 +23,5 @@ __all__ = [
     "GeoPlace", "Thread", "thread_categories", "ThreadComment", "CommentVote", "ThreadView",
     "Tag", "ThreadTag", "ThreadMention", "ThreadLike", "ThreadPhoto", "ThreadBookmark",
     "Poll", "PollOption", "PollVote", "HubVote", "HubModerator", "Report",
-    "UserBadge", "Donation", "Recommendation", "PasswordResetToken",
+    "UserBadge", "Donation", "Recommendation", "PasswordResetToken", "OrgApplication",
 ]

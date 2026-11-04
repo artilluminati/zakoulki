@@ -10,6 +10,12 @@ from app.models.report import Report
 from app.models.category import Category
 from app.models.geo_place import GeoPlace
 from app.models.donation import Donation
+from app.models.org_application import (
+    APP_APPROVED,
+    APP_PENDING,
+    ORG_KINDS,
+    OrgApplication,
+)
 from app.models.recommendation import (
     REC_PUBLISHED,
     REC_REJECTED,
@@ -201,6 +207,7 @@ def admin_stats(db: Session = Depends(get_db), user: User = Depends(get_current_
         "donations": db.query(Donation).count(),
         "donations_paid": db.query(Donation).filter(Donation.status == "paid").count(),
         "recommendations_pending": db.query(Recommendation).filter(Recommendation.status == "pending").count(),
+        "org_applications_pending": db.query(OrgApplication).filter(OrgApplication.status == APP_PENDING).count(),
     }
 
 
@@ -445,3 +452,86 @@ def admin_recommendation_status(rec_id: int, data: RecommendationStatus, db: Ses
         rec.expires_at = rec.published_at + timedelta(days=90)
     db.commit()
     return {"id": rec.id, "status": rec.status, "topic": rec.topic}
+
+
+# --------------------------------------------------------------------------
+# Заявки администраций и организаций на официальный аккаунт
+# --------------------------------------------------------------------------
+
+class OrgApplicationStatus(BaseModel):
+    status: str = Field(pattern="^(pending|approved|rejected)$")
+    admin_note: str | None = Field(default=None, max_length=2000)
+
+
+def _org_application_out(a: OrgApplication, username: str | None) -> dict:
+    return {
+        "id": a.id,
+        "kind": a.kind,
+        "kind_label": ORG_KINDS.get(a.kind, a.kind),
+        "org_name": a.org_name,
+        "city": a.city,
+        "address": a.address,
+        "website": a.website,
+        "description": a.description,
+        "contact_name": a.contact_name,
+        "contact_email": a.contact_email,
+        "contact_phone": a.contact_phone,
+        "account_mode": a.account_mode,
+        "existing_account": a.existing_account,
+        "user_id": a.user_id,
+        "username": username,
+        "status": a.status,
+        "admin_note": a.admin_note,
+        "created_at": a.created_at,
+        "reviewed_at": a.reviewed_at,
+    }
+
+
+@router.get("/org-applications")
+def admin_org_applications(status: str | None = Query(None),
+                           db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    require_admin(user)
+    q = db.query(OrgApplication).order_by(OrgApplication.id.desc())
+    if status:
+        q = q.filter(OrgApplication.status == status)
+    items = q.limit(200).all()
+    user_ids = {a.user_id for a in items if a.user_id}
+    users = {u.id: u.username for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    return [_org_application_out(a, users.get(a.user_id or 0)) for a in items]
+
+
+@router.patch("/org-applications/{app_id}")
+def admin_org_application_status(app_id: int, data: OrgApplicationStatus,
+                                 db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Одобрение выдаёт бейдж «Официальная организация» привязанному аккаунту."""
+    require_admin(user)
+    from datetime import datetime, timezone
+    app_row = db.get(OrgApplication, app_id)
+    if not app_row:
+        raise HTTPException(404, "Заявка не найдена")
+
+    target: User | None = None
+    if data.status == APP_APPROVED:
+        if app_row.user_id:
+            target = db.get(User, app_row.user_id)
+        if not target and app_row.existing_account:
+            account = app_row.existing_account.strip()
+            target = db.query(User).filter(
+                (User.email == account.lower()) | (User.username == account)
+            ).first()
+        if not target and app_row.contact_email:
+            target = db.query(User).filter(User.email == app_row.contact_email).first()
+        if not target:
+            raise HTTPException(
+                400,
+                "Не нашёл аккаунт заявителя. Укажите ник или email существующего аккаунта в заявке и повторите",
+            )
+        app_row.user_id = target.id
+        badge_service.grant_badge(db, target.id, "official", granted_by=user.id)
+
+    app_row.status = data.status
+    app_row.admin_note = (data.admin_note or "").strip() or None
+    app_row.reviewed_at = datetime.now(timezone.utc) if data.status != APP_PENDING else None
+    db.commit()
+    db.refresh(app_row)
+    return _org_application_out(app_row, target.username if target else None)
