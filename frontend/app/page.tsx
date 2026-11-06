@@ -17,7 +17,7 @@ import { useScope, scopeLabel } from "@/lib/scope";
 import ScopePicker from "@/components/ScopePicker";
 import { MapPinned, ChevronDown } from "lucide-react";
 
-type Sort = "new" | "top" | "near";
+type Sort = "new" | "top";
 
 export default function FeedPage() {
   const params = useSearchParams();
@@ -123,8 +123,7 @@ export default function FeedPage() {
     try {
       const data = await fetchThreads({
         search: search || undefined,
-        sort: sort === "near" ? "near" : sort,
-        ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
+        sort: sort,
         has_geo: filter === "offtop" ? false : undefined,
         is_hub: filter === "hubs" ? true : undefined,
         is_resolved: filter === "resolved" ? true : undefined,
@@ -149,8 +148,7 @@ export default function FeedPage() {
     try {
       const data = await fetchThreads({
         search: search || undefined,
-        sort: sort === "near" ? "near" : sort,
-        ...(sort === "near" && geo ? { lat: geo.lat, lng: geo.lng, radius: 10 } : {}),
+        sort: sort,
         has_geo: filter === "offtop" ? false : undefined,
         is_hub: filter === "hubs" ? true : undefined,
         is_resolved: filter === "resolved" ? true : undefined,
@@ -169,7 +167,7 @@ export default function FeedPage() {
   };
 
   const pickSort = (s: Sort) => {
-    if (s === "near" && !geo && !geoPending) requestGeo();
+    // near sort removed
     setSort(s);
   };
 
@@ -224,9 +222,9 @@ export default function FeedPage() {
           </Link>
         )}
         <div className="flex rounded-full bg-white p-1 text-sm shadow-sm border border-slate-200 dark:bg-neutral-900 dark:border-neutral-700">
-          {(["new", "top", "near"] as Sort[]).map((s) => (
+          {(["new", "top"] as Sort[]).map((s) => (
             <button key={s} onClick={() => pickSort(s)} className={`rounded-full px-3 py-1.5 font-semibold ${sort === s ? "bg-slate-900 text-white" : "text-slate-500 dark:text-neutral-400"}`}>
-              {s === "new" ? "Новые" : s === "top" ? "Обсуждают" : "Рядом"}
+              {s === "new" ? "Новые" : "Обсуждают"}
             </button>
           ))}
         </div>
@@ -260,15 +258,9 @@ export default function FeedPage() {
         </Link>
       </div>
 
-      {sort === "near" && geoPending && (
+      {false && geoPending && (
         <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center text-[13px] text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
           Определяем ваше местоположение…
-        </div>
-      )}
-      {sort === "near" && geoError && !geoPending && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
-          Не можем определить местоположение — разрешите доступ в браузере или показываем новое.
-          <button onClick={requestGeo} className="ml-2 font-bold underline">Попробовать снова</button>
         </div>
       )}
 

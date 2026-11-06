@@ -25,6 +25,7 @@ interface Place {
   region: string | null;
   latitude: number | null;
   longitude: number | null;
+  approved: boolean;
   created_at: string;
 }
 
@@ -34,9 +35,10 @@ interface FormState {
   city: string;
   district: string;
   region: string;
+  approved: boolean;
 }
 
-const EMPTY_FORM: FormState = { name: "", address: "", city: "", district: "", region: "" };
+const EMPTY_FORM: FormState = { name: "", address: "", city: "", district: "", region: "", approved: true };
 
 export default function PlacesAdmin() {
   const toast = useToast();
@@ -78,6 +80,7 @@ export default function PlacesAdmin() {
       city: p.city ?? "",
       district: p.district ?? "",
       region: p.region ?? "",
+      approved: p.approved ?? true,
     });
   };
 
@@ -96,6 +99,7 @@ export default function PlacesAdmin() {
         city: form.city.trim(),
         district: form.district.trim(),
         region: form.region.trim(),
+        approved: form.approved,
       });
       toast("Место обновлено", "success");
       setEditing(null);
@@ -175,6 +179,11 @@ export default function PlacesAdmin() {
             <div className="mt-1 text-xs text-slate-500 dark:text-neutral-400">
               {[p.address, p.district, p.city, p.region].filter(Boolean).join(" · ") || "Без адреса"}
             </div>
+            {!p.approved && (
+              <div className="mt-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                Не одобрено — не показывается на карте
+              </div>
+            )}
 
             {editing?.id === p.id && (
               <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
@@ -222,6 +231,17 @@ export default function PlacesAdmin() {
                     maxLength={200}
                     className={inputCls}
                   />
+                </label>
+                <label className="flex items-center gap-2 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={form.approved}
+                    onChange={(e) => setForm((f) => ({ ...f, approved: e.target.checked }))}
+                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-xs font-bold text-slate-500 dark:text-neutral-400">
+                    Одобрено для показа на карте (крупные территории — только после проверки)
+                  </span>
                 </label>
                 <div className="flex gap-1.5 sm:col-span-2">
                   <button onClick={save} disabled={busy} className={btnPrimary}>

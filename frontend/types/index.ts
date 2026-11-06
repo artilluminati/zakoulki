@@ -42,10 +42,14 @@ export interface Photo {
 export interface User {
   id: number;
   username: string;
+  name?: string | null;
   email: string;
   avatar?: string | null;
+  theme?: string;
   role?: string;
   badge?: string | null;
+  badges?: { id: number; kind: string; label: string | null; meta?: Record<string, unknown> | null }[];
+  email_notifications?: boolean;
   created_at: string;
 }
 

@@ -18,6 +18,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), default="user")  # user|admin
     badge: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)  # None|official — верифицированная организация
     email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)  # присылать письма об уведомлениях
+    theme: Mapped[str] = mapped_column(String(10), default="system")  # light|dark|system
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

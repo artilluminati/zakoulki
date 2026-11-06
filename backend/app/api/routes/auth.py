@@ -25,7 +25,7 @@ def register(data: UserCreate, background: BackgroundTasks, db: Session = Depend
     exists = db.query(User).filter((User.email == data.email) | (User.username == data.username)).first()
     if exists:
         raise HTTPException(400, "Пользователь с таким email или именем уже существует")
-    user = User(username=data.username, email=data.email, password_hash=hash_password(data.password))
+    user = User(username=data.username, name=data.name, email=data.email, password_hash=hash_password(data.password))
     db.add(user)
     db.commit()
     db.refresh(user)

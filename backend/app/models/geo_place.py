@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Float, DateTime, ForeignKey, Text, Integer
+from sqlalchemy import Boolean, String, Float, DateTime, ForeignKey, Text, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -27,6 +27,8 @@ class GeoPlace(Base):
     # территория: полигон [[lat, lng], ...] минимум 3 точки (JSON). Центр — в lat/lng.
     area_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     preview_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # крупные территории требуют одобрения модератора, чтобы не засорять общую карту
+    approved: Mapped[bool] = mapped_column(Boolean, default=True)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 

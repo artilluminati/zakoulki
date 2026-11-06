@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50, pattern=r"^[\wа-яА-ЯёЁ-]+$")
+    name: str | None = Field(default=None, max_length=60)
     email: EmailStr
     password: str = Field(min_length=6, max_length=100)
 
@@ -32,6 +33,7 @@ class UserOut(BaseModel):
     name: str | None = None
     email: EmailStr
     avatar: str | None = None
+    theme: str = "system"
     role: str = "user"
     badge: str | None = None          # legacy: официальная организация
     badges: list[BadgeOut] = Field(default_factory=list)
@@ -45,4 +47,5 @@ class UserProfileUpdate(BaseModel):
     email: EmailStr | None = None
     current_password: str | None = None  # нужен для смены логина/почты
     email_notifications: bool | None = None
+    theme: str | None = Field(default=None, pattern="^(light|dark|system)$")
     avatar: str | None = Field(default=None, max_length=255)

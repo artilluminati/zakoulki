@@ -44,6 +44,7 @@ def _out(p: GeoPlace) -> dict:
             "street": p.street, "lat": p.latitude, "lng": p.longitude,
             "area": area, "city": p.city, "region": p.region, "country": p.country,
             "yandex_kind": p.yandex_kind, "preview_url": p.preview_url,
+            "approved": p.approved,
             "map_preview": f"/uploads/{_map_pv}" if has_map else None}
 
 
@@ -85,6 +86,16 @@ def create_place(data: GeoPlaceCreate, background: BackgroundTasks, db: Session 
         if len(pts) >= 3:
             area = _json.dumps(pts)
     payload = data.model_dump(exclude={"area"})
+    # крупная территория (> ~0.007° по любой оси, ~800 м) требует одобрения
+    # модератора, чтобы не засорять общую карту
+    area_span = 0.0
+    if area:
+        lats = [float(p[0]) for p in area if len(p) >= 2]
+        lngs = [float(p[1]) for p in area if len(p) >= 2]
+        if lats and lngs:
+            area_span = max(max(lats) - min(lats), max(lngs) - min(lngs))
+    auto_approved = area_span <= 0.007
+
     # если иерархия не передана — достраиваем из реверс-геокодера,
     # иначе места без city/region не находятся в выборе региона
     if not payload.get("city") or not payload.get("region"):
@@ -106,7 +117,7 @@ def create_place(data: GeoPlaceCreate, background: BackgroundTasks, db: Session 
                     payload["district"] = r.get("district")
         except Exception:
             pass
-    p = GeoPlace(**payload, area_json=area, created_by=user.id)
+    p = GeoPlace(**payload, area_json=area, created_by=user.id, approved=auto_approved)
     db.add(p); db.commit(); db.refresh(p)
     # превью карты — фоном, чтобы не тормозить ответ
     from app.services.mapshot import render_preview, preview_name
@@ -159,7 +170,9 @@ def map_points(north: float, south: float, east: float, west: float,
     from app.models.thread_photo import ThreadPhoto
     items = (db.query(Thread).join(GeoPlace, Thread.place_id == GeoPlace.id)
              .filter(GeoPlace.latitude.between(south, north))
-             .filter(GeoPlace.longitude.between(west, east)))
+             .filter(GeoPlace.longitude.between(west, east))
+             # непроверенные крупные территории на общей карте не показываем
+             .filter(GeoPlace.approved == True))  # noqa: E712
     # прикреплённые к разделам вопросы и треды обсуждений — не отдельные пины:
     # раздел представляет их всех, в кружке цифра по пинам (раздел = 1)
     items = items.filter(Thread.hub_id.is_(None))

@@ -266,7 +266,6 @@ export default function MdEditor({
                 key={i}
                 ref={areaRef}
                 value={line}
-                rows={Math.max(1, minRows)}
                 onChange={(e) => onLineChange(i, e.target.value)}
                 onKeyDown={(e) => onLineKey(i, e)}
                 onBlur={(e) => {

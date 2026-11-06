@@ -15,7 +15,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -36,6 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.get("/auth/me");
       setUser(res.data);
+      // применяем сохранённую тему из профиля (синхронизация между устройствами)
+      if (res.data?.theme === "light" || res.data?.theme === "dark") {
+        try {
+          localStorage.setItem("zakoulki_theme", res.data.theme);
+          document.documentElement.classList.toggle("dark", res.data.theme === "dark");
+        } catch { /* ignore */ }
+      }
     } catch {
       // токен протух или невалиден
       localStorage.removeItem("token");
@@ -58,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser]);
 
   const register = useCallback(
-    async (username: string, email: string, password: string) => {
-      await api.post("/auth/register", { username, email, password });
+    async (username: string, email: string, password: string, name?: string) => {
+      await api.post("/auth/register", { username, email, password, name: name || undefined });
       await login(email, password);
     },
     [login]

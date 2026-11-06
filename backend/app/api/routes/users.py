@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.geo_place import GeoPlace
 from app.models.user import User
 from app.schemas.user import BadgeOut, UserOut, UserProfileUpdate
 from app.services import badges as badge_service
@@ -63,11 +64,67 @@ def update_me(data: UserProfileUpdate, db: Session = Depends(get_db),
         user.name = data.name.strip() or None
     if data.email_notifications is not None:
         user.email_notifications = data.email_notifications
+    if data.theme is not None:
+        user.theme = data.theme
     if data.avatar is not None:
         user.avatar = data.avatar
     db.commit()
     db.refresh(user)
     return _user_out(db, user)
+
+
+@router.post("/me/avatar", response_model=UserOut)
+async def upload_avatar(file: UploadFile = File(...), db: Session = Depends(get_db),
+                       user: User = Depends(get_current_user)):
+    """Загрузка аватарки. Файл сохраняется в app/uploads, имя — в user.avatar."""
+    import os, uuid
+    from app.core.config import settings
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(400, "Нужен файл изображения (jpg/png/webp)")
+    data = await file.read()
+    if len(data) > 4 * 1024 * 1024:
+        raise HTTPException(400, "Файл больше 4 МБ")
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+        ext = ".jpg"
+    fname = f"avatar_{user.id}_{uuid.uuid4().hex[:8]}{ext}"
+    path = os.path.join(settings.UPLOAD_DIR, fname)
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(data)
+    # удаляем старую аватарку (если была своя)
+    if user.avatar and user.avatar.startswith("avatar_"):
+        try:
+            os.remove(os.path.join(settings.UPLOAD_DIR, user.avatar))
+        except OSError:
+            pass
+    user.avatar = fname
+    db.commit()
+    db.refresh(user)
+    return _user_out(db, user)
+
+
+@router.delete("/me", status_code=204)
+def delete_me(data: UserProfileUpdate, db: Session = Depends(get_db),
+              user: User = Depends(get_current_user)):
+    """Удаление аккаунта. Требует текущий пароль для подтверждения."""
+    from app.core.security import verify_password
+    if not data.current_password or not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(400, "Введите текущий пароль для подтверждения удаления")
+
+    # не даём удалить последнего администратора
+    if user.role == "admin":
+        others = db.query(User).filter(User.role == "admin", User.id != user.id).count()
+        if others == 0:
+            raise HTTPException(400, "Нельзя удалить последнего администратора")
+
+    # отвязываем созданные места
+    db.query(GeoPlace).filter(GeoPlace.created_by == user.id).update({"created_by": None})
+    db.commit()
+
+    # удаляем пользователя (каскадно удалятся треды, комменты, закладки, лайки, жалобы и т.д.)
+    db.delete(user)
+    db.commit()
 
 
 def _user_out(db: Session, user: User) -> UserOut:

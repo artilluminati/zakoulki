@@ -34,6 +34,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState((t) => {
       const next = t === "dark" ? "light" : "dark";
       try { localStorage.setItem(KEY, next); } catch { /* ignore */ }
+      // синхронизируем с профилем, чтобы тема сохранялась между устройствами
+      try {
+        const token = localStorage.getItem("token");
+        if (token) {
+          import("@/lib/api").then(({ api }) => {
+            api.patch("/users/me", { theme: next }).catch(() => { /* не критично */ });
+          });
+        }
+      } catch { /* ignore */ }
       return next;
     });
   }, []);

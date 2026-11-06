@@ -354,6 +354,7 @@ class PlaceIn(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     area: list[list[float]] | None = None  # полигон [[lat,lng],...]
+    approved: bool | None = None
 
 
 @router.get("/places")
@@ -367,6 +368,7 @@ def admin_places(q: str | None = None, limit: int = Query(50, le=200),
     return [{"id": p.id, "name": p.name, "address": p.address, "city": p.city,
              "district": p.district, "region": p.region,
              "latitude": p.latitude, "longitude": p.longitude,
+             "approved": p.approved,
              "created_at": p.created_at} for p in items]
 
 
@@ -387,6 +389,8 @@ def admin_update_place(place_id: int, data: PlaceIn, background: BackgroundTasks
         value = getattr(data, field)
         if value is not None:
             setattr(place, field, value)
+    if data.approved is not None:
+        place.approved = data.approved
 
     if data.latitude is not None:
         place.latitude = data.latitude

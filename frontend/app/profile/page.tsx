@@ -40,6 +40,15 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<"mine" | "saved">("mine");
   const [emailNotif, setEmailNotif] = useState(true);
   const [savingMail, setSavingMail] = useState(false);
+  // редактирование профиля
+  const [editName, setEditName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [badges, setBadges] = useState<Badge[]>([]);
   // домашний город: подсказки региона и стартовый скоуп
   const [home, setHome] = useState<string | null>(null);
@@ -67,6 +76,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
+      setEditName(user.name ?? "");
+      setEditUsername(user.username);
+      setEditEmail(user.email);
       fetchThreads({ author_id: user.id, limit: 20 }).then((d) => { setMine(d); setMineHasMore(d.length === 20); }).catch(() => setMineFailed(true));
       api.get("/threads/notifications/mine").then((r) => setNotifs(r.data ?? [])).catch(() => { /* ignore */ });
       fetchBookmarks().then(setSaved).catch(() => { /* ignore */ });
@@ -107,6 +119,74 @@ export default function ProfilePage() {
     }
   };
 
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    setProfileMsg(null);
+    try {
+      const payload: Record<string, unknown> = {};
+      if (editName.trim() !== (user?.name ?? "")) payload.name = editName.trim() || null;
+      if (editUsername.trim() !== user?.username) payload.username = editUsername.trim();
+      if (editEmail.trim() !== user?.email) {
+        payload.email = editEmail.trim();
+        payload.current_password = editPassword;
+      }
+      if (Object.keys(payload).length === 0) {
+        setProfileMsg("Ничего не изменилось");
+        return;
+      }
+      if ((payload.username || payload.email) && !editPassword) {
+        setProfileMsg("Для смены логина или почты введите текущий пароль");
+        return;
+      }
+      const res = await api.patch("/users/me", payload);
+      toast("Профиль обновлён", "success");
+      setProfileMsg(null);
+      // обновляем сессию
+      window.location.reload();
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setProfileMsg(detail ?? "Не получилось сохранить");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    setUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.post("/users/me/avatar", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast("Аватарка обновлена", "success");
+      window.location.reload();
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast(detail ?? "Не получилось загрузить аватарку", "error");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!editPassword) {
+      toast("Введите текущий пароль для подтверждения удаления", "error");
+      return;
+    }
+    const ok = window.confirm("Удалить аккаунт навсегда? Все ваши вопросы и ответы будут удалены.");
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await api.delete("/users/me", { data: { current_password: editPassword } });
+      localStorage.removeItem("token");
+      window.location.href = "/";
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast(detail ?? "Не получилось удалить аккаунт", "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) return <div className="mx-auto max-w-2xl px-3 pt-10">Загружаем…</div>;
   if (!user) return <div className="mx-auto max-w-2xl px-3 pt-10 text-center">Войдите. <Link href="/login" className="underline">Войти</Link></div>;
 
@@ -114,7 +194,14 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-center gap-3">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-lime-200 text-2xl font-extrabold text-slate-900">{user.username.slice(0, 1).toUpperCase()}</span>
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-lime-200 text-2xl font-extrabold text-slate-900 dark:bg-lime-900 dark:text-lime-100">
+            {user.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") || ""}/uploads/${user.avatar}`} alt="" className="h-full w-full object-cover" />
+            ) : (
+              (user.name || user.username).slice(0, 1).toUpperCase()
+            )}
+          </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-lg font-extrabold">
               <span className="truncate">@{user.username}</span>
@@ -221,6 +308,97 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {/* Настройки профиля */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+        <div className="flex items-center gap-2 text-sm font-extrabold dark:text-neutral-100">
+          Настройки профиля
+        </div>
+        <div className="mt-3 space-y-3">
+          {/* Аватарка */}
+          <div className="flex items-center gap-3">
+            <label className="flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-lime-200 text-xl font-extrabold text-slate-900 dark:bg-lime-900 dark:text-lime-100">
+              {user.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") || ""}/uploads/${user.avatar}`} alt="" className="h-full w-full object-cover" />
+              ) : (
+                user.username.slice(0, 1).toUpperCase()
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploadingAvatar}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadAvatar(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-semibold dark:text-neutral-100">Аватарка</div>
+              <p className="text-xs text-slate-500 dark:text-neutral-400">
+                {uploadingAvatar ? "Загружаем…" : "Нажмите на кружок, чтобы выбрать фото (до 4 МБ)"}
+              </p>
+            </div>
+          </div>
+
+          {/* Поля */}
+          <div className="grid gap-2">
+            <input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Отображаемое имя"
+              maxLength={60}
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-emerald-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:bg-neutral-900"
+            />
+            <input
+              value={editUsername}
+              onChange={(e) => setEditUsername(e.target.value)}
+              placeholder="Никнейм (логин)"
+              maxLength={50}
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-emerald-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:bg-neutral-900"
+            />
+            <input
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              placeholder="Email"
+              type="email"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-emerald-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:bg-neutral-900"
+            />
+            <input
+              value={editPassword}
+              onChange={(e) => setEditPassword(e.target.value)}
+              placeholder="Текущий пароль (нужен для смены логина/почты)"
+              type="password"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-emerald-500 focus:bg-white dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:bg-neutral-900"
+            />
+          </div>
+
+          {profileMsg && (
+            <p className="text-[13px] text-red-600 dark:text-red-400">{profileMsg}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={saveProfile}
+              disabled={savingProfile}
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700 disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-neutral-200"
+            >
+              {savingProfile ? "Сохраняем…" : "Сохранить"}
+            </button>
+            <button
+              onClick={deleteAccount}
+              disabled={deleting}
+              className="rounded-xl px-3 py-2 text-xs text-slate-400 transition hover:text-red-600 disabled:opacity-50 dark:text-neutral-500 dark:hover:text-red-400"
+            >
+              {deleting ? "Удаляем…" : "Удалить аккаунт"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="flex gap-1.5">
         {(["mine", "saved"] as const).map((tb) => (
           <button

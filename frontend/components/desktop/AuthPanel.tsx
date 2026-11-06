@@ -17,6 +17,7 @@ export default function AuthPanel({ initialMode = "login", onSuccess }: Props) {
   const toast = useToast();
 
   const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +34,7 @@ export default function AuthPanel({ initialMode = "login", onSuccess }: Props) {
     setError(null);
     try {
       if (mode === "register") {
-        await register(username, email, password);
+        await register(username, email, password, name.trim() || undefined);
         toast("Аккаунт создан, вы вошли", "success");
       } else {
         await login(email, password);
@@ -92,8 +93,15 @@ export default function AuthPanel({ initialMode = "login", onSuccess }: Props) {
       </div>
 
       {mode === "register" && (
-        <input className={input} placeholder="Имя пользователя" value={username}
-          onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={50} />
+        <>
+          <input className={input} placeholder="Отображаемое имя (как вас называть)" value={name}
+            onChange={(e) => setName(e.target.value)} maxLength={60} />
+          <input className={input} placeholder="Никнейм (логин, после @)" value={username}
+            onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={50} pattern="[\wа-яА-ЯёЁ-]+" />
+          <p className="text-[11px] text-slate-400 dark:text-neutral-500">
+            Никнейм: кириллица, латиница, цифры, «_» и «-», без пробелов. По нему вас найдут через @.
+          </p>
+        </>
       )}
       <input className={input} placeholder="Email или ник" value={email}
         onChange={(e) => setEmail(e.target.value)} required />
