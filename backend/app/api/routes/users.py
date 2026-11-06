@@ -38,6 +38,29 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 @router.patch("/me", response_model=UserOut)
 def update_me(data: UserProfileUpdate, db: Session = Depends(get_db),
               user: User = Depends(get_current_user)):
+    from app.core.security import verify_password
+
+    # смена логина/почты — чувствительные операции: требуем текущий пароль
+    sensitive = False
+    if data.username is not None and data.username != user.username:
+        sensitive = True
+    if data.email is not None and str(data.email).lower() != user.email.lower():
+        sensitive = True
+
+    if sensitive:
+        if not data.current_password or not verify_password(data.current_password, user.password_hash):
+            raise HTTPException(400, "Для смены логина или почты введите текущий пароль")
+        if data.username is not None and data.username != user.username:
+            if db.query(User).filter(User.username == data.username, User.id != user.id).first():
+                raise HTTPException(400, "Этот логин уже занят")
+            user.username = data.username
+        if data.email is not None and str(data.email).lower() != user.email.lower():
+            if db.query(User).filter(User.email == data.email, User.id != user.id).first():
+                raise HTTPException(400, "Этот email уже зарегистрирован")
+            user.email = str(data.email)
+
+    if data.name is not None:
+        user.name = data.name.strip() or None
     if data.email_notifications is not None:
         user.email_notifications = data.email_notifications
     if data.avatar is not None:

@@ -29,6 +29,7 @@ class UserOut(BaseModel):
 
     id: int
     username: str
+    name: str | None = None
     email: EmailStr
     avatar: str | None = None
     role: str = "user"
@@ -39,5 +40,9 @@ class UserOut(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
+    username: str | None = Field(default=None, min_length=3, max_length=50, pattern=r"^[\wа-яА-ЯёЁ-]+$")
+    name: str | None = Field(default=None, max_length=60)
+    email: EmailStr | None = None
+    current_password: str | None = None  # нужен для смены логина/почты
     email_notifications: bool | None = None
     avatar: str | None = Field(default=None, max_length=255)
