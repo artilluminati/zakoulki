@@ -24,7 +24,7 @@ interface Stats { users: number; threads: number; places: number; reports_new: n
 
 const REASONS: Record<string, string> = { spam: "Спам", abuse: "Оскорбления", offtopic: "Не по теме", other: "Другое" };
 
-type Tab = "reports" | "users" | "threads" | "categories" | "hubs" | "places" | "donations" | "recommendations" | "orgs";
+type Tab = "reports" | "users" | "threads" | "categories" | "tags" | "hubs" | "places" | "donations" | "recommendations" | "orgs";
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -100,6 +100,7 @@ export default function AdminPage() {
     { id: "users", label: "Пользователи" },
     { id: "threads", label: "Треды" },
     { id: "categories", label: "Категории" },
+    { id: "tags", label: "Теги" },
     { id: "hubs", label: "Разделы" },
     { id: "places", label: "Места" },
     { id: "donations", label: "Донаты" },
@@ -164,6 +165,8 @@ export default function AdminPage() {
       {tab === "users" && <UsersAdmin />}
 
       {tab === "categories" && <CategoriesAdmin />}
+
+      {tab === "tags" && <TagsAdmin />}
 
       {tab === "hubs" && <HubsAdmin />}
 

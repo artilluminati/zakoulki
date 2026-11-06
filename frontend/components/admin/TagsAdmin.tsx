@@ -92,8 +92,8 @@ export default function TagsAdmin() {
   const remove = async (t: Tag) => {
     const ok = await confirm({
       title: "Удалить тег?",
-      message: `Тег «${t.name}» будет удалён из ${t.threads_count} тредов. Отменить нельзя.`,
-      confirmLabel: "Удалить",
+      text: `Тег «${t.name}» будет удалён из ${t.threads_count} тредов. Отменить нельзя.`,
+      ok: "Удалить",
       danger: true,
     });
     if (!ok) return;
@@ -118,7 +118,7 @@ export default function TagsAdmin() {
         <button type="button" onClick={openAdd} className={btnPrimary}>
           <Plus className="h-4 w-4" /> Добавить
         </button>
-        <Counter n={items.length} />
+        <Counter count={items.length} />
       </div>
 
       {adding && (
@@ -155,9 +155,9 @@ export default function TagsAdmin() {
       {loading ? (
         <LoadingRows />
       ) : error ? (
-        <ErrorBlock text={error} onRetry={load} />
+        <ErrorBlock message={error} onRetry={load} />
       ) : items.length === 0 ? (
-        <EmptyBlock text="Тегов пока нет" />
+        <EmptyBlock title="Тегов пока нет" />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-neutral-700">
           <table className="w-full text-[13px]">
@@ -194,13 +194,11 @@ export default function TagsAdmin() {
                     </div>
                   </td>
                 </tr>
-              </tbody>
+              ))}
+            </tbody>
             </table>
-          </table>
         </div>
       )}
     </div>
   );
 }
-TSX
-echo "TagsAdmin created"
