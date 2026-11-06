@@ -253,7 +253,6 @@ export default function MdEditor({
         {lines.length === 1 && lines[0] === "" && safeActive === null ? (
           <div
             onClick={() => focusActive(0, 0)}
-            style={minRows > 1 ? { minHeight: `${minRows * 1.5}rem` } : undefined}
             className="cursor-text text-[15px] leading-6 text-slate-400 dark:text-neutral-500"
           >
             {placeholder ?? "О чем хотите спросить? @ — человек, + — место, # — тема"}
@@ -266,7 +265,6 @@ export default function MdEditor({
                 ref={areaRef}
                 value={line}
                 rows={Math.max(1, minRows)}
-                style={minRows > 1 ? { minHeight: `${minRows * 1.5}rem` } : undefined}
                 onChange={(e) => onLineChange(i, e.target.value)}
                 onKeyDown={(e) => onLineKey(i, e)}
                 onBlur={(e) => {
