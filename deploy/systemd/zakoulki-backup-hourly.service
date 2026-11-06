@@ -1,0 +1,8 @@
+[Unit]
+Description=Ежечасный бэкап базы «Закоулков»
+
+[Service]
+Type=oneshot
+Environment=ENV_FILE=/home/artilluminati/projects/zakoulki/backend/.env
+Environment=BACKUP_ROOT=/windows/Users/ArtIlluminati/OneDrive/Документы/Проекты/Закоулки/бэкапы
+ExecStart=/home/artilluminati/projects/zakoulki/deploy/backup-hourly.sh
