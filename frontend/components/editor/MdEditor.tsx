@@ -253,6 +253,7 @@ export default function MdEditor({
         {lines.length === 1 && lines[0] === "" && safeActive === null ? (
           <div
             onClick={() => focusActive(0, 0)}
+            style={minRows > 1 ? { minHeight: `${minRows * 1.5}rem` } : undefined}
             className="cursor-text text-[15px] leading-6 text-slate-400 dark:text-neutral-500"
           >
             {placeholder ?? "О чем хотите спросить? @ — человек, + — место, # — тема"}
