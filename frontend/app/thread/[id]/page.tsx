@@ -540,7 +540,7 @@ export default function ThreadPage() {
           <HubBadge t={t} />
           {t.is_resolved && <ResolvedBadge />}
         </div>
-        {!t.is_hub && !t.is_hub_talk && t.place && user && (
+        {!t.is_hub && !t.is_hub_talk && !t.hub_id && t.place && user && (
           <div className="mt-2">
             {!t.hub_requested ? (
               (user.id === t.author_id || user.role === "admin") && (

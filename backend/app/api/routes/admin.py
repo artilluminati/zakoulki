@@ -9,6 +9,7 @@ from app.models.thread import Thread, thread_categories
 from app.models.report import Report
 from app.models.category import Category
 from app.models.geo_place import GeoPlace
+from app.models.thread_extra import Tag, ThreadTag
 from app.models.donation import Donation
 from app.models.org_application import (
     APP_APPROVED,
@@ -441,6 +442,60 @@ def admin_update_place(place_id: int, data: PlaceIn, background: BackgroundTasks
     return {"id": place.id, "name": place.name, "address": place.address,
             "city": place.city, "district": place.district, "region": place.region,
             "latitude": place.latitude, "longitude": place.longitude}
+
+
+# --------------------------------------------------------------------------
+# Теги
+# --------------------------------------------------------------------------
+
+class TagIn(BaseModel):
+    name: str = Field(min_length=1, max_length=50)
+
+
+@router.get("/tags")
+def admin_tags(q: str | None = Query(None), limit: int = Query(100, le=500),
+               db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    require_admin(user)
+    query = db.query(Tag).order_by(Tag.count.desc(), Tag.name)
+    if q:
+        query = query.filter(Tag.name.ilike(f"%{q}%"))
+    items = query.limit(limit).all()
+    out = []
+    for t in items:
+        used = db.query(ThreadTag).filter(ThreadTag.tag_id == t.id).count()
+        out.append({"id": t.id, "name": t.name, "slug": t.slug, "count": t.count or 0,
+                    "threads_count": used})
+    return out
+
+
+@router.patch("/tags/{tag_id}")
+def admin_rename_tag(tag_id: int, data: TagIn, db: Session = Depends(get_db),
+                     user: User = Depends(get_current_user)):
+    require_admin(user)
+    tag = db.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(404, "Тег не найден")
+    new_name = data.name.strip().lstrip("#")
+    if not new_name:
+        raise HTTPException(400, "Пустое имя")
+    if db.query(Tag).filter(Tag.name == new_name, Tag.id != tag_id).first():
+        raise HTTPException(400, "Тег с таким именем уже есть")
+    tag.name = new_name
+    tag.slug = new_name.lower().replace(" ", "-")
+    db.commit()
+    return {"id": tag.id, "name": tag.name, "slug": tag.slug}
+
+
+@router.delete("/tags/{tag_id}", status_code=204)
+def admin_delete_tag(tag_id: int, db: Session = Depends(get_db),
+                     user: User = Depends(get_current_user)):
+    require_admin(user)
+    tag = db.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(404, "Тег не найден")
+    db.query(ThreadTag).filter(ThreadTag.tag_id == tag_id).delete()
+    db.delete(tag)
+    db.commit()
 
 
 @router.delete("/places/{place_id}", status_code=204)

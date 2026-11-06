@@ -9,6 +9,7 @@ import { useToast } from "@/lib/toast";
 import { useConfirm } from "@/lib/confirm";
 import { timeAgo } from "@/components/ThreadCard";
 import CategoriesAdmin from "@/components/admin/CategoriesAdmin";
+import TagsAdmin from "@/components/admin/TagsAdmin";
 import UsersAdmin from "@/components/admin/UsersAdmin";
 import HubsAdmin from "@/components/admin/HubsAdmin";
 import PlacesAdmin from "@/components/admin/PlacesAdmin";
