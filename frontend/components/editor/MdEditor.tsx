@@ -249,7 +249,7 @@ export default function MdEditor({
         </div>
       </div>
       )}
-      <div className="px-3 py-2">
+      <div className="px-3 py-2" style={minRows > 1 ? { minHeight: `${minRows * 1.5}rem` } : undefined}>
         {lines.length === 1 && lines[0] === "" && safeActive === null ? (
           <div
             onClick={() => focusActive(0, 0)}
