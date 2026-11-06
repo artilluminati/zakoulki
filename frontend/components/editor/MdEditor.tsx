@@ -253,7 +253,7 @@ export default function MdEditor({
         {lines.length === 1 && lines[0] === "" && safeActive === null ? (
           <div
             onClick={() => focusActive(0, 0)}
-            className="cursor-text text-[15px] leading-6 text-slate-400 dark:text-neutral-500"
+            className="cursor-text break-words text-[15px] leading-6 text-slate-400 dark:text-neutral-500"
           >
             {placeholder ?? "О чем хотите спросить? @ — человек, + — место, # — тема"}
           </div>
@@ -286,7 +286,7 @@ export default function MdEditor({
                   if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
                   focusActive(i);
                 }}
-                className="cursor-text select-text text-[15px] leading-6"
+                className="cursor-text select-text break-words text-[15px] leading-6"
                 dangerouslySetInnerHTML={{ __html: renderLine(line) }}
               />
             )
