@@ -1,8 +1,10 @@
-import { Crown, ShieldCheck, Star } from "lucide-react";
+import { ShieldCheck, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /** Виды бейджей пользователя. Одновременно может быть несколько. */
-export type BadgeKind = "official" | "sponsor" | "op";
+// «Автор раздела» (op) — глобальный бейдж не показываем: он отображается
+// только внутри самого раздела (см. HubAuthorBadge в ThreadCard).
+export type BadgeKind = "official" | "sponsor";
 
 export interface Badge {
   id?: number;
@@ -31,12 +33,6 @@ export const BADGE_STYLES: Record<BadgeKind, BadgeStyle> = {
     Icon: Star,
     cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
     hint: "Поддерживает проект деньгами",
-  },
-  op: {
-    label: "Автор раздела",
-    Icon: Crown,
-    cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-    hint: "Ведёт раздел на площадке",
   },
 };
 

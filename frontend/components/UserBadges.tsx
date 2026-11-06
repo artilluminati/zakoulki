@@ -20,7 +20,9 @@ export default function UserBadges({
   mode?: "inline" | "stack";
   className?: string;
 }) {
-  const list = (badges ?? []).filter(Boolean);
+  // бейдж «Автор раздела» (op) показывается только внутри самого раздела,
+  // глобально (в ленте, профиле, карточках) он не нужен
+  const list = (badges ?? []).filter((b) => b && String(b.kind) !== "op");
   if (list.length === 0) return null;
 
   if (mode === "stack") {

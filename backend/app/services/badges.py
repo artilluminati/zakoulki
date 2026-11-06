@@ -4,13 +4,14 @@ from sqlalchemy.orm import Session
 from app.models.badge import (
     BADGE_LABELS,
     BADGE_OFFICIAL,
-    BADGE_OP,
     BADGE_SPONSOR,
     UserBadge,
 )
 from app.models.user import User
 
-ALL_KINDS = (BADGE_OFFICIAL, BADGE_SPONSOR, BADGE_OP)
+# «op» (автор раздела) — глобальный бейдж не выдаём: он показывается только
+# внутри самого раздела (см. HubAuthorBadge в ThreadCard.tsx).
+ALL_KINDS = (BADGE_OFFICIAL, BADGE_SPONSOR)
 
 
 def grant_badge(
@@ -70,7 +71,9 @@ def badges_for_users(db: Session, user_ids: list[int]) -> dict[int, list[dict]]:
     out: dict[int, list[dict]] = {uid: [] for uid in user_ids}
     if not user_ids:
         return out
-    rows = db.query(UserBadge).filter(UserBadge.user_id.in_(user_ids)).order_by(UserBadge.id).all()
+    rows = (db.query(UserBadge)
+            .filter(UserBadge.user_id.in_(user_ids), UserBadge.kind != "op")
+            .order_by(UserBadge.id).all())
     for b in rows:
         out[b.user_id].append(_badge_out(b))
     return out
@@ -87,7 +90,9 @@ def _badge_out(b: UserBadge) -> dict:
 
 
 def badges_out(db: Session, user_id: int) -> list[dict]:
-    rows = db.query(UserBadge).filter(UserBadge.user_id == user_id).order_by(UserBadge.id).all()
+    rows = (db.query(UserBadge)
+            .filter(UserBadge.user_id == user_id, UserBadge.kind != "op")
+            .order_by(UserBadge.id).all())
     return [_badge_out(b) for b in rows]
 
 
