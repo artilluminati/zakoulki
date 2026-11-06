@@ -6,7 +6,6 @@ from app.models.category import Category
 from app.models.geo_place import GeoPlace
 from app.models.thread import Thread, thread_categories
 from app.models.thread_comment import ThreadComment
-from app.models.thread_photo import ThreadPhoto
 from app.models.user import User
 from app.services.markdown import render_markdown
 
@@ -91,7 +90,7 @@ POSTS = [
     },
     # ---- Саяногорск ----
     {
-        "title": "Медведь вышел к магазину на Ленина — видели утром",
+        "title": "Медведь вышел к магазину на Пушкина, видели утром",
         "body": "Сегодня утром медведь вышел к магазину на Ленина, у помойки. "
                 "Люди с детьми шли мимо, дети испугались. Вызвали МЧС, но пока никого не дождались. "
                 "Кто-нибудь ещё видел? Опасно ли отпускать детей гулять? "
@@ -184,24 +183,7 @@ POSTS = [
 
 
 
-PHOTOS = {
-    "Отопление в подъезде на Покровке не работает вторую неделю": ["2afb4032276d450d829c57cd8c57ec8c.png"],
-    "Яма на дороге после ремонта — машины бьют диски": ["83758698f1ba4a94a08621dbe2bc9233.png"],
-    "Сломанная детская площадка во дворе — качели оторваны": ["a5edba0d5689405daca3a498822e6561.png"],
-    "Мусор не вывозят третью неделю — контейнеры переполнены": ["map_1.png"],
-    "Медведь вышел к магазину на Ленина — видели утром": ["map_2.png"],
-    "Не горит фонарь на ул. Баумана — вечером темно": ["map_3.png"],
-    "Автобус №12 ходит раз в час — люди не успевают на работу": ["map_4.png"],
-    "Горячей воды нет уже 5 дней — никто не предупреждал": ["map_5.png"],
-}
 
-PHOTO_DIMS = {
-    "2afb4032276d450d829c57cd8c57ec8c.png": (1179, 1144),
-    "83758698f1ba4a94a08621dbe2bc9233.png": (100, 100),
-    "a5edba0d5689405daca3a498822e6561.png": (1080, 2400),
-    "map_1.png": (1256, 288), "map_2.png": (1256, 288), "map_3.png": (1256, 288),
-    "map_4.png": (1256, 288), "map_5.png": (1256, 288),
-}
 
 def main():
     db = SessionLocal()
@@ -229,7 +211,7 @@ def main():
         "Яма на дороге после ремонта — машины бьют диски",
         "Сломанная детская площадка во дворе — качели оторваны",
         "Мусор не вывозят третью неделю — контейнеры переполнены",
-        "Холодные батареи в доме на Ленина, 15 — каждый год одно и то же",
+        "Медведь вышел к магазину на Пушкина, видели утром",
         "Не горит фонарь на ул. Баумана — вечером темно",
         "Автобус №12 ходит раз в час — люди не успевают на работу",
         "Горячей воды нет уже 5 дней — никто не предупреждал",
@@ -240,7 +222,6 @@ def main():
         t = db.query(Thread).filter(Thread.title == title).first()
         if t:
             db.query(ThreadComment).filter(ThreadComment.thread_id == t.id).delete()
-            db.query(ThreadPhoto).filter(ThreadPhoto.thread_id == t.id).delete()
             db.execute(thread_categories.delete().where(thread_categories.c.thread_id == t.id))
             db.delete(t)
     db.commit()
@@ -291,11 +272,6 @@ def main():
             ch, _ = render_markdown(cbody)
             db.add(ThreadComment(thread_id=t.id, author_id=cu.id, body_md=cbody, body_html=ch))
             t.comments_count += 1
-
-        # фото
-        for fname in PHOTOS.get(post["title"], []):
-            w, h = PHOTO_DIMS.get(fname, (None, None))
-            db.add(ThreadPhoto(thread_id=t.id, file_name=fname, width=w, height=h))
 
         db.commit()
         print("создан:", post["title"][:70])

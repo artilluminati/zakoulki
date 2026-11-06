@@ -635,10 +635,22 @@ def update_thread(thread_id: int, data: ThreadUpdate, db: Session = Depends(get_
     if data.place_id is not None:
         if data.place_id == 0:
             t.place_id = None
+            # точку сняли — очищаем гео-поля, чтобы не висел чужой город
+            t.city = None
+            t.district = None
+            t.region = None
+            t.country = None
         else:
-            if not db.get(GeoPlace, data.place_id):
+            new_place = db.get(GeoPlace, data.place_id)
+            if not new_place:
                 raise HTTPException(404, "Место не найдено")
             t.place_id = data.place_id
+            # синхронизируем город/район/регион с новым местом,
+            # иначе тред остаётся в старом регионе при смене точки
+            t.city = new_place.city
+            t.district = new_place.district
+            t.region = new_place.region
+            t.country = new_place.country
     if data.body_md is not None:
         html, entities = render_markdown(data.body_md)
         t.body_md = data.body_md

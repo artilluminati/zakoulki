@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -350,6 +350,9 @@ class PlaceIn(BaseModel):
     city: str | None = Field(default=None, max_length=200)
     district: str | None = Field(default=None, max_length=200)
     region: str | None = Field(default=None, max_length=200)
+    latitude: float | None = None
+    longitude: float | None = None
+    area: list[list[float]] | None = None  # полигон [[lat,lng],...]
 
 
 @router.get("/places")
@@ -367,18 +370,77 @@ def admin_places(q: str | None = None, limit: int = Query(50, le=200),
 
 
 @router.patch("/places/{place_id}")
-def admin_update_place(place_id: int, data: PlaceIn, db: Session = Depends(get_db),
-                       user: User = Depends(get_current_user)):
+def admin_update_place(place_id: int, data: PlaceIn, background: BackgroundTasks,
+                       db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     require_admin(user)
     place = db.get(GeoPlace, place_id)
     if not place:
         raise HTTPException(404, "Место не найдено")
+
+    coords_changed = (data.latitude is not None and abs(data.latitude - place.latitude) > 1e-9) or \
+                     (data.longitude is not None and abs(data.longitude - place.longitude) > 1e-9) or \
+                     (data.area is not None)
+
+    # явные поля — перезаписываем
     for field in ("name", "address", "city", "district", "region"):
         value = getattr(data, field)
         if value is not None:
             setattr(place, field, value)
+
+    if data.latitude is not None:
+        place.latitude = data.latitude
+    if data.longitude is not None:
+        place.longitude = data.longitude
+    if data.area is not None:
+        import json as _json
+        place.area_json = _json.dumps(data.area) if len(data.area) >= 3 else place.area_json
+
+    # если координаты поменялись — подтягиваем город/район/регион/адрес из реверс-геокодера,
+    # если они не переданы явно, и обновляем название, если оно было автосгенерировано
+    if coords_changed:
+        try:
+            from app.services import citydata as _cd
+            r = _cd.nominatim_reverse(float(place.latitude), float(place.longitude))
+            if r:
+                if data.city is None and r.get("city"):
+                    place.city = r.get("city")
+                if data.district is None and r.get("district"):
+                    place.district = r.get("district")
+                if data.region is None and r.get("region"):
+                    place.region = r.get("region")
+                if data.address is None and r.get("address"):
+                    place.address = r.get("address")
+                # автосгенерированное имя «Точка на карте» обновляем на новый адрес
+                if data.name is None and place.name in ("Точка на карте", "Точка"):
+                    if r.get("name"):
+                        place.name = r.get("name")
+        except Exception:
+            pass
+
+        # перегенерация превью — фоном, чтобы ответ не тормозил
+        try:
+            from app.services.mapshot import render_preview, preview_name
+            import os as _os
+            import json as _json2
+            area = None
+            try:
+                area = _json2.loads(place.area_json) if place.area_json else None
+            except Exception:
+                area = None
+            background.add_task(
+                render_preview, place.latitude, place.longitude,
+                _os.path.join(__import__("app.core.config", fromlist=["settings"]).settings.UPLOAD_DIR,
+                              preview_name(place.id)),
+                area,
+            )
+        except Exception:
+            pass
+
     db.commit()
-    return {"id": place.id, "name": place.name, "address": place.address}
+    db.refresh(place)
+    return {"id": place.id, "name": place.name, "address": place.address,
+            "city": place.city, "district": place.district, "region": place.region,
+            "latitude": place.latitude, "longitude": place.longitude}
 
 
 @router.delete("/places/{place_id}", status_code=204)
