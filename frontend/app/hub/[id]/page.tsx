@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
-import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, updateThread, resolveThread, archiveHub, createGeoPlace, deleteThread, type HubModerator } from "@/lib/v5";
+import { fetchThread, fetchAttached, createThread, uploadThreadPhoto, attachHub, renameHub, fetchHubModerators, addHubModerator, removeHubModerator, bookmarkThread, updateThread, resolveThread, archiveHub, createGeoPlace, reverseGeocode, deleteThread, type HubModerator } from "@/lib/v5";
 import ThreadCard, { timeAgo, regionLine, ThreadHtml, HubAuthorBadge, HubModeratorBadge, ResolvedBadge } from "@/components/ThreadCard";
 import MdEditor from "@/components/editor/MdEditor";
 import QuickComposer from "@/components/QuickComposer";
@@ -81,38 +81,68 @@ export default function HubPage() {
   };
 
   const openPlaceEditor = () => {
-    if (!t?.place) return;
-    const hasArea = !!t.place.area && t.place.area.length >= 3;
-    setEditAreaMode(hasArea);
-    setEditVertices(hasArea ? [...t.place.area!] : []);
-    setEditPin(hasArea ? null : { lat: t.place.lat, lng: t.place.lng });
-    setEditView((v) => ({ lat: t.place!.lat, lng: t.place!.lng, nonce: v.nonce + 1 }));
+    if (t?.place) {
+      const hasArea = !!t.place.area && t.place.area.length >= 3;
+      setEditAreaMode(hasArea);
+      setEditVertices(hasArea ? [...t.place.area!] : []);
+      setEditPin(hasArea ? null : { lat: t.place.lat, lng: t.place.lng });
+      setEditView((v) => ({ lat: t.place!.lat, lng: t.place!.lng, nonce: v.nonce + 1 }));
+    } else {
+      // у раздела ещё нет точки — начинаем с чистого листа
+      setEditAreaMode(false);
+      setEditVertices([]);
+      setEditPin({ lat: 55.755, lng: 37.617 });
+      setEditView((v) => ({ lat: 55.755, lng: 37.617, nonce: v.nonce + 1 }));
+    }
     setEditMapExpanded(false);
     setPlaceEditing(true);
   };
 
   const savePlace = async () => {
-    if (!t?.place || placeSaving) return;
+    if (placeSaving) return;
     setPlaceSaving(true);
     try {
       let placeId: number | undefined;
-      if (!editAreaMode && editPin && (editPin.lat !== t.place.lat || editPin.lng !== t.place.lng)) {
-        const p = await createGeoPlace({
-          name: t.place.name, latitude: editPin.lat, longitude: editPin.lng,
-          address: t.place.address, district: t.place.district, street: t.place.street,
-          city: t.place.city, region: t.place.region, country: t.place.country,
-        });
-        placeId = p.id;
-      } else if (editAreaMode && editVertices.length >= 3) {
-        const same = editVertices.length === (t.place.area?.length ?? -1) &&
-          editVertices.every((v, i) => t.place!.area![i]?.[0] === v[0] && t.place!.area![i]?.[1] === v[1]);
-        if (!same) {
-          const cLat = editVertices.reduce((s, v) => s + v[0], 0) / editVertices.length;
-          const cLng = editVertices.reduce((s, v) => s + v[1], 0) / editVertices.length;
+      const orig = t?.place;
+      if (!editAreaMode && editPin) {
+        if (orig && (editPin.lat !== orig.lat || editPin.lng !== orig.lng)) {
           const p = await createGeoPlace({
-            name: t.place.name, latitude: cLat, longitude: cLng,
-            address: t.place.address, district: t.place.district, street: t.place.street,
-            city: t.place.city, region: t.place.region, country: t.place.country,
+            name: orig.name, latitude: editPin.lat, longitude: editPin.lng,
+            address: orig.address, district: orig.district, street: orig.street,
+            city: orig.city, region: orig.region, country: orig.country,
+          });
+          placeId = p.id;
+        } else if (!orig) {
+          // новый пункт: создаём место с нуля
+          const r = await reverseGeocode(editPin.lat, editPin.lng).catch(() => null);
+          const p = await createGeoPlace({
+            name: r?.name || "Точка на карте", latitude: editPin.lat, longitude: editPin.lng,
+            address: r?.address || null, district: r?.district || null, street: r?.street || null,
+            city: r?.city || null, region: r?.region || null, country: r?.country || "Россия",
+          });
+          placeId = p.id;
+        }
+      } else if (editAreaMode && editVertices.length >= 3) {
+        const cLat = editVertices.reduce((s, v) => s + v[0], 0) / editVertices.length;
+        const cLng = editVertices.reduce((s, v) => s + v[1], 0) / editVertices.length;
+        if (orig) {
+          const same = editVertices.length === (orig.area?.length ?? -1) &&
+            editVertices.every((v, i) => orig.area![i]?.[0] === v[0] && orig.area![i]?.[1] === v[1]);
+          if (!same) {
+            const p = await createGeoPlace({
+              name: orig.name, latitude: cLat, longitude: cLng,
+              address: orig.address, district: orig.district, street: orig.street,
+              city: orig.city, region: orig.region, country: orig.country,
+              area: editVertices,
+            });
+            placeId = p.id;
+          }
+        } else {
+          const r = await reverseGeocode(cLat, cLng).catch(() => null);
+          const p = await createGeoPlace({
+            name: r?.name || "Территория", latitude: cLat, longitude: cLng,
+            address: r?.address || null, district: r?.district || null, street: r?.street || null,
+            city: r?.city || null, region: r?.region || null, country: r?.country || "Россия",
             area: editVertices,
           });
           placeId = p.id;
@@ -120,7 +150,7 @@ export default function HubPage() {
       }
       if (placeId) {
         await updateThread(t.id, { place_id: placeId });
-        toast("Место раздела обновлено", "success");
+        toast("Точка привязана", "success");
         setPlaceEditing(false);
         load();
       } else {
@@ -244,7 +274,7 @@ export default function HubPage() {
             </button>
           )
         )}
-        {t.place && (
+        {t.place ? (
           <div className="mt-3 overflow-hidden rounded-xl border border-emerald-200/60 dark:border-emerald-800">
             {t.place.map_preview && <PhotoImg src={t.place.map_preview} className="h-28 w-full" />}
             <div className="flex items-center gap-2 bg-white/60 px-3 py-2 text-sm font-bold text-emerald-800 dark:bg-neutral-900/60 dark:text-emerald-300">
@@ -307,6 +337,73 @@ export default function HubPage() {
                     className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40"
                   >
                     {placeSaving ? "Сохраняем…" : "Сохранить место"}
+                  </button>
+                  <button onClick={() => setPlaceEditing(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-neutral-700">Отмена</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="mt-3 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/60 p-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+            <p className="text-[13px] text-emerald-800 dark:text-emerald-200">
+              У раздела пока нет привязанной точки или территории.
+            </p>
+            {(isAuthor || user?.role === "admin") && !placeEditing && (
+              <button
+                onClick={openPlaceEditor}
+                className="mt-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"
+              >
+                Привязать точку
+              </button>
+            )}
+            {placeEditing && (
+              <div className="mt-2 space-y-1.5">
+                <div className="flex gap-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setEditAreaMode(false); setEditPin({ lat: 55.755, lng: 37.617 }); }}
+                    className={`rounded-lg px-2 py-1 font-bold ${!editAreaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+                  >
+                    Точка
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditAreaMode(true); setEditMapExpanded(true); }}
+                    className={`rounded-lg px-2 py-1 font-bold ${editAreaMode ? "bg-slate-900 text-white" : "text-slate-500"}`}
+                  >
+                    Территория
+                  </button>
+                </div>
+                <div className="h-44 w-full overflow-hidden rounded-xl">
+                  <MiniMap
+                    center={editView}
+                    pin={editAreaMode ? null : (editPin ?? { lat: 55.755, lng: 37.617 })}
+                    onMove={(la, ln) => {
+                      setEditPin({ lat: la, lng: ln });
+                      setEditView((v) => ({ lat: la, lng: ln, nonce: v.nonce }));
+                    }}
+                    areaMode={editAreaMode}
+                    vertices={editVertices}
+                    onVertex={(la, ln, idx) => {
+                      if (!editAreaMode) return;
+                      if (idx !== undefined) {
+                        setEditVertices((prev) => prev.map((v, i) => (i === idx ? [la, ln] as [number, number] : v)));
+                      } else if (editVertices.length < 30) {
+                        setEditVertices((prev) => [...prev, [la, ln] as [number, number]]);
+                      }
+                    }}
+                    onRemoveVertex={(i) => setEditVertices((prev) => prev.filter((_, j) => j !== i))}
+                    expanded={editMapExpanded}
+                    onExpandedChange={setEditMapExpanded}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={savePlace}
+                    disabled={placeSaving || (editAreaMode && editVertices.length < 3)}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40"
+                  >
+                    {placeSaving ? "Сохраняем…" : "Привязать"}
                   </button>
                   <button onClick={() => setPlaceEditing(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-neutral-700">Отмена</button>
                 </div>
