@@ -30,10 +30,8 @@ export default function MdEditor({
   const lines = value.split("\n");
 
   const autoGrow = (el: HTMLTextAreaElement) => {
-    // не сжимаем поле ниже minRows, иначе высота прыгает при фокусе
-    const floor = minRows > 1 ? minRows * 24 : 0;
     el.style.height = "auto";
-    el.style.height = `${Math.max(el.scrollHeight, floor)}px`;
+    el.style.height = `${el.scrollHeight}px`;
   };
 
   const focusActive = (idx: number, caret?: number) => {
