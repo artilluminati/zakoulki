@@ -251,7 +251,9 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
           <span className="flex flex-wrap items-center gap-1.5">
             <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
             <UserBadges badges={authorBadges} mode="inline" />
-            {isAuthor && <AuthorBadge />}
+            {/* «Автор» (вы — автор этой ветки) показываем только вне разделов,
+                чтобы не путать с «Автор раздела» */}
+            {isAuthor && !hubAuthorId && <AuthorBadge />}
             <HubBadge t={t} />
             {t.is_resolved && <ResolvedBadge />}
             {isHubAuthor && <HubAuthorBadge />}
