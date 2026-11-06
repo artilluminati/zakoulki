@@ -213,6 +213,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/organizations" className="hover:text-slate-800">Организациям</Link>
           <Link href="/data" className="hover:text-slate-800">Источники данных</Link>
           <Link href="/map" className="hover:text-slate-800">Карта</Link>
+          <Link href="/terms" className="hover:text-slate-800">Соглашение</Link>
+          <Link href="/privacy" className="hover:text-slate-800">Конфиденциальность</Link>
           <Link href="/donate" className="flex items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300">
             <Heart className="h-3.5 w-3.5" /> Поддержать
           </Link>

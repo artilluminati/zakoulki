@@ -10,6 +10,7 @@ import AppShell from "@/components/AppShell";
 import Script from "next/script";
 import ChunkReload from "@/components/ChunkReload";
 import Onboarding from "@/components/Onboarding";
+import CookieBanner from "@/components/CookieBanner";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", display: "swap" });
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <ScopeProvider>
                 <AppShell>{children}</AppShell>
                 <Onboarding />
+                <CookieBanner />
               </ScopeProvider>
             </ToastProvider>
           </AuthProvider>
