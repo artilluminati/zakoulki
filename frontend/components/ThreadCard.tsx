@@ -242,7 +242,7 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
   const closeMenu = () => { setMenu(false); setReportMode(false); };
 
   return (
-    <article className={`rounded-2xl border p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-in dark:bg-neutral-900 ${t.is_hub ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-slate-200 bg-white dark:border-neutral-700"}`}>
+    <article className={`rounded-2xl border p-4 shadow-sm transition-shadow duration-150 hover:shadow-md dark:bg-neutral-900 ${t.is_hub ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-slate-200 bg-white dark:border-neutral-700"}`}>
       <div className="flex items-center gap-2.5">
         <span className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-slate-700" style={{ background: avatarColor(t.author_username) }}>
           {(t.author_username ?? "?").slice(0, 1).toUpperCase()}
