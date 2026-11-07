@@ -84,7 +84,7 @@ function BellButton() {
   return (
     <div ref={ref} className="relative">
       <button onClick={toggle} aria-label="Уведомления" className="relative flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-800">
-        <Bell className="h-5 w-5 text-slate-600 dark:text-neutral-300" />
+        <Bell className={`h-5 w-5 text-slate-600 dark:text-neutral-300 ${count > 0 ? "animate-bounce-soft" : ""}`} />
         {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{count}</span>}
       </button>
       {open && (

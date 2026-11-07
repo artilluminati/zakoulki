@@ -127,6 +127,96 @@ button:disabled {
 .thread-html p { margin: 0 0 8px; }
 .thread-html p:last-child { margin-bottom: 0; }
 
+/* ===== микроанимации ===== */
+
+/* базовые переходы для интерактивных элементов */
+button, a, [role="button"] {
+  transition: transform 0.12s ease, background-color 0.15s ease, color 0.15s ease,
+              border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+/* нажатие — лёгкое сжатие */
+button:active, [role="button"]:active, .press:active {
+  transform: scale(0.97);
+}
+
+/* карточки — подъём при наведении */
+.thread-card, .cat-card, .info-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.thread-card:hover, .cat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -12px rgba(2, 6, 23, .18);
+}
+
+/* ключевые кадры */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes bounceSoft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.25); }
+  50% { transform: scale(0.95); }
+  75% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* утилиты */
+.animate-fade-in { animation: fadeIn 0.2s ease-out both; }
+.animate-slide-up { animation: slideUp 0.22s ease-out both; }
+.animate-slide-down { animation: slideDown 0.22s ease-out both; }
+.animate-pop { animation: pop 0.28s ease-out both; }
+.animate-bounce-soft { animation: bounceSoft 1.6s ease-in-out infinite; }
+.animate-heart { animation: heartBeat 0.4s ease-out; }
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+
+/* тосты — выезд снизу */
+.toast { transition: transform 0.2s ease, opacity 0.2s ease; }
+
+/* модалки и поповеры — плавное появление */
+[role="dialog"], .modal, .popover {
+  animation: slideUp 0.18s ease-out both;
+}
+
+/* reduce-motion: уважаем настройки пользователя */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 /* тултип места */
 .place-tooltip {
   position: absolute; z-index: 50; width: 240px;

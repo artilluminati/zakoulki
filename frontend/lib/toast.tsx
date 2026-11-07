@@ -54,7 +54,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {toasts.map((t) => (
                     <div
                         key={t.id}
-                        className="pointer-events-auto flex w-full max-w-sm items-start gap-2 rounded-lg border border-white/10 bg-slate-900/95 px-4 py-3 text-sm text-white shadow-2xl backdrop-blur"
+                        className="pointer-events-auto flex w-full max-w-sm items-start gap-2 rounded-lg border border-white/10 bg-slate-900/95 px-4 py-3 text-sm text-white shadow-2xl backdrop-blur animate-slide-up"
                     >
                         {ICONS[t.kind]}
                         <span className="flex-1">{t.message}</span>

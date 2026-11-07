@@ -47,7 +47,7 @@ export default function ScoreArrows({ id, score, myVote, vertical = false, comme
         aria-label="Голос за"
         className={`rounded p-0.5 ${mine === 1 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 hover:text-emerald-600 dark:text-neutral-500"}`}
       >
-        <ChevronUp className={`h-5 w-5 ${mine === 1 ? "fill-emerald-600/20" : ""}`} strokeWidth={2.5} />
+        <ChevronUp className={`h-5 w-5 transition-transform duration-150 ${mine === 1 ? "fill-emerald-600/20 scale-110" : ""}`} strokeWidth={2.5} />
       </button>
       <span className={`min-w-6 text-center text-[13px] font-extrabold tabular-nums ${value > 0 ? "text-emerald-600 dark:text-emerald-400" : value < 0 ? "text-red-500" : "text-slate-500 dark:text-neutral-400"}`}>
         {value}
