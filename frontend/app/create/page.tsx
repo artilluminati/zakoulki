@@ -68,7 +68,11 @@ export default function CreatePage() {
       : null;
 
   const onMapVertex = (latitude: number, longitude: number, index?: number) => {
-    if (!areaMode) return;
+    if (!areaMode) {
+      // в режиме точки клик по карте ставит метку (а не вершину полигона)
+      onPinMove(latitude, longitude);
+      return;
+    }
     if (index !== undefined) {
       setVertices((prev) => prev.map((v, i) => (i === index ? [latitude, longitude] as [number, number] : v)));
     } else if (vertices.length < 30) {

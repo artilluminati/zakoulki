@@ -93,19 +93,26 @@ export default function MiniMap({ center, pin, onMove, areaMode = false, vertice
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  // явное центрирование + позиция пина (в режиме территории главной метки нет)
+  // явное центрирование карты (в режиме территории главной метки нет)
   useEffect(() => {
     try {
-      if (pin && !areaMode) {
-        try { markRef.current?.geometry.setCoordinates([pin.lat, pin.lng]); } catch { /* ignore */ }
-        try { markRef.current?.options.set("visible", true); } catch { /* ignore */ }
-      } else {
-        try { markRef.current?.options.set("visible", false); } catch { /* ignore */ }
-      }
       mapRef.current?.setCenter([center.lat, center.lng], center.zoom ?? mapRef.current?.getZoom());
     } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center.nonce, areaMode]);
+
+  // показ/скрытие и позиция пина при изменении pin (раньше зависело только от
+  // center.nonce — поэтому клик по карте в режиме точки не показывал метку)
+  useEffect(() => {
+    try {
+      if (pin && !areaMode) {
+        markRef.current?.geometry.setCoordinates([pin.lat, pin.lng]);
+        markRef.current?.options.set("visible", true);
+      } else if (!areaMode) {
+        markRef.current?.options.set("visible", false);
+      }
+    } catch { /* ignore */ }
+  }, [pin, areaMode]);
 
   // перерисовка полигона территории
   useEffect(() => {
