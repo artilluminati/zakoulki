@@ -11,7 +11,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "app/uploads"
     YANDEX_GEOCODER_KEY: str = ""
     # CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://192.168.1.13:3000"]
-    CORS_ORIGINS: list[str] = ["*"]
+    # Разрешённые источники для CORS. В продакшене — домен сайта, не "*".
+    # Несколько значений через запятую: "https://example.ru,https://www.example.ru"
+    CORS_ORIGINS: list[str] = ["http://localhost:3001", "http://127.0.0.1:3001"]
 
     # --- адреса сайта (нужны в письмах и ссылках оплаты) ---
     SITE_URL: str = "http://localhost:3001"          # публичный адрес фронта

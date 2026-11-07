@@ -123,7 +123,7 @@ export const ThreadHtml = memo(function ThreadHtml({ html, placePreview }: { htm
           );
         }
         const pm = p.match(/data-place-id="(\d+)".*?>(.*?)<\/a>/);
-        if (!pm) return <span key={i} dangerouslySetInnerHTML={{ __html: p }} />;
+        if (!pm) return <div key={i} className="contents" dangerouslySetInnerHTML={{ __html: p }} />;
         {
           const id = Number(pm[1]);
           const label = pm[2].replace("📍", "");
