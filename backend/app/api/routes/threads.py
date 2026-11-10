@@ -342,7 +342,18 @@ def list_threads(
     if before_id:
         q = q.filter(Thread.id < before_id)
     if after_id:
-        q = q.filter(Thread.id > after_id)
+        # Для поллинга: сортируем по возрастанию, чтобы забрать посты, идущие СРАЗУ после after_id
+        q = q.order_by(Thread.id.asc()).limit(limit)
+        
+        # Выполняем запрос (замените `db.scalars(q)` или `db.execute(q).scalars()` на ваш стандартный вызов)
+        threads = list(db.scalars(q).all()) 
+        
+        # Разворачиваем список обратно, чтобы фронтенд получил их от новых к старым
+        threads.reverse()
+    else:
+        # Обычная пагинация вниз или первая загрузка
+        q = q.order_by(Thread.id.desc()).limit(limit)
+        threads = list(db.scalars(q).all())
     if author_id:
         q = q.filter(Thread.author_id == author_id)
     if place_id:
