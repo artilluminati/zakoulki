@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Cookie, X } from "lucide-react";
 
 const KEY = "zakoulki_cookie_consent_v1";
 
 export default function CookieBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
     try {
-      const v = localStorage.getItem(KEY);
-      if (!v) setVisible(true);
+      return !localStorage.getItem(KEY);
     } catch {
-      setVisible(true);
+      return true;
     }
-  }, []);
+  });
 
   const accept = () => {
     try { localStorage.setItem(KEY, "1"); } catch { /* ignore */ }

@@ -3,6 +3,7 @@ uvicorn[standard]
 sqlalchemy>=2.0
 alembic
 psycopg2-binary
+pymysql
 pydantic
 pydantic-settings
 python-jose[cryptography]
