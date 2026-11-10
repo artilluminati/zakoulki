@@ -480,13 +480,26 @@ export default function ThreadPage() {
                     <div className="mb-1.5 h-36 w-full overflow-hidden rounded-xl">
                       <MiniMap
                         center={editView}
-                        pin={{ lat: editNewPlace.lat, lng: editNewPlace.lng }}
+                        pin={editNewPlace ? { lat: editNewPlace.lat, lng: editNewPlace.lng } : null}
                         onMove={(la, ln) => {
-                          setEditNewPlace((prev) => (prev ? { ...prev, lat: la, lng: ln } : prev));
+                          setEditNewPlace((prev) => (prev ? { ...prev, lat: la, lng: ln } : {
+                            id: 0, name: "Точка на карте", address: null, district: null,
+                            street: null, city: t.city ?? null, region: t.region ?? null,
+                            country: t.country ?? "Россия", lat: la, lng: ln, yandex_kind: "self",
+                          } as GeoPlaceV5));
                           setEditView((v) => ({ lat: la, lng: ln, nonce: v.nonce }));
                         }}
-                        expanded={false}
-                        onExpandedChange={() => {}}
+                        onVertex={(la, ln, idx) => {
+                          if (idx !== undefined) return;
+                          setEditNewPlace((prev) => (prev ? { ...prev, lat: la, lng: ln } : {
+                            id: 0, name: "Точка на карте", address: null, district: null,
+                            street: null, city: t.city ?? null, region: t.region ?? null,
+                            country: t.country ?? "Россия", lat: la, lng: ln, yandex_kind: "self",
+                          } as GeoPlaceV5));
+                          setEditView((v) => ({ lat: la, lng: ln, nonce: v.nonce }));
+                        }}
+                        expanded={editMapExpanded}
+                        onExpandedChange={setEditMapExpanded}
                       />
                     </div>
                     <button
