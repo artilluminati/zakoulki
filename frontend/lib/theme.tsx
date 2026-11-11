@@ -26,6 +26,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, []);
 
+  // тема из профиля (при входе с другого устройства) — синхронизируем состояние
+  useEffect(() => {
+    const onTheme = (e: Event) => {
+      const t = (e as CustomEvent<string>).detail;
+      if (t === "dark" || t === "light") setThemeState(t);
+      else if (t === "system") {
+        try {
+          setThemeState(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener("zakoulki-theme", onTheme);
+    return () => window.removeEventListener("zakoulki-theme", onTheme);
+  }, []);
+
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);

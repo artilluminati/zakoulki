@@ -37,10 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await api.get("/auth/me");
       setUser(res.data);
       // применяем сохранённую тему из профиля (синхронизация между устройствами)
-      if (res.data?.theme === "light" || res.data?.theme === "dark") {
+      if (res.data?.theme) {
         try {
-          localStorage.setItem("zakoulki_theme", res.data.theme);
-          document.documentElement.classList.toggle("dark", res.data.theme === "dark");
+          const t = res.data.theme;
+          if (t === "light" || t === "dark") {
+            localStorage.setItem("zakoulki_theme", t);
+            document.documentElement.classList.toggle("dark", t === "dark");
+          } else {
+            // system — следуем за ОС
+            localStorage.removeItem("zakoulki_theme");
+            const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            document.documentElement.classList.toggle("dark", dark);
+          }
+          window.dispatchEvent(new CustomEvent("zakoulki-theme", { detail: t }));
         } catch { /* ignore */ }
       }
     } catch {

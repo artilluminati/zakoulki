@@ -269,6 +269,8 @@ def _thread_out_batch(
         result.append({
             "id": t.id, "author_id": t.author_id,
             "author_username": author.username if author else None,
+            "author_name": author.name if author else None,
+            "author_avatar": author.avatar if author else None,
             "author_badge": author.badge if author else None,
             "author_badges": author_badges.get(t.author_id, []),
             "is_author": bool(user_id and t.author_id == user_id),

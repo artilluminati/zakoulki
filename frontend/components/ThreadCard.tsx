@@ -244,12 +244,17 @@ export default memo(function ThreadCard({ t, hubAuthorId, hubModIds }: { t: Thre
   return (
     <article className={`rounded-2xl border p-4 shadow-sm transition-shadow duration-150 hover:shadow-md dark:bg-neutral-900 ${t.is_hub ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-slate-200 bg-white dark:border-neutral-700"}`}>
       <div className="flex items-center gap-2.5">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-slate-700" style={{ background: avatarColor(t.author_username) }}>
-          {(t.author_username ?? "?").slice(0, 1).toUpperCase()}
+        <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-sm font-extrabold text-slate-700" style={{ background: avatarColor(t.author_username) }}>
+          {t.author_avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") || ""}/uploads/${t.author_avatar}`} alt="" className="h-full w-full object-cover" />
+          ) : (
+            (t.author_name || t.author_username || "?").slice(0, 1).toUpperCase()
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
-            <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_username ?? "житель"}</Link>
+            <Link href={t.author_username ? `/user/${t.author_username}` : "#"} className="truncate text-[15px] font-bold hover:underline">{t.author_name || t.author_username || "житель"}</Link>
             <UserBadges badges={authorBadges} mode="inline" />
             {/* «Автор» (вы — автор этой ветки) показываем только вне разделов,
                 чтобы не путать с «Автор раздела» */}

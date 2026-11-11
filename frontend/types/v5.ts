@@ -27,6 +27,8 @@ export interface ThreadV5 {
   id: number;
   author_id: number;
   author_username?: string | null;
+  author_name?: string | null;
+  author_avatar?: string | null;
   author_badge?: string | null;
   author_badges?: ThreadBadgeV5[];
   /** Автор треда — это «OP» ветки. */

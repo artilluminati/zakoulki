@@ -41,10 +41,17 @@ export default function UserPage() {
     <div className="mx-auto max-w-2xl space-y-3 px-3 pt-4 md:px-0 md:pt-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-center gap-3">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-lime-200 text-2xl font-extrabold text-slate-900">{user.username.slice(0, 1).toUpperCase()}</span>
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-lime-200 text-2xl font-extrabold text-slate-900">
+            {user.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") || ""}/uploads/${user.avatar}`} alt="" className="h-full w-full object-cover" />
+            ) : (
+              (user.name || user.username).slice(0, 1).toUpperCase()
+            )}
+          </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-lg font-extrabold">
-              <span className="truncate">@{user.username}</span>
+              <span className="truncate">{user.name || `@${user.username}`}</span>
               {user.badge === "official" && <OfficialBadge />}
             </div>
             <div className="text-xs text-slate-400 dark:text-neutral-500">с нами с {new Date(user.created_at).toLocaleDateString("ru-RU")}</div>

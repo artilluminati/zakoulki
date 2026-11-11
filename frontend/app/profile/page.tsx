@@ -204,9 +204,10 @@ export default function ProfilePage() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-lg font-extrabold">
-              <span className="truncate">@{user.username}</span>
+              <span className="truncate">{user.name || `@${user.username}`}</span>
               {user.badge === "official" && <OfficialBadge />}
             </div>
+            {user.name && <div className="text-sm text-slate-500 dark:text-neutral-400">@{user.username}</div>}
             <div className="truncate text-sm text-slate-500 dark:text-neutral-400">{user.email}</div>
             <div className="text-xs text-slate-400 dark:text-neutral-500">с нами с {new Date(user.created_at).toLocaleDateString("ru-RU")}</div>
           </div>
